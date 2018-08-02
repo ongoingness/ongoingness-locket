@@ -27,8 +27,7 @@ import okhttp3.*
 import java.io.IOException
 
 import java.lang.ref.WeakReference
-import java.util.Calendar
-import java.util.TimeZone
+import java.util.*
 
 /**
  * Updates rate in milliseconds for interactive mode. We update once a second to advance the
@@ -83,7 +82,10 @@ class MyWatchFace : CanvasWatchFaceService() {
 
     inner class Engine : CanvasWatchFaceService.Engine() {
 
-        private val client: OkHttpClient = OkHttpClient()
+        // Setup OKHttp to accept non-https urls.
+        private val client: OkHttpClient = OkHttpClient.Builder()
+                .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.CLEARTEXT))
+                .build()
 
         private lateinit var mCalendar: Calendar
 
@@ -113,6 +115,8 @@ class MyWatchFace : CanvasWatchFaceService() {
         private var mAmbient: Boolean = false
         private var mLowBitAmbient: Boolean = false
         private var mBurnInProtection: Boolean = false
+
+        private var mCanvas: Canvas = Canvas()
 
         /* Handler to update the time once a second in interactive mode. */
         private val mUpdateTimeHandler = EngineHandler(this)
@@ -374,7 +378,9 @@ class MyWatchFace : CanvasWatchFaceService() {
                         // You already are on a high-bandwidth network, so start your network request
                         System.out.println("Got network")
 
-                        callGoogle("https://google.com")
+//                        callGoogle("https://facebook.com")
+
+                        downloadImage("http://images.pexels.com/photos/962095/pexels-photo-962095.jpeg?cs=srgb&dl=astronomy-evening-exploration-962095.jpg&fm=jpg")
                     }
 
                 }
@@ -386,6 +392,8 @@ class MyWatchFace : CanvasWatchFaceService() {
         override fun onDraw(canvas: Canvas, bounds: Rect) {
             val now = System.currentTimeMillis()
             mCalendar.timeInMillis = now
+
+            mCanvas = canvas
 
             drawBackground(canvas)
             drawWatchFace(canvas)
@@ -549,10 +557,41 @@ class MyWatchFace : CanvasWatchFaceService() {
             val request = Request.Builder().url(url).build()
 
             client.newCall(request).enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) {}
+                override fun onFailure(call: Call, e: IOException) {
+                    System.out.println("error in request")
+                    e.printStackTrace()
+                }
                 override fun onResponse(call: Call, response: Response) {
                     val text = response.body()?.string() ?: ""
+                    System.out.println("Printing out text from google")
                     System.out.println(text)
+                }
+            })
+        }
+
+        /**
+         * Download an image from a URL.
+         */
+        private fun downloadImage (url: String) {
+            val request = Request.Builder().url(url).build()
+
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call?, e: IOException?) {
+                    e?.printStackTrace()
+                }
+
+                override fun onResponse(call: Call?, response: Response) {
+                    try {
+                        var inputStream = response.body()?.byteStream()
+                        var bitmap = BitmapFactory.decodeStream(inputStream)
+
+                        mBackgroundBitmap = bitmap
+
+                        drawBackground(mCanvas)
+                    } catch (error: Error) {
+                        error.printStackTrace()
+                    }
+
                 }
             })
         }
