@@ -24,7 +24,6 @@ import android.support.wearable.watchface.WatchFaceStyle
 import android.view.SurfaceHolder
 import android.widget.Toast
 import com.google.gson.Gson
-import io.reactivex.disposables.Disposable
 import okhttp3.*
 import java.io.IOException
 
@@ -150,23 +149,13 @@ class MyWatchFace : CanvasWatchFaceService() {
                 color = Color.BLACK
             }
             mBackgroundBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg)
-
-            /* Extracts colors from background image to improve watchface style. */
-            Palette.from(mBackgroundBitmap).generate {
-                it?.let {
-                    mWatchHandHighlightColor = it.getVibrantColor(Color.RED)
-                    mWatchHandColor = it.getLightVibrantColor(Color.WHITE)
-                    mWatchHandShadowColor = it.getDarkMutedColor(Color.BLACK)
-                    updateWatchHandStyle()
-                }
-            }
         }
 
         private fun initializeWatchFace() {
             /* Set defaults for colors */
-            mWatchHandColor = Color.WHITE
-            mWatchHandHighlightColor = Color.RED
-            mWatchHandShadowColor = Color.BLACK
+            mWatchHandColor = Color.TRANSPARENT
+            mWatchHandHighlightColor = Color.TRANSPARENT
+            mWatchHandShadowColor = Color.TRANSPARENT
 
             mHourPaint = Paint().apply {
                 color = mWatchHandColor
@@ -239,10 +228,10 @@ class MyWatchFace : CanvasWatchFaceService() {
 
         private fun updateWatchHandStyle() {
             if (this.mAmbient) {
-                mHourPaint.color = Color.WHITE
-                mMinutePaint.color = Color.WHITE
-                mSecondPaint.color = Color.WHITE
-                mTickAndCirclePaint.color = Color.WHITE
+                mHourPaint.color = Color.TRANSPARENT
+                mMinutePaint.color = Color.TRANSPARENT
+                mSecondPaint.color = Color.TRANSPARENT
+                mTickAndCirclePaint.color = Color.TRANSPARENT
 
                 mHourPaint.isAntiAlias = false
                 mMinutePaint.isAntiAlias = false
