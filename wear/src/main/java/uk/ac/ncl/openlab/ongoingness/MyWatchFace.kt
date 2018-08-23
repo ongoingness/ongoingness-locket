@@ -93,12 +93,6 @@ class MyWatchFace : CanvasWatchFaceService() {
         private val URL = "http://46.101.47.18:3000/api"
         private lateinit var mCalendar: Calendar
 
-        private var disposable: Disposable? = null
-
-        private val ongoingnessApiService by lazy {
-            OngoingnessApiService.create()
-        }
-
         private var mRegisteredTimeZoneReceiver = false
         private var mMuteMode: Boolean = false
         private var mCenterX: Float = 0F
