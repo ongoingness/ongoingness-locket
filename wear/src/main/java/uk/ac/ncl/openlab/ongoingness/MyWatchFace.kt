@@ -23,10 +23,13 @@ import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
 import android.view.SurfaceHolder
 import android.widget.Toast
+import com.google.gson.Gson
+import io.reactivex.disposables.Disposable
 import okhttp3.*
 import java.io.IOException
 
 import java.lang.ref.WeakReference
+import java.net.NetworkInterface
 import java.util.*
 
 /**
@@ -87,7 +90,14 @@ class MyWatchFace : CanvasWatchFaceService() {
                 .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.CLEARTEXT))
                 .build()
 
+        private val URL = "http://46.101.47.18:3000/api"
         private lateinit var mCalendar: Calendar
+
+        private var disposable: Disposable? = null
+
+        private val ongoingnessApiService by lazy {
+            OngoingnessApiService.create()
+        }
 
         private var mRegisteredTimeZoneReceiver = false
         private var mMuteMode: Boolean = false
@@ -377,12 +387,10 @@ class MyWatchFace : CanvasWatchFaceService() {
                     } else {
                         // You already are on a high-bandwidth network, so start your network request
                         System.out.println("Got network")
+                        getToken()
 
-//                        callGoogle("https://facebook.com")
-
-                        downloadImage("http://images.pexels.com/photos/962095/pexels-photo-962095.jpeg?cs=srgb&dl=astronomy-evening-exploration-962095.jpg&fm=jpg")
+//                        downloadImage("http://images.pexels.com/photos/962095/pexels-photo-962095.jpeg?cs=srgb&dl=astronomy-evening-exploration-962095.jpg&fm=jpg")
                     }
-
                 }
             }
             invalidate()
@@ -550,11 +558,25 @@ class MyWatchFace : CanvasWatchFaceService() {
             }
         }
 
+        private var token: String = ""
+
         /**
-         * Make a request to google
+         * Get a token using mac address
          */
-        private fun callGoogle (url: String) {
-            val request = Request.Builder().url(url).build()
+        private fun getToken () {
+            val url = "$URL/auth/mac"
+            val gson = Gson()
+
+            println("Getting MAC address")
+            val mac: String = getMacAddr()
+
+            val formBody = FormBody.Builder()
+                    .add("mac", mac)
+                    .build()
+            val request = Request.Builder()
+                    .url(url)
+                    .post(formBody)
+                    .build()
 
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
@@ -562,11 +584,70 @@ class MyWatchFace : CanvasWatchFaceService() {
                     e.printStackTrace()
                 }
                 override fun onResponse(call: Call, response: Response) {
-                    val text = response.body()?.string() ?: ""
-                    System.out.println("Printing out text from google")
-                    System.out.println(text)
+                    val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
+                    token = genericResponse.payload
+                    System.out.println(token)
+
+                    getMediaId()
                 }
             })
+        }
+
+        /**
+         * Get id of media
+         */
+        private fun getMediaId () {
+            println("Getting media id")
+            val url = "$URL/media/request/present"
+            val gson = Gson()
+
+            val request = Request.Builder()
+                    .url(url)
+                    .header("x-access-token", token)
+                    .build()
+
+            client.newCall(request)
+                    .enqueue(object : Callback {
+                        override fun onFailure(call: Call, e: IOException) {
+                            System.out.println("error in request")
+                            e.printStackTrace()
+                        }
+                        override fun onResponse(call: Call, response: Response) {
+                            val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
+                            val id = genericResponse.payload
+                            println("media id $id")
+
+                            println("$URL/media/show/$id")
+                            downloadImage("$URL/media/show/$id/$token")
+                        }
+                    })
+        }
+
+        /**
+         * Get device mac address
+         */
+        fun getMacAddr(): String {
+            try {
+                val all: List<NetworkInterface> = Collections.list(NetworkInterface.getNetworkInterfaces())
+                for(nif: NetworkInterface in all) {
+                    if (nif.name.toLowerCase() != "wlan0") continue
+
+                    val macBytes: ByteArray = nif.hardwareAddress ?: return ""
+
+                    val res1 = StringBuilder()
+                    for (b: Byte in macBytes) {
+                        res1.append(String.format("%02X", b))
+                    }
+
+                    if (res1.isNotEmpty()) {
+                        res1.deleteCharAt(res1.length - 1)
+                    }
+                    return res1.toString()
+                }
+            } catch (ex: Exception) {
+                println(ex.stackTrace)
+            }
+            return ""
         }
 
         /**
@@ -582,8 +663,8 @@ class MyWatchFace : CanvasWatchFaceService() {
 
                 override fun onResponse(call: Call?, response: Response) {
                     try {
-                        var inputStream = response.body()?.byteStream()
-                        var bitmap = BitmapFactory.decodeStream(inputStream)
+                        val inputStream = response.body()?.byteStream()
+                        val bitmap = BitmapFactory.decodeStream(inputStream)
 
                         mBackgroundBitmap = bitmap
 
