@@ -371,7 +371,13 @@ class MyWatchFace : CanvasWatchFaceService() {
                     } else {
                         // You already are on a high-bandwidth network, so start your network request
                         System.out.println("Got network")
-                        getToken()
+
+                        // Check for token before getting media
+                        if (token.isEmpty()) {
+                            getToken()
+                        } else {
+                            getMediaId()
+                        }
                     }
                 }
             }
@@ -555,7 +561,7 @@ class MyWatchFace : CanvasWatchFaceService() {
 
             // "98:29:A6:BB:F6:72" - default mac
             val formBody = FormBody.Builder()
-                    .add("mac", mac)
+                    .add("mac", "98:29:A6:BB:F6:72")
                     .build()
             val request = Request.Builder()
                     .url(url)
