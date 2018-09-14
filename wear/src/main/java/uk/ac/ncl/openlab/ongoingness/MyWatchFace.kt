@@ -553,8 +553,9 @@ class MyWatchFace : CanvasWatchFaceService() {
             println("Getting MAC address")
             val mac: String = getMacAddr()
 
+            // "98:29:A6:BB:F6:72" - default mac
             val formBody = FormBody.Builder()
-                    .add("mac", "98:29:A6:BB:F6:72")
+                    .add("mac", mac)
                     .build()
             val request = Request.Builder()
                     .url(url)
