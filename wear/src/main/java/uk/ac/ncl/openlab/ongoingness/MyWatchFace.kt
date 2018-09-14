@@ -17,7 +17,6 @@ import android.net.Network
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
-import android.support.v7.graphics.Palette
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
@@ -90,6 +89,8 @@ class MyWatchFace : CanvasWatchFaceService() {
                 .build()
 
         private val URL = "http://46.101.47.18:3000/api"
+        private val ERA = "past"
+
         private lateinit var mCalendar: Calendar
 
         private var mRegisteredTimeZoneReceiver = false
@@ -371,8 +372,6 @@ class MyWatchFace : CanvasWatchFaceService() {
                         // You already are on a high-bandwidth network, so start your network request
                         System.out.println("Got network")
                         getToken()
-
-//                        downloadImage("http://images.pexels.com/photos/962095/pexels-photo-962095.jpeg?cs=srgb&dl=astronomy-evening-exploration-962095.jpg&fm=jpg")
                     }
                 }
             }
@@ -397,7 +396,8 @@ class MyWatchFace : CanvasWatchFaceService() {
             } else if (mAmbient) {
                 canvas.drawBitmap(mGrayBackgroundBitmap, 0f, 0f, mBackgroundPaint)
             } else {
-                canvas.drawBitmap(mBackgroundBitmap, 0f, 0f, mBackgroundPaint)
+                val resized = Bitmap.createScaledBitmap(mBackgroundBitmap, 350, 350, false)
+                canvas.drawBitmap(resized, 0f, 0f, mBackgroundPaint)
             }
         }
 
@@ -554,7 +554,7 @@ class MyWatchFace : CanvasWatchFaceService() {
             val mac: String = getMacAddr()
 
             val formBody = FormBody.Builder()
-                    .add("mac", mac)
+                    .add("mac", "98:29:A6:BB:F6:72")
                     .build()
             val request = Request.Builder()
                     .url(url)
@@ -581,7 +581,7 @@ class MyWatchFace : CanvasWatchFaceService() {
          */
         private fun getMediaId () {
             println("Getting media id")
-            val url = "$URL/media/request/present"
+            val url = "$URL/media/request/$ERA"
             val gson = Gson()
 
             val request = Request.Builder()
@@ -600,7 +600,7 @@ class MyWatchFace : CanvasWatchFaceService() {
                             val id = genericResponse.payload
                             println("media id $id")
 
-                            println("$URL/media/show/$id")
+                            println("$URL/media/show/$id/$token")
                             downloadImage("$URL/media/show/$id/$token")
                         }
                     })
@@ -625,6 +625,7 @@ class MyWatchFace : CanvasWatchFaceService() {
                     if (res1.isNotEmpty()) {
                         res1.deleteCharAt(res1.length - 1)
                     }
+                    println("MAC:" + res1.toString())
                     return res1.toString()
                 }
             } catch (ex: Exception) {
