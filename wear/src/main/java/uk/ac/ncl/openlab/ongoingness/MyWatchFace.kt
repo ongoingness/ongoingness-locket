@@ -90,6 +90,9 @@ class MyWatchFace : CanvasWatchFaceService() {
 
         private val URL = "http://46.101.47.18:3000/api"
         private val ERA = "past"
+        private var links: Array<String> = arrayOf("") // Array of linked media to present
+        private var linkIdx: Int = -1 // Id of current past link
+        private var presentId: String = "" // Present Id to show.
 
         private lateinit var mCalendar: Calendar
 
@@ -373,7 +376,7 @@ class MyWatchFace : CanvasWatchFaceService() {
                         if (token.isEmpty()) {
                             getToken()
                         } else {
-                            getMediaId()
+                           // getMediaId()
                         }
                     }
                 }
@@ -548,6 +551,8 @@ class MyWatchFace : CanvasWatchFaceService() {
 
         /**
          * Get a token using mac address
+         * TODO: Call this when watch face is initialised
+         * TODO: Regenerate token on 401
          */
         private fun getToken () {
             val url = "$URL/auth/mac"
@@ -558,7 +563,7 @@ class MyWatchFace : CanvasWatchFaceService() {
 
             // "98:29:A6:BB:F6:72" - default mac
             val formBody = FormBody.Builder()
-                    .add("mac", "98:29:A6:BB:F6:72")
+                    .add("mac", mac)
                     .build()
             val request = Request.Builder()
                     .url(url)
@@ -573,9 +578,14 @@ class MyWatchFace : CanvasWatchFaceService() {
                 override fun onResponse(call: Call, response: Response) {
                     val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
                     token = genericResponse.payload
-                    System.out.println(token)
 
-                    getMediaId()
+                    // If there is no present image to show, update the semantic context.
+                    if (presentId.isEmpty()) {
+                        updateSementicContext()
+                    } else {
+                    // Otherwise, cycle to next in set.
+                        cycle()
+                    }
                 }
             })
         }
@@ -583,32 +593,32 @@ class MyWatchFace : CanvasWatchFaceService() {
         /**
          * Get id of media
          */
-        private fun getMediaId () {
-            println("Getting media id")
-            val url = "$URL/media/request/$ERA"
-            val gson = Gson()
-
-            val request = Request.Builder()
-                    .url(url)
-                    .header("x-access-token", token)
-                    .build()
-
-            client.newCall(request)
-                    .enqueue(object : Callback {
-                        override fun onFailure(call: Call, e: IOException) {
-                            System.out.println("error in request")
-                            e.printStackTrace()
-                        }
-                        override fun onResponse(call: Call, response: Response) {
-                            val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
-                            val id = genericResponse.payload
-                            println("media id $id")
-
-                            println("$URL/media/show/$id/$token")
-                            downloadImage("$URL/media/show/$id/$token")
-                        }
-                    })
-        }
+//        private fun getMediaId () {
+//            println("Getting media id")
+//            val url = "$URL/media/request/$ERA"
+//            val gson = Gson()
+//
+//            val request = Request.Builder()
+//                    .url(url)
+//                    .header("x-access-token", token)
+//                    .build()
+//
+//            client.newCall(request)
+//                    .enqueue(object : Callback {
+//                        override fun onFailure(call: Call, e: IOException) {
+//                            System.out.println("error in request")
+//                            e.printStackTrace()
+//                        }
+//                        override fun onResponse(call: Call, response: Response) {
+//                            val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
+//                            val id = genericResponse.payload
+//                            println("media id $id")
+//
+//                            println("$URL/media/show/$id/$token")
+//                            downloadImage("$URL/media/show/$id/$token")
+//                        }
+//                    })
+//        }
 
         /**
          * Get device mac address
@@ -663,6 +673,89 @@ class MyWatchFace : CanvasWatchFaceService() {
 
                 }
             })
+        }
+
+        /**
+         * Get linked images for the presently shown image.
+         */
+        private fun getImageIdsInSet (presentId: String) {
+            val url = "$URL/media/links/$presentId"
+            val gson = Gson()
+
+            val request = Request.Builder()
+                    .url(url)
+                    .header("x-access-token", token)
+                    .build()
+
+            client.newCall(request)
+                    .enqueue(object : Callback {
+                        override fun onFailure(call: Call, e: IOException) {
+                            System.out.println("error in request")
+                            e.printStackTrace()
+                        }
+                        override fun onResponse(call: Call, response: Response) {
+                            val linkResponse: LinkResponse = gson.fromJson(response.body()?.string(), LinkResponse::class.java)
+                            val rawLinks = linkResponse.payload
+                            links = rawLinks
+                            println(rawLinks)
+                        }
+                    })
+        }
+
+        /**
+         * Force the api to start a new session
+         * TODO: Call this when device is rotated.
+         */
+        private fun updateSementicContext () {
+            val url = "$URL/media/request/present"
+            val gson = Gson()
+
+            val request = Request.Builder()
+                    .url(url)
+                    .header("x-access-token", token)
+                    .build()
+
+            client.newCall(request)
+                    .enqueue(object : Callback {
+                        override fun onFailure(call: Call, e: IOException) {
+                            e.printStackTrace()
+                        }
+                        override fun onResponse(call: Call, response: Response) {
+                            val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
+                            val id = genericResponse.payload
+                            presentId = id
+
+                            getImageIdsInSet(presentId)
+                        }
+                    })
+        }
+
+        /**
+         * Cycle image along cluster
+         * TODO: Call this when device is rolled forward
+         */
+        private fun cycle() {
+            // Return if there are no more images in cluster
+            if(links.isEmpty() || links[0].isBlank()) {
+                return
+            }
+
+            // Increment index with direction
+            linkIdx++
+
+            // If imageIndex rolls over array size then show the present image.
+            if (linkIdx == links.size) {
+                linkIdx = -1
+            }
+
+            val imgId: String = if (linkIdx == -1) {
+                presentId
+            } else {
+                links[linkIdx]
+            }
+
+            // Download image and draw a new watch face
+            downloadImage("$URL/media/show/$imgId/$token")
         }
     }
 }
