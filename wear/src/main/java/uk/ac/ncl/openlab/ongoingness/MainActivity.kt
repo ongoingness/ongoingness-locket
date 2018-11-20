@@ -13,8 +13,7 @@ import java.io.IOException
 
 class MainActivity : WearableActivity() {
 
-    var mBackgroundBitmap: Bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
-            resources, R.drawable.bg), 350, 350, true)
+    var mBackgroundBitmap: Bitmap? = null
     var macAddress: String = ""
 
     private val URL = "http://46.101.47.18:3000/api"
@@ -32,7 +31,9 @@ class MainActivity : WearableActivity() {
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        updateBackground(mBackgroundBitmap)
+        mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
+                resources, R.drawable.bg), 350, 350, true)
+        updateBackground(mBackgroundBitmap!!)
 
         macAddress = getMacAddr()
     }

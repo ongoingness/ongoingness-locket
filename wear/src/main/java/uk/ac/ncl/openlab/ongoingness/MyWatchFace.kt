@@ -4,14 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Paint
-import android.graphics.Rect
+import android.graphics.*
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Bundle
@@ -20,12 +13,11 @@ import android.os.Message
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
+import android.util.Log
 import android.view.SurfaceHolder
-import android.widget.Toast
 import com.google.gson.Gson
 import okhttp3.*
 import java.io.IOException
-
 import java.lang.ref.WeakReference
 import java.net.NetworkInterface
 import java.util.*
@@ -48,6 +40,8 @@ private const val SECOND_TICK_STROKE_WIDTH = 2f
 private const val CENTER_GAP_AND_CIRCLE_RADIUS = 4f
 
 private const val SHADOW_RADIUS = 6f
+
+private const val TAG = "WATCH"
 
 /**
  * Analog watch face with a ticking second hand. In ambient mode, the second hand isn't
@@ -366,7 +360,7 @@ class MyWatchFace : CanvasWatchFaceService() {
                         if (bandwidth < minBandwidthKbps) {
                             // Request a high-bandwidth network
                             System.out.println("Request high-bandwidth network")
-                            Toast.makeText(applicationContext, "no active network", Toast.LENGTH_SHORT).show()
+                            Log.d(TAG, "no active network")
 
                         }
                     } else {
@@ -375,10 +369,11 @@ class MyWatchFace : CanvasWatchFaceService() {
 
                         // Check for token before getting media
                         if (token.isEmpty()) {
-                            Toast.makeText(applicationContext, "getting token", Toast.LENGTH_SHORT).show()
+                            Log.d(TAG, "getting token")
                             getToken()
                         } else {
                            // getMediaId()
+                            cycle()
                         }
 
 //                        val intent: Intent = Intent(MyWatchFace, MainActivity.class)
@@ -566,8 +561,8 @@ class MyWatchFace : CanvasWatchFaceService() {
             println("Getting MAC address")
             val mac: String = getMacAddr()
 
-            println(mac)
-            Toast.makeText(applicationContext, mac, Toast.LENGTH_SHORT).show()
+            Log.d(TAG, mac)
+
 
             // "98:29:A6:BB:F6:72" - default mac
             val formBody = FormBody.Builder()
@@ -589,11 +584,11 @@ class MyWatchFace : CanvasWatchFaceService() {
 
                     // If there is no present image to show, update the semantic context.
                     if (presentId.isEmpty()) {
-                        Toast.makeText(applicationContext, "Updating", Toast.LENGTH_SHORT).show()
+                        Log.d(TAG,"Updating")
                         updateSementicContext()
                     } else {
                     // Otherwise, cycle to next in set.
-                        Toast.makeText(applicationContext, "Cycling", Toast.LENGTH_SHORT).show()
+                        Log.d(TAG,"Cycling")
                         cycle()
                     }
                 }
@@ -646,9 +641,10 @@ class MyWatchFace : CanvasWatchFaceService() {
                         res1.append(String.format("%02X", b))
                     }
 
-                    if (res1.isNotEmpty()) {
-                        res1.deleteCharAt(res1.length - 1)
-                    }
+//                    if (res1.isNotEmpty()) {
+//                        res1.deleteCharAt(res1.length - 1)
+//                    }
+
                     println("MAC:" + res1.toString())
                     return res1.toString()
                 }
