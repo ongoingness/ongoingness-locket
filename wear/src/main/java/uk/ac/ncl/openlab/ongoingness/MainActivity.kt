@@ -32,7 +32,7 @@ class MainActivity : WearableActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
-                resources, R.drawable.bg), 350, 350, true)
+                resources, R.drawable.bg), 400, 400, true)
         updateBackground(mBackgroundBitmap!!)
 
         macAddress = getMacAddr()

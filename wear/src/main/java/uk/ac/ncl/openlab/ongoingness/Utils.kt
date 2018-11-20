@@ -15,9 +15,6 @@ fun getMacAddr(): String {
                 res1.append(String.format("%02X", b))
             }
 
-            if (res1.isNotEmpty()) {
-                res1.deleteCharAt(res1.length - 1)
-            }
             println("MAC:" + res1.toString())
             return res1.toString()
         }
