@@ -563,8 +563,6 @@ class MyWatchFace : CanvasWatchFaceService() {
 
             Log.d(TAG, mac)
 
-
-            // "98:29:A6:BB:F6:72" - default mac
             val formBody = FormBody.Builder()
                     .add("mac", mac)
                     .build()
@@ -640,10 +638,6 @@ class MyWatchFace : CanvasWatchFaceService() {
                     for (b: Byte in macBytes) {
                         res1.append(String.format("%02X", b))
                     }
-
-//                    if (res1.isNotEmpty()) {
-//                        res1.deleteCharAt(res1.length - 1)
-//                    }
 
                     println("MAC:" + res1.toString())
                     return res1.toString()
@@ -733,7 +727,7 @@ class MyWatchFace : CanvasWatchFaceService() {
 
                             downloadImage("$URL/media/show/$id/$token")
 
-//                            getImageIdsInSet(presentId)
+                            getImageIdsInSet(presentId)
                         }
                     })
         }
