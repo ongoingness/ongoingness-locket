@@ -19,7 +19,7 @@ import io.reactivex.subjects.PublishSubject
 /**
  * Created by Kyle Montague on 10/11/2018.
  */
-class RotationRecogniser(val context: Context) {
+open class RotationRecogniser(val context: Context) {
 
 
     val TAG = "RR"

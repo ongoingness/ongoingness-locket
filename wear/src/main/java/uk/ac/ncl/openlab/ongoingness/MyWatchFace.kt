@@ -58,6 +58,10 @@ private const val TAG = "WATCH"
  */
 class MyWatchFace : CanvasWatchFaceService() {
 
+
+
+
+
     override fun onCreateEngine(): Engine {
         return Engine()
     }
@@ -140,6 +144,10 @@ class MyWatchFace : CanvasWatchFaceService() {
 
             initializeBackground()
             initializeWatchFace()
+
+            initializeRotationRecogniser()
+
+
         }
 
         private fun initializeBackground() {
@@ -194,6 +202,7 @@ class MyWatchFace : CanvasWatchFaceService() {
 
         override fun onDestroy() {
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME)
+            distroyRotationRecogniser()
             super.onDestroy()
         }
 
@@ -402,7 +411,7 @@ class MyWatchFace : CanvasWatchFaceService() {
             } else if (mAmbient) {
                 canvas.drawBitmap(mGrayBackgroundBitmap, 0f, 0f, mBackgroundPaint)
             } else {
-                val resized = Bitmap.createScaledBitmap(mBackgroundBitmap, 350, 350, false)
+                val resized = Bitmap.createScaledBitmap(mBackgroundBitmap, 400, 400, false)
                 canvas.drawBitmap(resized, 0f, 0f, mBackgroundPaint)
             }
         }
@@ -758,6 +767,44 @@ class MyWatchFace : CanvasWatchFaceService() {
 
             // Download image and draw a new watch face
             downloadImage("$URL/media/show/$imgId/$token")
+        }
+
+        private fun initializeRotationRecogniser(){
+            rotationRecogniser = RotationRecogniser(applicationContext)//should be in onCreate of activity
+            rotationRecogniser!!.start(rotationListener) //should be in onResume of activity
+        }
+
+        private fun distroyRotationRecogniser(){
+            rotationRecogniser!!.stop() // should be in onPause of activity
+        }
+
+        var rotationRecogniser: RotationRecogniser? = null
+        val rotationListener = object:RotationRecogniser.Listener{
+            override fun onOrientationChange(orientation: RotationRecogniser.Orientation) {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun onRotateUp() {
+                cycle()
+            }
+
+            override fun onRotateDown() {
+                cycle()
+            }
+
+            override fun onRotateLeft() {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun onRotateRight() {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+            override fun onStandby() {
+                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
+
+
         }
     }
 }
