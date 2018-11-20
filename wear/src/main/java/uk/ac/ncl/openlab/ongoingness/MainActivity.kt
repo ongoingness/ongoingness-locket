@@ -1,11 +1,15 @@
 package uk.ac.ncl.openlab.ongoingness
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Bundle
 import android.support.wear.widget.BoxInsetLayout
 import android.support.wearable.activity.WearableActivity
+import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
 import com.google.gson.Gson
@@ -44,7 +48,23 @@ class MainActivity : WearableActivity() {
 
         Toast.makeText(this, "in activity", Toast.LENGTH_SHORT).show()
 
-        getToken(client)
+        System.out.println("Getting connection")
+
+        val minBandwidthKbps = 320
+        val mConnectivityManager: ConnectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork: Network? = mConnectivityManager.activeNetwork
+
+        if (activeNetwork == null) {
+            val bandwidth = mConnectivityManager.getNetworkCapabilities(activeNetwork).linkDownstreamBandwidthKbps
+            if (bandwidth < minBandwidthKbps) {
+                // Request a high-bandwidth network
+                System.out.println("Request high-bandwidth network")
+            }
+        } else {
+            // You already are on a high-bandwidth network, so start your network request
+            System.out.println("Got network")
+            getToken(client)
+        }
 
         rotationRecogniser = RotationRecogniser(this)
     }
@@ -140,7 +160,6 @@ class MainActivity : WearableActivity() {
             override fun onResponse(call: Call, response: Response) {
                 val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
                 token = genericResponse.payload
-
                 updateSemanticContext(client)
             }
         })
