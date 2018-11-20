@@ -366,6 +366,7 @@ class MyWatchFace : CanvasWatchFaceService() {
                         if (bandwidth < minBandwidthKbps) {
                             // Request a high-bandwidth network
                             System.out.println("Request high-bandwidth network")
+                            Toast.makeText(applicationContext, "no active network", Toast.LENGTH_SHORT).show()
 
                         }
                     } else {
@@ -374,10 +375,14 @@ class MyWatchFace : CanvasWatchFaceService() {
 
                         // Check for token before getting media
                         if (token.isEmpty()) {
+                            Toast.makeText(applicationContext, "getting token", Toast.LENGTH_SHORT).show()
                             getToken()
                         } else {
                            // getMediaId()
                         }
+
+//                        val intent: Intent = Intent(MyWatchFace, MainActivity.class)
+//                        startActivity(intent)
                     }
                 }
             }
@@ -561,6 +566,9 @@ class MyWatchFace : CanvasWatchFaceService() {
             println("Getting MAC address")
             val mac: String = getMacAddr()
 
+            println(mac)
+            Toast.makeText(applicationContext, mac, Toast.LENGTH_SHORT).show()
+
             // "98:29:A6:BB:F6:72" - default mac
             val formBody = FormBody.Builder()
                     .add("mac", mac)
@@ -581,9 +589,11 @@ class MyWatchFace : CanvasWatchFaceService() {
 
                     // If there is no present image to show, update the semantic context.
                     if (presentId.isEmpty()) {
+                        Toast.makeText(applicationContext, "Updating", Toast.LENGTH_SHORT).show()
                         updateSementicContext()
                     } else {
                     // Otherwise, cycle to next in set.
+                        Toast.makeText(applicationContext, "Cycling", Toast.LENGTH_SHORT).show()
                         cycle()
                     }
                 }
@@ -725,7 +735,9 @@ class MyWatchFace : CanvasWatchFaceService() {
                             val id = genericResponse.payload
                             presentId = id
 
-                            getImageIdsInSet(presentId)
+                            downloadImage("$URL/media/show/$id/$token")
+
+//                            getImageIdsInSet(presentId)
                         }
                     })
         }
