@@ -145,7 +145,7 @@ class MyWatchFace : CanvasWatchFaceService() {
             initializeBackground()
             initializeWatchFace()
 
-            initializeRotationRecogniser()
+//            initializeRotationRecogniser()
 
 
         }
@@ -202,7 +202,7 @@ class MyWatchFace : CanvasWatchFaceService() {
 
         override fun onDestroy() {
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME)
-            distroyRotationRecogniser()
+//            distroyRotationRecogniser()
             super.onDestroy()
         }
 
@@ -225,6 +225,11 @@ class MyWatchFace : CanvasWatchFaceService() {
 
             System.out.println("Ambient mode changed")
             System.out.println(inAmbientMode)
+
+            if (!inAmbientMode) {
+                val intent = Intent(applicationContext, MainActivity::class.java)
+                startActivity(intent)
+            }
 
             updateWatchHandStyle()
 
@@ -358,36 +363,32 @@ class MyWatchFace : CanvasWatchFaceService() {
                     /**
                      * Request a network when waking tapping
                      */
-                    System.out.println("Getting connection")
+//                    System.out.println("Getting connection")
 
-                    val minBandwidthKbps = 320
-                    val mConnectivityManager: ConnectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                    val activeNetwork: Network? = mConnectivityManager.activeNetwork
-
-                    if (activeNetwork == null) {
-                        val bandwidth = mConnectivityManager.getNetworkCapabilities(activeNetwork).linkDownstreamBandwidthKbps
-                        if (bandwidth < minBandwidthKbps) {
-                            // Request a high-bandwidth network
-                            System.out.println("Request high-bandwidth network")
-                            Log.d(TAG, "no active network")
-
-                        }
-                    } else {
-                        // You already are on a high-bandwidth network, so start your network request
-                        System.out.println("Got network")
-
-                        // Check for token before getting media
-                        if (token.isEmpty()) {
-                            Log.d(TAG, "getting token")
-                            getToken()
-                        } else {
-                           // getMediaId()
-                            cycle()
-                        }
-
-//                        val intent: Intent = Intent(MyWatchFace, MainActivity.class)
-//                        startActivity(intent)
-                    }
+//                    val minBandwidthKbps = 320
+//                    val mConnectivityManager: ConnectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+//                    val activeNetwork: Network? = mConnectivityManager.activeNetwork
+//
+//                    if (activeNetwork == null) {
+//                        val bandwidth = mConnectivityManager.getNetworkCapabilities(activeNetwork).linkDownstreamBandwidthKbps
+//                        if (bandwidth < minBandwidthKbps) {
+//                            // Request a high-bandwidth network
+//                            System.out.println("Request high-bandwidth network")
+//                            Log.d(TAG, "no active network")
+//                        }
+//                    } else {
+//                        // You already are on a high-bandwidth network, so start your network request
+//                        System.out.println("Got network")
+//
+//                        // Check for token before getting media
+//                        if (token.isEmpty()) {
+//                            Log.d(TAG, "getting token")
+//                            getToken()
+//                        } else {
+//                           // getMediaId()
+//                            cycle()
+//                        }
+//                    }
                 }
             }
             invalidate()
@@ -603,36 +604,6 @@ class MyWatchFace : CanvasWatchFaceService() {
         }
 
         /**
-         * Get id of media
-         */
-//        private fun getMediaId () {
-//            println("Getting media id")
-//            val url = "$URL/media/request/$ERA"
-//            val gson = Gson()
-//
-//            val request = Request.Builder()
-//                    .url(url)
-//                    .header("x-access-token", token)
-//                    .build()
-//
-//            client.newCall(request)
-//                    .enqueue(object : Callback {
-//                        override fun onFailure(call: Call, e: IOException) {
-//                            System.out.println("error in request")
-//                            e.printStackTrace()
-//                        }
-//                        override fun onResponse(call: Call, response: Response) {
-//                            val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
-//                            val id = genericResponse.payload
-//                            println("media id $id")
-//
-//                            println("$URL/media/show/$id/$token")
-//                            downloadImage("$URL/media/show/$id/$token")
-//                        }
-//                    })
-//        }
-
-        /**
          * Get device mac address
          */
         fun getMacAddr(): String {
@@ -769,43 +740,43 @@ class MyWatchFace : CanvasWatchFaceService() {
             downloadImage("$URL/media/show/$imgId/$token")
         }
 
-        private fun initializeRotationRecogniser(){
-            rotationRecogniser = RotationRecogniser(applicationContext)//should be in onCreate of activity
-            rotationRecogniser!!.start(rotationListener) //should be in onResume of activity
-        }
-
-        private fun distroyRotationRecogniser(){
-            rotationRecogniser!!.stop() // should be in onPause of activity
-        }
-
-        var rotationRecogniser: RotationRecogniser? = null
-        val rotationListener = object:RotationRecogniser.Listener{
-            override fun onOrientationChange(orientation: RotationRecogniser.Orientation) {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onRotateUp() {
-                cycle()
-            }
-
-            override fun onRotateDown() {
-                cycle()
-            }
-
-            override fun onRotateLeft() {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onRotateRight() {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-            override fun onStandby() {
-                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-            }
-
-
-        }
+//        private fun initializeRotationRecogniser(){
+//            rotationRecogniser = RotationRecogniser(applicationContext)//should be in onCreate of activity
+//            rotationRecogniser!!.start(rotationListener) //should be in onResume of activity
+//        }
+//
+//        private fun distroyRotationRecogniser(){
+//            rotationRecogniser!!.stop() // should be in onPause of activity
+//        }
+//
+//        var rotationRecogniser: RotationRecogniser? = null
+//        val rotationListener = object:RotationRecogniser.Listener{
+//            override fun onOrientationChange(orientation: RotationRecogniser.Orientation) {
+//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+//            }
+//
+//            override fun onRotateUp() {
+//                cycle()
+//            }
+//
+//            override fun onRotateDown() {
+//                cycle()
+//            }
+//
+//            override fun onRotateLeft() {
+//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+//            }
+//
+//            override fun onRotateRight() {
+//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+//            }
+//
+//            override fun onStandby() {
+//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+//            }
+//
+//
+//        }
     }
 }
 

@@ -10,7 +10,7 @@ import kotlinx.android.synthetic.main.content_main.*
 import okhttp3.*
 import java.io.IOException
 
-class MainActivity : AppCompatActivity() {
+class MainMobileActivity : AppCompatActivity() {
 
     private val client = OkHttpClient()
     private var _text: String = ""
