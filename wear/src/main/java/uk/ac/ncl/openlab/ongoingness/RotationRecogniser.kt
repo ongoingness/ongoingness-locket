@@ -57,7 +57,7 @@ open class RotationRecogniser(val context: Context) {
     var timeoutRunnable: Runnable? = null
 
 
-    private var timeoutDuration = 1000L * 60 * 1 //one minute timeout
+    private var timeoutDuration = 1000L * 30 * 1 //one minute timeout
     private var movementThreshold = 0.5
     private val timeoutInterval = 5000L
 
@@ -66,7 +66,7 @@ open class RotationRecogniser(val context: Context) {
         timeoutRunnable = Runnable {
 
             if((System.currentTimeMillis() - lastChanged) >= timeoutDuration){
-
+                    Log.d(TAG,"onstanby")
                         listener?.onStandby()
 
 //                try {

@@ -5,21 +5,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.*
-import android.net.ConnectivityManager
-import android.net.Network
 import android.os.Bundle
 import android.os.Handler
 import android.os.Message
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
-import android.util.Log
 import android.view.SurfaceHolder
-import com.google.gson.Gson
-import okhttp3.*
-import java.io.IOException
 import java.lang.ref.WeakReference
-import java.net.NetworkInterface
 import java.util.*
 
 /**
@@ -58,10 +51,6 @@ private const val TAG = "WATCH"
  */
 class MyWatchFace : CanvasWatchFaceService() {
 
-
-
-
-
     override fun onCreateEngine(): Engine {
         return Engine()
     }
@@ -80,18 +69,6 @@ class MyWatchFace : CanvasWatchFaceService() {
     }
 
     inner class Engine : CanvasWatchFaceService.Engine() {
-
-        // Setup OKHttp to accept non-https urls.
-        private val client: OkHttpClient = OkHttpClient.Builder()
-                .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.CLEARTEXT))
-                .build()
-
-        private val URL = "http://46.101.47.18:3000/api"
-        private val ERA = "past"
-        private var links: Array<String> = arrayOf("") // Array of linked media to present
-        private var linkIdx: Int = -1 // Id of current past link
-        private var presentId: String = "" // Present Id to show.
-
         private lateinit var mCalendar: Calendar
 
         private var mRegisteredTimeZoneReceiver = false
@@ -144,10 +121,6 @@ class MyWatchFace : CanvasWatchFaceService() {
 
             initializeBackground()
             initializeWatchFace()
-
-//            initializeRotationRecogniser()
-
-
         }
 
         private fun initializeBackground() {
@@ -202,7 +175,6 @@ class MyWatchFace : CanvasWatchFaceService() {
 
         override fun onDestroy() {
             mUpdateTimeHandler.removeMessages(MSG_UPDATE_TIME)
-//            distroyRotationRecogniser()
             super.onDestroy()
         }
 
@@ -360,36 +332,8 @@ class MyWatchFace : CanvasWatchFaceService() {
                 }
                 WatchFaceService.TAP_TYPE_TAP -> {
                     // The user has completed the tap gesture.
-
                     val intent = Intent(applicationContext, MainActivity::class.java)
                     startActivity(intent)
-
-//                    System.out.println("Getting connection")
-
-//                    val minBandwidthKbps = 320
-//                    val mConnectivityManager: ConnectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-//                    val activeNetwork: Network? = mConnectivityManager.activeNetwork
-//
-//                    if (activeNetwork == null) {
-//                        val bandwidth = mConnectivityManager.getNetworkCapabilities(activeNetwork).linkDownstreamBandwidthKbps
-//                        if (bandwidth < minBandwidthKbps) {
-//                            // Request a high-bandwidth network
-//                            System.out.println("Request high-bandwidth network")
-//                            Log.d(TAG, "no active network")
-//                        }
-//                    } else {
-//                        // You already are on a high-bandwidth network, so start your network request
-//                        System.out.println("Got network")
-//
-//                        // Check for token before getting media
-//                        if (token.isEmpty()) {
-//                            Log.d(TAG, "getting token")
-//                            getToken()
-//                        } else {
-//                           // getMediaId()
-//                            cycle()
-//                        }
-//                    }
                 }
             }
             invalidate()
@@ -557,227 +501,6 @@ class MyWatchFace : CanvasWatchFaceService() {
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs)
             }
         }
-
-        private var token: String = ""
-
-        /**
-         * Get a token using mac address
-         * TODO: Call this when watch face is initialised
-         * TODO: Regenerate token on 401
-         */
-        private fun getToken () {
-            val url = "$URL/auth/mac"
-            val gson = Gson()
-
-            println("Getting MAC address")
-            val mac: String = getMacAddr()
-
-            Log.d(TAG, mac)
-
-            val formBody = FormBody.Builder()
-                    .add("mac", mac)
-                    .build()
-            val request = Request.Builder()
-                    .url(url)
-                    .post(formBody)
-                    .build()
-
-            client.newCall(request).enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) {
-                    System.out.println("error in request")
-                    e.printStackTrace()
-                }
-                override fun onResponse(call: Call, response: Response) {
-                    val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
-                    token = genericResponse.payload
-
-                    // If there is no present image to show, update the semantic context.
-                    if (presentId.isEmpty()) {
-                        Log.d(TAG,"Updating")
-                        updateSementicContext()
-                    } else {
-                    // Otherwise, cycle to next in set.
-                        Log.d(TAG,"Cycling")
-                        cycle()
-                    }
-                }
-            })
-        }
-
-        /**
-         * Get device mac address
-         */
-        fun getMacAddr(): String {
-            try {
-                val all: List<NetworkInterface> = Collections.list(NetworkInterface.getNetworkInterfaces())
-                for(nif: NetworkInterface in all) {
-                    if (nif.name.toLowerCase() != "wlan0") continue
-
-                    val macBytes: ByteArray = nif.hardwareAddress ?: return ""
-
-                    val res1 = StringBuilder()
-                    for (b: Byte in macBytes) {
-                        res1.append(String.format("%02X", b))
-                    }
-
-                    println("MAC:" + res1.toString())
-                    return res1.toString()
-                }
-            } catch (ex: Exception) {
-                println(ex.stackTrace)
-            }
-            return ""
-        }
-
-        /**
-         * Download an image from a URL.
-         */
-        private fun downloadImage (url: String) {
-            val request = Request.Builder().url(url).build()
-
-            client.newCall(request).enqueue(object : Callback {
-                override fun onFailure(call: Call?, e: IOException?) {
-                    e?.printStackTrace()
-                }
-
-                override fun onResponse(call: Call?, response: Response) {
-                    try {
-                        val inputStream = response.body()?.byteStream()
-                        val bitmap = BitmapFactory.decodeStream(inputStream)
-
-                        mBackgroundBitmap = bitmap
-
-                        drawBackground(mCanvas)
-                    } catch (error: Error) {
-                        error.printStackTrace()
-                    }
-
-                }
-            })
-        }
-
-        /**
-         * Get linked images for the presently shown image.
-         */
-        private fun getImageIdsInSet (presentId: String) {
-            val url = "$URL/media/links/$presentId"
-            val gson = Gson()
-
-            val request = Request.Builder()
-                    .url(url)
-                    .header("x-access-token", token)
-                    .build()
-
-            client.newCall(request)
-                    .enqueue(object : Callback {
-                        override fun onFailure(call: Call, e: IOException) {
-                            System.out.println("error in request")
-                            e.printStackTrace()
-                        }
-                        override fun onResponse(call: Call, response: Response) {
-                            val linkResponse: LinkResponse = gson.fromJson(response.body()?.string(), LinkResponse::class.java)
-                            val rawLinks = linkResponse.payload
-                            links = rawLinks
-                            println(rawLinks)
-                        }
-                    })
-        }
-
-        /**
-         * Force the api to start a new session
-         * TODO: Call this when device is rotated.
-         */
-        private fun updateSementicContext () {
-            val url = "$URL/media/request/present"
-            val gson = Gson()
-
-            val request = Request.Builder()
-                    .url(url)
-                    .header("x-access-token", token)
-                    .build()
-
-            client.newCall(request)
-                    .enqueue(object : Callback {
-                        override fun onFailure(call: Call, e: IOException) {
-                            e.printStackTrace()
-                        }
-                        override fun onResponse(call: Call, response: Response) {
-                            val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
-                            val id = genericResponse.payload
-                            presentId = id
-
-                            downloadImage("$URL/media/show/$id/$token")
-
-                            getImageIdsInSet(presentId)
-                        }
-                    })
-        }
-
-        /**
-         * Cycle image along cluster
-         * TODO: Call this when device is rolled forward
-         */
-        private fun cycle() {
-            // Return if there are no more images in cluster
-            if(links.isEmpty() || links[0].isBlank()) {
-                return
-            }
-
-            // Increment index with direction
-            linkIdx++
-
-            // If imageIndex rolls over array size then show the present image.
-            if (linkIdx == links.size) {
-                linkIdx = -1
-            }
-
-            val imgId: String = if (linkIdx == -1) {
-                presentId
-            } else {
-                links[linkIdx]
-            }
-
-            // Download image and draw a new watch face
-            downloadImage("$URL/media/show/$imgId/$token")
-        }
-
-//        private fun initializeRotationRecogniser(){
-//            rotationRecogniser = RotationRecogniser(applicationContext)//should be in onCreate of activity
-//            rotationRecogniser!!.start(rotationListener) //should be in onResume of activity
-//        }
-//
-//        private fun distroyRotationRecogniser(){
-//            rotationRecogniser!!.stop() // should be in onPause of activity
-//        }
-//
-//        var rotationRecogniser: RotationRecogniser? = null
-//        val rotationListener = object:RotationRecogniser.Listener{
-//            override fun onOrientationChange(orientation: RotationRecogniser.Orientation) {
-//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//            }
-//
-//            override fun onRotateUp() {
-//                cycle()
-//            }
-//
-//            override fun onRotateDown() {
-//                cycle()
-//            }
-//
-//            override fun onRotateLeft() {
-//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//            }
-//
-//            override fun onRotateRight() {
-//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//            }
-//
-//            override fun onStandby() {
-//                TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//            }
-//
-//
-//        }
     }
 }
 
