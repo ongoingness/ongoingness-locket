@@ -49,7 +49,7 @@ class MainActivity : WearableActivity() {
 
         // Create a background bit map from drawable, and overdraw to 400
         updateBackground(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
-                resources, R.drawable.bg), screenSize, screenSize, true)!!)
+                resources, R.drawable.placeholder), screenSize, screenSize, true)!!)
 
         // Build a OK HTTP client
         client = OkHttpClient.Builder()
