@@ -19,12 +19,13 @@ import okhttp3.*
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.net.NetworkInterface
 import java.util.*
 
 
 class MainActivity : WearableActivity() {
 
-    private val URL = "http://46.101.47.18:3000/api"
+    private val apiUrl = "http://46.101.47.18:3000/api"
     private var token = ""
     private var links: Array<String> = arrayOf("") // Array of linked media to present
     private var presentId: String = "" // Present Id to show.
@@ -89,7 +90,7 @@ class MainActivity : WearableActivity() {
         if (token.isEmpty()) throw Error("Token cannot be empty")
         if(!hasConnection()) return
 
-        val url = "$URL/media/links/$presentId"
+        val url = "$apiUrl/media/links/$presentId"
         val gson = Gson()
 
         Log.d("getImageIdsInSet", "Getting ids in set")
@@ -128,9 +129,9 @@ class MainActivity : WearableActivity() {
      * from the API.
      */
     private fun getToken(client: OkHttpClient?) {
-        val url = "$URL/auth/mac"
+        val url = "$apiUrl/auth/mac"
         val gson = Gson()
-        val mac: String = getMacAddr() // Get mac address
+        val mac: String = getMacAddress() // Get mac address
         val formBody = FormBody.Builder()
                 .add("mac", mac)
                 .build()
@@ -169,7 +170,7 @@ class MainActivity : WearableActivity() {
      * @param client OkHttpClient
      */
     private fun updateSemanticContext(client: OkHttpClient?) {
-        val url = "$URL/media/request/present"
+        val url = "$apiUrl/media/request/present"
         val gson = Gson()
         val request = Request.Builder()
                 .url(url)
@@ -256,7 +257,7 @@ class MainActivity : WearableActivity() {
         if (!hasConnection()) return
 
         for (id in links) {
-            val url = "$URL/media/show/$id/$token"
+            val url = "$apiUrl/media/show/$id/$token"
             val request = Request.Builder().url(url).build()
 
             Log.d("fetchBitmaps", "Fetching bitmap from $url")
@@ -284,7 +285,7 @@ class MainActivity : WearableActivity() {
      * @param client httpClient
      */
     private fun fetchPresentImage(client: OkHttpClient) {
-        val url = "$URL/media/show/$presentId/$token"
+        val url = "$apiUrl/media/show/$presentId/$token"
         val request = Request.Builder().url(url).build()
 
         if (!hasConnection()) return
@@ -396,5 +397,30 @@ class MainActivity : WearableActivity() {
             }
         }
         return directory.absolutePath
+    }
+
+    /**
+     * Get mac address from IPv6 address
+     * @return device mac address
+     */
+    private fun getMacAddress(): String {
+        try {
+            val all: List<NetworkInterface> = Collections.list(NetworkInterface.getNetworkInterfaces())
+            for(nif: NetworkInterface in all) {
+                if (nif.name.toLowerCase() != "wlan0") continue
+
+                val macBytes: ByteArray = nif.hardwareAddress ?: return ""
+
+                val res1 = StringBuilder()
+                for (b: Byte in macBytes) {
+                    res1.append(String.format("%02X", b))
+                }
+
+                return res1.toString()
+            }
+        } catch (ex: Exception) {
+            println(ex.stackTrace)
+        }
+        return ""
     }
 }
