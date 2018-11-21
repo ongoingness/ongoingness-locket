@@ -378,12 +378,10 @@ class MainActivity : WearableActivity() {
      */
     private fun storeBitmap(bitmap: Bitmap): String {
         val cw = ContextWrapper(applicationContext)
-        // path to /data/data/yourapp/app_data/imageDir
         val directory: File = cw.getDir("imageDir", Context.MODE_PRIVATE)
-        // Create imageDir
         val path = File(directory,"last-image.png")
-
         var fos: FileOutputStream? = null
+
         try {
             fos = FileOutputStream(path)
             // Use the compress method on the BitMap object to write image to the OutputStream
