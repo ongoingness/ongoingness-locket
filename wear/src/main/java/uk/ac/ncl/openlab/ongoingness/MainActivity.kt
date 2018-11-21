@@ -11,11 +11,11 @@ import android.support.wear.widget.BoxInsetLayout
 import android.support.wearable.activity.WearableActivity
 import android.util.Log
 import android.view.WindowManager
+import android.widget.Toast
 import com.google.gson.Gson
 import okhttp3.*
 import java.io.IOException
 import java.util.*
-
 
 class MainActivity : WearableActivity() {
 
@@ -51,19 +51,7 @@ class MainActivity : WearableActivity() {
 
         Log.d("OnCreate", "Getting a connection")
 
-        // Check a network is available
-        val mConnectivityManager: ConnectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetwork: Network? = mConnectivityManager.activeNetwork
-
-        if (activeNetwork == null) {
-            val bandwidth = mConnectivityManager.getNetworkCapabilities(activeNetwork).linkDownstreamBandwidthKbps
-            if (bandwidth < minBandwidthKbps) {
-                // Request a high-bandwidth network
-                Log.d("OnCreate", "Request high-bandwidth network")
-            }
-        } else {
-            // You already are on a high-bandwidth network, so start your network request
-            Log.d("OnCreate", "Got a network")
+        if (hasConnection()) {
             getToken(client)
         }
 
@@ -89,8 +77,9 @@ class MainActivity : WearableActivity() {
      * @param presentId Id of item of media to collect linked images from.
      * @param client client to make http requests.
      */
-    private fun getImageIdsInSet (presentId: String, client: OkHttpClient) {
+    private fun getImageIdsInSet(presentId: String, client: OkHttpClient) {
         if (token.isEmpty()) throw Error("Token cannot be empty")
+        if(!hasConnection()) return
 
         val url = "$URL/media/links/$presentId"
         val gson = Gson()
@@ -108,6 +97,7 @@ class MainActivity : WearableActivity() {
                         Log.e("getImageIdsInSet", "Error in request")
                         e.printStackTrace()
                     }
+
                     override fun onResponse(call: Call, response: Response) {
                         val linkResponse: LinkResponse = gson.fromJson(response.body()?.string(), LinkResponse::class.java)
                         val rawLinks = linkResponse.payload
@@ -129,13 +119,10 @@ class MainActivity : WearableActivity() {
      * @param client OkHttpClient requires http client to authenticate the device and fetch a token
      * from the API.
      */
-    private fun getToken (client: OkHttpClient?) {
+    private fun getToken(client: OkHttpClient?) {
         val url = "$URL/auth/mac"
         val gson = Gson()
-
-        // Get mac address
-        val mac: String = getMacAddr()
-
+        val mac: String = getMacAddr() // Get mac address
         val formBody = FormBody.Builder()
                 .add("mac", mac)
                 .build()
@@ -144,10 +131,13 @@ class MainActivity : WearableActivity() {
                 .post(formBody)
                 .build()
 
+        if (!hasConnection()) return
+
         client!!.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 e.printStackTrace()
             }
+
             override fun onResponse(call: Call, response: Response) {
                 val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
 
@@ -173,19 +163,21 @@ class MainActivity : WearableActivity() {
     private fun updateSemanticContext(client: OkHttpClient?) {
         val url = "$URL/media/request/present"
         val gson = Gson()
-
-        Log.d("updateSemanticContext", "Updating semantic context")
-
         val request = Request.Builder()
                 .url(url)
                 .header("x-access-token", token)
                 .build()
+
+        Log.d("updateSemanticContext", "Updating semantic context")
+
+        if (!hasConnection()) return
 
         client?.newCall(request)
                 ?.enqueue(object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
                         e.printStackTrace()
                     }
+
                     override fun onResponse(call: Call, response: Response) {
                         val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
                         val id = genericResponse.payload
@@ -206,8 +198,13 @@ class MainActivity : WearableActivity() {
     private fun updateBackground(bitmap: Bitmap) {
         runOnUiThread {
             // Stuff that updates the UI
-            val background = findViewById<BoxInsetLayout>(R.id.background)
-            background.background = BitmapDrawable(resources, bitmap)
+            try {
+                val background = findViewById<BoxInsetLayout>(R.id.background)
+                background.background = BitmapDrawable(resources, bitmap)
+            } catch (e: java.lang.Error) {
+                e.printStackTrace()
+            }
+
         }
     }
 
@@ -216,13 +213,13 @@ class MainActivity : WearableActivity() {
      */
     private fun cycle(direction: Int) {
         // Return if there are no more images in cluster
-        if(mediaList.isEmpty()) {
+        if (mediaList.isEmpty()) {
             return
         }
 
         linkIdx += direction
 
-        when(direction) {
+        when (direction) {
             -1 -> {
                 if (linkIdx < 0) {
                     updateBackground(presentImage!!)
@@ -246,6 +243,8 @@ class MainActivity : WearableActivity() {
      * Fetch images of of the past and add to an array list.
      */
     private fun fetchBitmaps(client: OkHttpClient?) {
+        if (!hasConnection()) return
+
         for (id in links) {
             val url = "$URL/media/show/$id/$token"
             val request = Request.Builder().url(url).build()
@@ -278,6 +277,8 @@ class MainActivity : WearableActivity() {
         val url = "$URL/media/show/$presentId/$token"
         val request = Request.Builder().url(url).build()
 
+        if (!hasConnection()) return
+
         Log.d("fetchPresentImage", "Fetching image from $url")
 
         client.newCall(request).enqueue(object : Callback {
@@ -287,9 +288,13 @@ class MainActivity : WearableActivity() {
 
             override fun onResponse(call: Call?, response: Response) {
                 try {
+                    // Create an input stream from the image.
                     val inputStream = response.body()?.byteStream()
+
+                    // Scale it to match device size.
                     presentImage = Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), screenSize, screenSize, false)
 
+                    // Update background to downloaded image.
                     updateBackground(presentImage!!)
                 } catch (error: Error) {
                     error.printStackTrace()
@@ -298,8 +303,8 @@ class MainActivity : WearableActivity() {
         })
     }
 
-    var rotationRecogniser: RotationRecogniser? = null
-    val rotationListener = object:RotationRecogniser.Listener{
+    private var rotationRecogniser: RotationRecogniser? = null
+    private val rotationListener = object : RotationRecogniser.Listener {
 
         override fun onRotateUp() {
             cycle(1)
@@ -318,8 +323,31 @@ class MainActivity : WearableActivity() {
         }
 
         override fun onStandby() {
-            Log.d("WATCH","standby")
+            Log.d("WATCH", "standby")
             finish()
+        }
+    }
+
+    /**
+     * Checkt that the activity has an active network connection.
+     */
+    private fun hasConnection(): Boolean {
+        // Check a network is available
+        val mConnectivityManager: ConnectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetwork: Network? = mConnectivityManager.activeNetwork
+
+        if (activeNetwork != null) {
+            val bandwidth = mConnectivityManager.getNetworkCapabilities(activeNetwork).linkDownstreamBandwidthKbps
+            if (bandwidth < minBandwidthKbps) {
+                // Request a high-bandwidth network
+                Log.d("OnCreate", "Request high-bandwidth network")
+                Toast.makeText(this, "poor network", Toast.LENGTH_SHORT).show()
+                return false
+            }
+            return true
+        } else {
+            Toast.makeText(this, "No network", Toast.LENGTH_SHORT).show()
+            return false
         }
     }
 }
