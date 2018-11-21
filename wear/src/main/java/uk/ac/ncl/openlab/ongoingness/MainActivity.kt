@@ -75,6 +75,7 @@ class MainActivity : WearableActivity() {
     override fun onPause() {
         super.onPause()
         rotationRecogniser?.stop()
+
     }
 
     /**

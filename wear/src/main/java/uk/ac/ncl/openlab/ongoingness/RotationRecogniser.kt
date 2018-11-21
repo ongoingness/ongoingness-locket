@@ -57,7 +57,7 @@ open class RotationRecogniser(val context: Context) {
     var timeoutRunnable: Runnable? = null
 
 
-    private var timeoutDuration = 1000L * 60 * 1 //one minute timeout
+    private var timeoutDuration = 1000L * 30 * 1 //one minute timeout
     private var movementThreshold = 0.5
     private val timeoutInterval = 5000L
 
@@ -66,27 +66,29 @@ open class RotationRecogniser(val context: Context) {
         timeoutRunnable = Runnable {
 
             if((System.currentTimeMillis() - lastChanged) >= timeoutDuration){
-
-                if(circularArray.size > 10){
-                    var mag = 0.0f
-                    for (i in 1 until circularArray.size){
-                        val x = Math.abs(circularArray[i].values[0]- circularArray[i-1].values[0])
-                        val y = Math.abs(circularArray[i].values[1]- circularArray[i-1].values[0])
-                        val z = Math.abs(circularArray[i].values[2]- circularArray[i-1].values[0])
-                        mag+= x+y+z
-                    }
-                    val movement = mag/circularArray.size
-                    Log.d(TAG,"movement $movement")
-                    if(movement >= movementThreshold){
-                        circularArray.reset()
-                        lastChanged = System.currentTimeMillis()
-                        timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval) //check again in 5seconds
-                    }else{
+                    Log.d(TAG,"onstanby")
                         listener?.onStandby()
-                    }
-                }else{
-                    listener?.onStandby()
-                }
+
+//                try {
+//                    var mag = 0.0f
+//                    for (i in 1 until circularArray.size) {
+//                        val x = Math.abs(circularArray[i].values[0] - circularArray[i - 1].values[0])
+//                        val y = Math.abs(circularArray[i].values[1] - circularArray[i - 1].values[0])
+//                        val z = Math.abs(circularArray[i].values[2] - circularArray[i - 1].values[0])
+//                        mag += x + y + z
+//                    }
+//                    val movement = mag / circularArray.size
+//                    Log.d(TAG, "movement $movement")
+//                    if (movement >= movementThreshold) {
+//                        circularArray.reset()
+//                        timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval) //check again in 5seconds
+//                    } else {
+//                        listener?.onStandby()
+//                    }
+//                }catch(e:Exception){
+//                    Log.e(TAG,e.message)
+//                }
+
 
             }else {
                 timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval) //check again in 5seconds
@@ -123,6 +125,7 @@ open class RotationRecogniser(val context: Context) {
 
         disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GAME_ROTATION_VECTOR, SensorManager.SENSOR_DELAY_NORMAL)
                 .subscribeOn(Schedulers.computation())
+                .distinctUntilChanged(RxSensorFilter.uniqueEventValues())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { rxSensorEvent -> checkMotion(rxSensorEvent) })
 
@@ -191,7 +194,6 @@ open class RotationRecogniser(val context: Context) {
     private var circularArray = CircularArray<RxSensorEvent>(30)
     private fun checkMotion(event: RxSensorEvent) {
         circularArray.add(event)
-        Log.d(TAG,"new movement")
     }
 
 
