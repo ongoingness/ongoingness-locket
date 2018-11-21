@@ -221,17 +221,20 @@ class MainActivity : WearableActivity() {
             return
         }
 
-        // Increment index with direction
-        linkIdx++
-
-        // If imageIndex rolls over array size then show the present image.
-        if (linkIdx == mediaList.size) {
-            linkIdx = -1
-            updateBackground(presentImage!!)
-            return
+        when(linkIdx) {
+            -1 -> {
+                updateBackground(presentImage!!)
+                linkIdx++
+            }
+            mediaList.size -> {
+                updateBackground(presentImage!!)
+                linkIdx = 0
+            }
+            else -> {
+                updateBackground(mediaList[linkIdx])
+                linkIdx++
+            }
         }
-
-        updateBackground(mediaList[linkIdx])
     }
 
     /**
