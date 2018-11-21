@@ -28,6 +28,8 @@ class MainActivity : WearableActivity() {
     private var client: OkHttpClient? = null
     private val SCREEN_SIZE: Int = 400
     val minBandwidthKbps: Int = 320
+    private var mediaList = ArrayList<Bitmap>()
+    private var presentImage: Bitmap? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,34 +85,6 @@ class MainActivity : WearableActivity() {
     }
 
     /**
-     * Download an image from a URL.
-     * Draw a bitmap, then update the background.
-     *
-     * @param url url to fetch image from
-     * @param client to make the request.
-     */
-    private fun downloadImage (url: String, client: OkHttpClient?) {
-        val request = Request.Builder().url(url).build()
-
-        client?.newCall(request)?.enqueue(object : Callback {
-            override fun onFailure(call: Call?, e: IOException?) {
-                e?.printStackTrace()
-            }
-
-            override fun onResponse(call: Call?, response: Response) {
-                try {
-                    val inputStream = response.body()?.byteStream()
-                    val bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), SCREEN_SIZE, SCREEN_SIZE, false)
-
-                    updateBackground(bitmap)
-                } catch (error: Error) {
-                    error.printStackTrace()
-                }
-            }
-        })
-    }
-
-    /**
      * Get linked images for the presently shown image.
      * Store links in an array
      *
@@ -140,6 +114,12 @@ class MainActivity : WearableActivity() {
                         val linkResponse: LinkResponse = gson.fromJson(response.body()?.string(), LinkResponse::class.java)
                         val rawLinks = linkResponse.payload
                         links = rawLinks
+
+                        // Clear array of image bitmaps.
+                        mediaList.clear()
+
+                        // Pre fetch images
+                        fetchBitmaps(client)
                     }
                 })
     }
@@ -202,8 +182,8 @@ class MainActivity : WearableActivity() {
                 .header("x-access-token", token)
                 .build()
 
-        client!!.newCall(request)
-                .enqueue(object : Callback {
+        client?.newCall(request)
+                ?.enqueue(object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
                         e.printStackTrace()
                     }
@@ -213,7 +193,7 @@ class MainActivity : WearableActivity() {
                         presentId = id
 
                         getImageIdsInSet(presentId, client)
-                        downloadImage("$URL/media/show/$presentId/$token", client)
+                        fetchPresentImage(client)
                     }
                 })
     }
@@ -234,13 +214,10 @@ class MainActivity : WearableActivity() {
 
     /**
      * Cycle to next image in the semantic set.
-     * Requires a client to download the next image.
-     *
-     * @param client OkHttpClient
      */
-    private fun cycle(client: OkHttpClient?) {
+    private fun cycle() {
         // Return if there are no more images in cluster
-        if(links.isEmpty() || links[0].isBlank()) {
+        if(mediaList.isEmpty()) {
             return
         }
 
@@ -248,18 +225,69 @@ class MainActivity : WearableActivity() {
         linkIdx++
 
         // If imageIndex rolls over array size then show the present image.
-        if (linkIdx == links.size) {
+        if (linkIdx == mediaList.size) {
             linkIdx = -1
+            updateBackground(presentImage!!)
+            return
         }
 
-        val imgId: String = if (linkIdx == -1) {
-            presentId
-        } else {
-            links[linkIdx]
-        }
+        updateBackground(mediaList[linkIdx])
+    }
 
-        // Download image and draw a new watch face
-        downloadImage("$URL/media/show/$imgId/$token", client)
+    /**
+     * Fetch images of of the past and add to an array list.
+     */
+    private fun fetchBitmaps(client: OkHttpClient?) {
+        for ((index, id) in links.withIndex()) {
+            val url = "$URL/media/show/$id/$token"
+            val request = Request.Builder().url(url).build()
+
+            Log.d("fetchBitmaps", "Fetching bitmap from $url")
+
+            client?.newCall(request)?.enqueue(object : Callback {
+                override fun onFailure(call: Call?, e: IOException?) {
+                    e?.printStackTrace()
+                }
+
+                override fun onResponse(call: Call?, response: Response) {
+                    try {
+                        val inputStream = response.body()?.byteStream()
+                        mediaList.add(Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), SCREEN_SIZE, SCREEN_SIZE, false))
+                    } catch (error: Error) {
+                        error.printStackTrace()
+                    }
+                }
+            })
+        }
+    }
+
+    /**
+     * Fetch and set the present image.
+     *
+     * @param client httpClient
+     */
+    private fun fetchPresentImage(client: OkHttpClient) {
+        val url = "$URL/media/show/$presentId/$token"
+        val request = Request.Builder().url(url).build()
+
+        Log.d("fetchPresentImage", "Fetching image from $url")
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call?, e: IOException?) {
+                e?.printStackTrace()
+            }
+
+            override fun onResponse(call: Call?, response: Response) {
+                try {
+                    val inputStream = response.body()?.byteStream()
+                    presentImage = Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), SCREEN_SIZE, SCREEN_SIZE, false)
+
+                    updateBackground(presentImage!!)
+                } catch (error: Error) {
+                    error.printStackTrace()
+                }
+            }
+        })
     }
 
     var rotationRecogniser: RotationRecogniser? = null
@@ -268,11 +296,11 @@ class MainActivity : WearableActivity() {
         }
 
         override fun onRotateUp() {
-            cycle(client)
+            cycle()
         }
 
         override fun onRotateDown() {
-            cycle(client)
+            cycle()
         }
 
         override fun onRotateLeft() {
