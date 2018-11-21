@@ -36,6 +36,14 @@ class MainActivity : WearableActivity() {
     private var mediaList = ArrayList<Bitmap>()
     private var presentImage: Bitmap? = null
 
+    /**
+     * Directions for cycling along images in semantic set.
+     */
+    enum class Direction {
+        FORWARD,
+        BACKWARDS
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -221,17 +229,18 @@ class MainActivity : WearableActivity() {
 
     /**
      * Cycle to next image in the semantic set.
+     *
+     * @param direction Which direction to increment the images by.
      */
-    private fun cycle(direction: Int) {
+    private fun cycle(direction: Direction) {
         // Return if there are no more images in cluster
         if (mediaList.isEmpty()) {
             return
         }
 
-        linkIdx += direction
-
         when (direction) {
-            -1 -> {
+            Direction.BACKWARDS -> {
+                linkIdx += -1
                 if (linkIdx < 0) {
                     updateBackground(presentImage!!)
                     linkIdx = -1
@@ -239,7 +248,8 @@ class MainActivity : WearableActivity() {
                     updateBackground(mediaList[linkIdx])
                 }
             }
-            1 -> {
+            Direction.FORWARD -> {
+                linkIdx += 1
                 if (linkIdx == mediaList.size) {
                     linkIdx = mediaList.size - 1
                     updateBackground(mediaList[linkIdx])
@@ -318,11 +328,11 @@ class MainActivity : WearableActivity() {
     private val rotationListener = object : RotationRecogniser.Listener {
 
         override fun onRotateUp() {
-            cycle(1)
+            cycle(Direction.FORWARD)
         }
 
         override fun onRotateDown() {
-            cycle(-1)
+            cycle(Direction.BACKWARDS)
         }
 
         override fun onRotateLeft() {
