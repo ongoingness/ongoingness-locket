@@ -215,24 +215,30 @@ class MainActivity : WearableActivity() {
     /**
      * Cycle to next image in the semantic set.
      */
-    private fun cycle() {
+    private fun cycle(direction: Int) {
         // Return if there are no more images in cluster
         if(mediaList.isEmpty()) {
             return
         }
 
-        when(linkIdx) {
+        linkIdx += direction
+
+        when(direction) {
             -1 -> {
-                updateBackground(presentImage!!)
-                linkIdx++
+                if (linkIdx < 0) {
+                    updateBackground(presentImage!!)
+                    linkIdx = -1
+                } else {
+                    updateBackground(mediaList[linkIdx])
+                }
             }
-            mediaList.size -> {
-                updateBackground(presentImage!!)
-                linkIdx = 0
-            }
-            else -> {
-                updateBackground(mediaList[linkIdx])
-                linkIdx++
+            1 -> {
+                if (linkIdx == mediaList.size) {
+                    linkIdx = mediaList.size - 1
+                    updateBackground(mediaList[linkIdx])
+                } else {
+                    updateBackground(mediaList[linkIdx])
+                }
             }
         }
     }
@@ -299,11 +305,11 @@ class MainActivity : WearableActivity() {
         }
 
         override fun onRotateUp() {
-            cycle()
+            cycle(1)
         }
 
         override fun onRotateDown() {
-            cycle()
+            cycle(-1)
         }
 
         override fun onRotateLeft() {
