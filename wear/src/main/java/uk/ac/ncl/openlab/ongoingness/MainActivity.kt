@@ -3,7 +3,6 @@ package uk.ac.ncl.openlab.ongoingness
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
 import android.net.ConnectivityManager
 import android.net.Network
@@ -11,7 +10,6 @@ import android.os.Bundle
 import android.support.wear.widget.BoxInsetLayout
 import android.support.wearable.activity.WearableActivity
 import android.util.Log
-import android.view.Display
 import android.view.WindowManager
 import com.google.gson.Gson
 import okhttp3.*
