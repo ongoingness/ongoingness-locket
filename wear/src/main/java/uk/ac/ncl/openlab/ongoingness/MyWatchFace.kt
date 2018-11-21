@@ -360,9 +360,10 @@ class MyWatchFace : CanvasWatchFaceService() {
                 }
                 WatchFaceService.TAP_TYPE_TAP -> {
                     // The user has completed the tap gesture.
-                    /**
-                     * Request a network when waking tapping
-                     */
+
+                    val intent = Intent(applicationContext, MainActivity::class.java)
+                    startActivity(intent)
+
 //                    System.out.println("Getting connection")
 
 //                    val minBandwidthKbps = 320

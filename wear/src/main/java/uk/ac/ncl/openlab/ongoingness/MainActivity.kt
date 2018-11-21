@@ -11,7 +11,6 @@ import android.support.wear.widget.BoxInsetLayout
 import android.support.wearable.activity.WearableActivity
 import android.util.Log
 import android.view.WindowManager
-import android.widget.Toast
 import com.google.gson.Gson
 import okhttp3.*
 import java.io.IOException
@@ -27,6 +26,8 @@ class MainActivity : WearableActivity() {
     private var presentId: String = "" // Present Id to show.
     private var linkIdx: Int = -1
     private var client: OkHttpClient? = null
+    private val SCREEN_SIZE: Int = 400
+    val minBandwidthKbps: Int = 320
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,19 +39,19 @@ class MainActivity : WearableActivity() {
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        // Create a background bit map from drawable, and overdraw to 400
         mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
-                resources, R.drawable.bg), 400, 400, true)
+            resources, R.drawable.bg), SCREEN_SIZE, SCREEN_SIZE, true)
         updateBackground(mBackgroundBitmap!!)
 
+        // Build a OK HTTP client
         client = OkHttpClient.Builder()
                 .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.CLEARTEXT))
                 .build()
 
-        Toast.makeText(this, "in activity", Toast.LENGTH_SHORT).show()
+        Log.d("OnCreate", "Getting a connection")
 
-        System.out.println("Getting connection")
-
-        val minBandwidthKbps = 320
+        // Check a network is available
         val mConnectivityManager: ConnectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val activeNetwork: Network? = mConnectivityManager.activeNetwork
 
@@ -58,23 +59,24 @@ class MainActivity : WearableActivity() {
             val bandwidth = mConnectivityManager.getNetworkCapabilities(activeNetwork).linkDownstreamBandwidthKbps
             if (bandwidth < minBandwidthKbps) {
                 // Request a high-bandwidth network
-                System.out.println("Request high-bandwidth network")
+                Log.d("OnCreate", "Request high-bandwidth network")
             }
         } else {
             // You already are on a high-bandwidth network, so start your network request
-            System.out.println("Got network")
+            Log.d("OnCreate", "Got a network")
             getToken(client)
         }
 
         rotationRecogniser = RotationRecogniser(this)
     }
 
-
+    // Restart the activity recogniser
     override fun onResume() {
         super.onResume()
         rotationRecogniser?.start(rotationListener)
     }
 
+    // Pause the activity recogniser
     override fun onPause() {
         super.onPause()
         rotationRecogniser?.stop()
@@ -82,6 +84,10 @@ class MainActivity : WearableActivity() {
 
     /**
      * Download an image from a URL.
+     * Draw a bitmap, then update the background.
+     *
+     * @param url url to fetch image from
+     * @param client to make the request.
      */
     private fun downloadImage (url: String, client: OkHttpClient?) {
         val request = Request.Builder().url(url).build()
@@ -94,7 +100,7 @@ class MainActivity : WearableActivity() {
             override fun onResponse(call: Call?, response: Response) {
                 try {
                     val inputStream = response.body()?.byteStream()
-                    val bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), 400, 400, false)
+                    val bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), SCREEN_SIZE, SCREEN_SIZE, false)
 
                     updateBackground(bitmap)
                 } catch (error: Error) {
@@ -106,12 +112,18 @@ class MainActivity : WearableActivity() {
 
     /**
      * Get linked images for the presently shown image.
+     * Store links in an array
+     *
+     * @param presentId Id of item of media to collect linked images from.
+     * @param client client to make http requests.
      */
     private fun getImageIdsInSet (presentId: String, client: OkHttpClient) {
         if (token.isEmpty()) throw Error("Token cannot be empty")
 
         val url = "$URL/media/links/$presentId"
         val gson = Gson()
+
+        Log.d("getImageIdsInSet", "Getting ids in set")
 
         val request = Request.Builder()
                 .url(url)
@@ -121,7 +133,7 @@ class MainActivity : WearableActivity() {
         client.newCall(request)
                 .enqueue(object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
-                        System.out.println("error in request")
+                        Log.e("getImageIdsInSet", "Error in request")
                         e.printStackTrace()
                     }
                     override fun onResponse(call: Call, response: Response) {
@@ -134,14 +146,15 @@ class MainActivity : WearableActivity() {
 
     /**
      * Get a token using mac address
-     * TODO: Call this when watch face is initialised
-     * TODO: Regenerate token on 401
+     *
+     * @param client OkHttpClient requires http client to authenticate the device and fetch a token
+     * from the API.
      */
     private fun getToken (client: OkHttpClient?) {
         val url = "$URL/auth/mac"
         val gson = Gson()
 
-        println("Getting MAC address")
+        // Get mac address
         val mac: String = getMacAddr()
 
         val formBody = FormBody.Builder()
@@ -152,30 +165,45 @@ class MainActivity : WearableActivity() {
                 .post(formBody)
                 .build()
 
-        client?.newCall(request)?.enqueue(object : Callback {
+        client!!.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                System.out.println("error in request")
                 e.printStackTrace()
             }
             override fun onResponse(call: Call, response: Response) {
                 val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
+
+                // Set token
                 token = genericResponse.payload
+
+                // Update the semantic context, force background to be an image of the present on boot.
                 updateSemanticContext(client)
             }
         })
     }
 
+    /**
+     * Get an id of an image from the present,
+     * get links of new item of media
+     * draw the image of the present on the background.
+     *
+     * Requires a client to get the next present image id from api, get new images, and download
+     * the next image to show.
+     *
+     * @param client OkHttpClient
+     */
     private fun updateSemanticContext(client: OkHttpClient?) {
         val url = "$URL/media/request/present"
         val gson = Gson()
+
+        Log.d("updateSemanticContext", "Updating semantic context")
 
         val request = Request.Builder()
                 .url(url)
                 .header("x-access-token", token)
                 .build()
 
-        client?.newCall(request)
-                ?.enqueue(object : Callback {
+        client!!.newCall(request)
+                .enqueue(object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
                         e.printStackTrace()
                     }
@@ -185,16 +213,31 @@ class MainActivity : WearableActivity() {
                         presentId = id
 
                         getImageIdsInSet(presentId, client)
+                        downloadImage("$URL/media/show/$presentId/$token", client)
                     }
                 })
     }
 
+    /**
+     * Update the background of the watch face.
+     *
+     * @param bitmap The bitmap to set the background to.
+     * @return Unit
+     */
     private fun updateBackground(bitmap: Bitmap) {
-        val background = findViewById<BoxInsetLayout>(R.id.background)
-        background.background = BitmapDrawable(resources, bitmap)
-//        background.setImageBitmap(bitmap)
+        runOnUiThread {
+            // Stuff that updates the UI
+            val background = findViewById<BoxInsetLayout>(R.id.background)
+            background.background = BitmapDrawable(resources, bitmap)
+        }
     }
 
+    /**
+     * Cycle to next image in the semantic set.
+     * Requires a client to download the next image.
+     *
+     * @param client OkHttpClient
+     */
     private fun cycle(client: OkHttpClient?) {
         // Return if there are no more images in cluster
         if(links.isEmpty() || links[0].isBlank()) {
@@ -222,7 +265,6 @@ class MainActivity : WearableActivity() {
     var rotationRecogniser: RotationRecogniser? = null
     val rotationListener = object:RotationRecogniser.Listener{
         override fun onOrientationChange(orientation: RotationRecogniser.Orientation) {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
         override fun onRotateUp() {
