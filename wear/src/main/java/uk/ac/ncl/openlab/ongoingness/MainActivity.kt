@@ -3,6 +3,7 @@ package uk.ac.ncl.openlab.ongoingness
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
 import android.net.ConnectivityManager
 import android.net.Network
@@ -10,6 +11,7 @@ import android.os.Bundle
 import android.support.wear.widget.BoxInsetLayout
 import android.support.wearable.activity.WearableActivity
 import android.util.Log
+import android.view.Display
 import android.view.WindowManager
 import com.google.gson.Gson
 import okhttp3.*
@@ -19,15 +21,14 @@ import java.util.*
 
 class MainActivity : WearableActivity() {
 
-    var mBackgroundBitmap: Bitmap? = null
     private val URL = "http://46.101.47.18:3000/api"
     private var token = ""
     private var links: Array<String> = arrayOf("") // Array of linked media to present
     private var presentId: String = "" // Present Id to show.
     private var linkIdx: Int = -1
     private var client: OkHttpClient? = null
-    private val SCREEN_SIZE: Int = 400
-    val minBandwidthKbps: Int = 320
+    private var screenSize: Int = 400
+    private val minBandwidthKbps: Int = 320
     private var mediaList = ArrayList<Bitmap>()
     private var presentImage: Bitmap? = null
 
@@ -42,9 +43,8 @@ class MainActivity : WearableActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // Create a background bit map from drawable, and overdraw to 400
-        mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
-            resources, R.drawable.bg), SCREEN_SIZE, SCREEN_SIZE, true)
-        updateBackground(mBackgroundBitmap!!)
+        updateBackground(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
+                resources, R.drawable.bg), screenSize, screenSize, true)!!)
 
         // Build a OK HTTP client
         client = OkHttpClient.Builder()
@@ -117,6 +117,7 @@ class MainActivity : WearableActivity() {
 
                         // Clear array of image bitmaps.
                         mediaList.clear()
+                        linkIdx = -1
 
                         // Pre fetch images
                         fetchBitmaps(client)
@@ -247,7 +248,7 @@ class MainActivity : WearableActivity() {
      * Fetch images of of the past and add to an array list.
      */
     private fun fetchBitmaps(client: OkHttpClient?) {
-        for ((index, id) in links.withIndex()) {
+        for (id in links) {
             val url = "$URL/media/show/$id/$token"
             val request = Request.Builder().url(url).build()
 
@@ -261,7 +262,7 @@ class MainActivity : WearableActivity() {
                 override fun onResponse(call: Call?, response: Response) {
                     try {
                         val inputStream = response.body()?.byteStream()
-                        mediaList.add(Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), SCREEN_SIZE, SCREEN_SIZE, false))
+                        mediaList.add(Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), screenSize, screenSize, false))
                     } catch (error: Error) {
                         error.printStackTrace()
                     }
@@ -289,7 +290,7 @@ class MainActivity : WearableActivity() {
             override fun onResponse(call: Call?, response: Response) {
                 try {
                     val inputStream = response.body()?.byteStream()
-                    presentImage = Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), SCREEN_SIZE, SCREEN_SIZE, false)
+                    presentImage = Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), screenSize, screenSize, false)
 
                     updateBackground(presentImage!!)
                 } catch (error: Error) {
