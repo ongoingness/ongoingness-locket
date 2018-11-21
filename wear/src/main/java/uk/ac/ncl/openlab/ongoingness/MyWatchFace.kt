@@ -9,13 +9,12 @@ import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
 import android.view.SurfaceHolder
-import java.lang.ref.WeakReference
-import java.util.*
-import android.graphics.BitmapFactory
-import android.graphics.Bitmap
+import android.widget.Toast
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileNotFoundException
+import java.lang.ref.WeakReference
+import java.util.*
 
 
 /**
@@ -30,11 +29,6 @@ private const val INTERACTIVE_UPDATE_RATE_MS = 1000
 private const val MSG_UPDATE_TIME = 0
 
 /**
- * Analog watch face with a ticking second hand. In ambient mode, the second hand isn't
- * shown. On devices with low-bit ambient mode, the hands are drawn without anti-aliasing in ambient
- * mode. The watch face is drawn with less contrast in mute mode.
- *
- *
  * Important Note: Because watch face apps do not have a default Activity in
  * their project, you will need to set your Configurations to
  * "Do not launch Activity" for both the Wear and/or Application modules. If you
@@ -165,7 +159,6 @@ class MyWatchFace : CanvasWatchFaceService() {
             }
             invalidate()
         }
-
 
         override fun onDraw(canvas: Canvas, bounds: Rect) {
             val now = System.currentTimeMillis()

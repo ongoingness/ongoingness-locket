@@ -209,6 +209,8 @@ class MainActivity : WearableActivity() {
             try {
                 val background = findViewById<BoxInsetLayout>(R.id.background)
                 background.background = BitmapDrawable(resources, bitmap)
+
+                storeBitmap(bitmap)
             } catch (e: java.lang.Error) {
                 e.printStackTrace()
             }
