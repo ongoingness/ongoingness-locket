@@ -1,8 +1,10 @@
 package uk.ac.ncl.openlab.ongoingness
 
 import android.content.Context
+import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
 import android.net.ConnectivityManager
 import android.net.Network
@@ -14,8 +16,11 @@ import android.view.WindowManager
 import android.widget.Toast
 import com.google.gson.Gson
 import okhttp3.*
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.util.*
+
 
 class MainActivity : WearableActivity() {
 
@@ -36,6 +41,8 @@ class MainActivity : WearableActivity() {
 
         // Enables Always-on
         setAmbientEnabled()
+
+        screenSize = getScreenSize()
 
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -329,7 +336,7 @@ class MainActivity : WearableActivity() {
     }
 
     /**
-     * Checkt that the activity has an active network connection.
+     * Check that the activity has an active network connection.
      */
     private fun hasConnection(): Boolean {
         // Check a network is available
@@ -349,5 +356,44 @@ class MainActivity : WearableActivity() {
             Toast.makeText(this, "No network", Toast.LENGTH_SHORT).show()
             return false
         }
+    }
+
+    /**
+     * Get the screen size of a device.
+     */
+    private fun getScreenSize(): Int {
+        val scaleFactor = 1.1
+        val display = windowManager.defaultDisplay
+        val size = Point()
+        display.getSize(size)
+        return (size.x * scaleFactor).toInt()
+    }
+
+    /**
+     * Store a bitmap to file
+     * @param bitmap Bitmap to store.
+     */
+    private fun storeBitmap(bitmap: Bitmap): String {
+        val cw = ContextWrapper(applicationContext)
+        // path to /data/data/yourapp/app_data/imageDir
+        val directory: File = cw.getDir("imageDir", Context.MODE_PRIVATE)
+        // Create imageDir
+        val path = File(directory,"last-image.png")
+
+        var fos: FileOutputStream? = null
+        try {
+            fos = FileOutputStream(path)
+            // Use the compress method on the BitMap object to write image to the OutputStream
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            try {
+                fos?.close()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+        return directory.absolutePath
     }
 }
