@@ -302,8 +302,6 @@ class MainActivity : WearableActivity() {
 
     var rotationRecogniser: RotationRecogniser? = null
     val rotationListener = object:RotationRecogniser.Listener{
-        override fun onOrientationChange(orientation: RotationRecogniser.Orientation) {
-        }
 
         override fun onRotateUp() {
             cycle(1)
@@ -322,6 +320,7 @@ class MainActivity : WearableActivity() {
         }
 
         override fun onStandby() {
+            Log.d("WATCH","standby")
             finish()
         }
     }
