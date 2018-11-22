@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
+import android.util.Log
 import android.view.SurfaceHolder
 import java.io.File
 import java.io.FileInputStream
@@ -70,6 +71,7 @@ class MyWatchFace : CanvasWatchFaceService() {
             this.mAmbient = inAmbientMode
 
             if (!inAmbientMode) {
+                Log.d("WatchFace", "leaving ambient mode")
                 launchActivity()
             }
         }
@@ -143,7 +145,6 @@ class MyWatchFace : CanvasWatchFaceService() {
                 invalidate()
             }
         }
-
 
         /**
          * Get the stored bitmap from file.
