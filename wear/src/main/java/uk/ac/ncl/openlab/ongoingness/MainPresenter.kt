@@ -4,15 +4,11 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.net.ConnectivityManager
-import android.net.Network
 import android.util.Log
 import com.google.gson.Gson
 import okhttp3.*
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
-import java.net.NetworkInterface
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -22,7 +18,6 @@ class MainPresenter {
     private var index = -1
     private val imageList: ArrayList<Bitmap>? = ArrayList()
     private var presentImage: Bitmap? = null
-    private val minBandwidthKbps: Int = 320
     private var token: String? = null
     private val client: OkHttpClient = OkHttpClient.Builder()
             .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.CLEARTEXT))
@@ -91,7 +86,10 @@ class MainPresenter {
         }
 
         view?.updateBackground(bitmapToDraw!!)
-        storeBitmap(bitmapToDraw!!)
+
+        val cw = ContextWrapper(context)
+        val directory: File = cw.getDir("imageDir", Context.MODE_PRIVATE)
+        storeBitmap(bitmapToDraw!!, directory)
     }
 
     /**
@@ -103,15 +101,15 @@ class MainPresenter {
      * the next image to show.
      */
     fun updateSemanticContext() {
+        if (token == null) throw Error("Token cannot be empty")
+        if (!hasConnection(context)) return
+
         val url = "$apiUrl/media/request/present"
         val gson = Gson()
         val request = Request.Builder()
                 .url(url)
-                .header("x-access-token", token)
+                .header("x-access-token", token!!)
                 .build()
-
-        if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection()) return
 
         Log.d("updateSemanticContext", "Updating semantic context")
 
@@ -139,7 +137,7 @@ class MainPresenter {
      */
     fun populateImages(presentId: String) {
         if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection()) return
+        if (!hasConnection(context)) return
 
         val url = "$apiUrl/media/links/$presentId"
         val gson = Gson()
@@ -178,7 +176,7 @@ class MainPresenter {
      */
     private fun fetchPresentImage(presentId: String) {
         if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection()) return
+        if (!hasConnection(context)) return
 
         val url = "$apiUrl/media/show/$presentId/$token"
         val request = Request.Builder().url(url).build()
@@ -214,7 +212,7 @@ class MainPresenter {
      */
     private fun fetchBitmaps(links: Array<String>) {
         if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection()) return
+        if (!hasConnection(context)) return
 
         for (id in links) {
             val url = "$apiUrl/media/show/$id/$token"
@@ -270,83 +268,6 @@ class MainPresenter {
                 callback()
             }
         })
-    }
-
-    /**
-     * Get mac address from IPv6 address
-     *
-     * @return device mac address
-     */
-    private fun getMacAddress(): String {
-        try {
-            val all: List<NetworkInterface> = Collections.list(NetworkInterface.getNetworkInterfaces())
-            for (nif: NetworkInterface in all) {
-                if (nif.name.toLowerCase() != "wlan0") continue
-
-                val macBytes: ByteArray = nif.hardwareAddress ?: return ""
-
-                val res1 = StringBuilder()
-                for (b: Byte in macBytes) {
-                    res1.append(String.format("%02X", b))
-                }
-
-                return res1.toString()
-            }
-        } catch (ex: Exception) {
-            println(ex.stackTrace)
-        }
-        return ""
-    }
-
-    /**
-     * Check that the activity has an active network connection.
-     *
-     * @return boolean if device has connection
-     */
-    private fun hasConnection(): Boolean {
-        // Check a network is available
-        val mConnectivityManager: ConnectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetwork: Network? = mConnectivityManager.activeNetwork
-
-        if (activeNetwork != null) {
-            val bandwidth = mConnectivityManager.getNetworkCapabilities(activeNetwork).linkDownstreamBandwidthKbps
-            if (bandwidth < minBandwidthKbps) {
-                // Request a high-bandwidth network
-                Log.d("OnCreate", "Request high-bandwidth network")
-                return false
-            }
-            return true
-        } else {
-            return false
-        }
-    }
-
-    /**
-     * Store a bitmap to file
-     * @param bitmap Bitmap to store.
-     *
-     * @return bitmap path.
-     */
-    private fun storeBitmap(bitmap: Bitmap): String {
-        val cw = ContextWrapper(context)
-        val directory: File = cw.getDir("imageDir", Context.MODE_PRIVATE)
-        val path = File(directory, "last-image.png")
-        var fos: FileOutputStream? = null
-
-        try {
-            fos = FileOutputStream(path)
-            // Use the compress method on the BitMap object to write image to the OutputStream
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        } finally {
-            try {
-                fos?.close()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-        }
-        return directory.absolutePath
     }
 
     interface View {

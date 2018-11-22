@@ -146,21 +146,6 @@ class MyWatchFace : CanvasWatchFaceService() {
             }
         }
 
-        /**
-         * Get the stored bitmap from file.
-         *
-         * @param path
-         * @return Bitmap
-         */
-        private fun getBitmapFromFile(path: String): Bitmap? {
-            try {
-                val f = File(path, "last-image.png")
-                return BitmapFactory.decodeStream(FileInputStream(f))
-            } catch (e: FileNotFoundException) {
-            }
-            return null
-        }
-
         private fun launchActivity() {
             val intent = Intent(applicationContext, MainActivity::class.java)
             startActivity(intent)
