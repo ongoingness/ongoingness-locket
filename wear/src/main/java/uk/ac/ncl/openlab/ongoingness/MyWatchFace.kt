@@ -70,8 +70,7 @@ class MyWatchFace : CanvasWatchFaceService() {
             this.mAmbient = inAmbientMode
 
             if (!inAmbientMode) {
-                val intent = Intent(applicationContext, MainActivity::class.java)
-                startActivity(intent)
+                launchActivity()
             }
         }
 
@@ -100,8 +99,7 @@ class MyWatchFace : CanvasWatchFaceService() {
                 }
                 WatchFaceService.TAP_TYPE_TAP -> {
                     // The user has completed the tap gesture.
-                    val intent = Intent(applicationContext, MainActivity::class.java)
-                    startActivity(intent)
+                    launchActivity()
                 }
             }
             invalidate()
@@ -157,8 +155,14 @@ class MyWatchFace : CanvasWatchFaceService() {
             try {
                 val f = File(path, "last-image.png")
                 return BitmapFactory.decodeStream(FileInputStream(f))
-            } catch (e: FileNotFoundException) { }
+            } catch (e: FileNotFoundException) {
+            }
             return null
+        }
+
+        private fun launchActivity() {
+            val intent = Intent(applicationContext, MainActivity::class.java)
+            startActivity(intent)
         }
     }
 }

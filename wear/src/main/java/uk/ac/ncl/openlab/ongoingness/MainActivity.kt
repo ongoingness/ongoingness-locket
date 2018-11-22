@@ -9,6 +9,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Bundle
+import android.os.Parcelable
 import android.support.wear.widget.BoxInsetLayout
 import android.support.wearable.activity.WearableActivity
 import android.util.Log
@@ -35,6 +36,7 @@ class MainActivity : WearableActivity() {
     private val minBandwidthKbps: Int = 320
     private var mediaList = ArrayList<Bitmap>()
     private var presentImage: Bitmap? = null
+    private var watchFaceImage: Bitmap? = null
 
     /**
      * Directions for cycling along images in semantic set.
@@ -51,14 +53,17 @@ class MainActivity : WearableActivity() {
         // Enables Always-on
         setAmbientEnabled()
 
+        Log.d("OnCreate", "Getting bitmap")
+
         screenSize = getScreenSize()
+        watchFaceImage = intent.getParcelableExtra<Parcelable>("backgroundImage") as Bitmap?
 
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        // Create a background bit map from drawable, and overdraw to 400
+        // Create a background bit map from drawable
         updateBackground(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
-                resources, R.drawable.placeholder), screenSize, screenSize, true)!!)
+                resources, R.drawable.placeholder), screenSize, screenSize, false)!!)
 
         // Build a OK HTTP client
         client = OkHttpClient.Builder()
@@ -96,7 +101,7 @@ class MainActivity : WearableActivity() {
      */
     private fun getImageIdsInSet(presentId: String, client: OkHttpClient) {
         if (token.isEmpty()) throw Error("Token cannot be empty")
-        if(!hasConnection()) return
+        if (!hasConnection()) return
 
         val url = "$apiUrl/media/links/$presentId"
         val gson = Gson()
@@ -390,7 +395,7 @@ class MainActivity : WearableActivity() {
     private fun storeBitmap(bitmap: Bitmap): String {
         val cw = ContextWrapper(applicationContext)
         val directory: File = cw.getDir("imageDir", Context.MODE_PRIVATE)
-        val path = File(directory,"last-image.png")
+        val path = File(directory, "last-image.png")
         var fos: FileOutputStream? = null
 
         try {
@@ -416,7 +421,7 @@ class MainActivity : WearableActivity() {
     private fun getMacAddress(): String {
         try {
             val all: List<NetworkInterface> = Collections.list(NetworkInterface.getNetworkInterfaces())
-            for(nif: NetworkInterface in all) {
+            for (nif: NetworkInterface in all) {
                 if (nif.name.toLowerCase() != "wlan0") continue
 
                 val macBytes: ByteArray = nif.hardwareAddress ?: return ""
