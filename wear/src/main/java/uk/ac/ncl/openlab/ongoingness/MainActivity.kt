@@ -82,6 +82,8 @@ class MainActivity : WearableActivity(), MainPresenter.View {
     private val rotationListener = object : RotationRecogniser.Listener {
 
         override fun onRotateUp() {
+            val background = presenter.dummyOpen()
+            updateBackground(background)
         }
 
         override fun onRotateDown() {

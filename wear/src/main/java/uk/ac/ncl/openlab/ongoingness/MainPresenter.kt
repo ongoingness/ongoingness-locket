@@ -24,6 +24,9 @@ class MainPresenter {
             .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.CLEARTEXT))
             .build()
     private var context: Context? = null
+    private var lastPerm = false
+    private var permIdx = 0
+    private var tempIdx = 0
 
     /**
      * Attach the view to the presenter
@@ -129,7 +132,7 @@ class MainPresenter {
     /**
      * Fetch all media from the api.
      */
-    public fun fetchAllMedia() {
+    fun fetchAllMedia() {
         val gson = Gson()
         val url = "$apiUrl/media"
         val request = Request.Builder().url(url).build()
@@ -140,7 +143,11 @@ class MainPresenter {
         Log.d("fetchAllMedia", "Getting all media")
 
         client.newCall(request).enqueue(object : Callback {
+            /**
+             * On error, just load permanent collection
+             */
             override fun onFailure(call: Call, e: IOException) {
+                loadPermanentCollection()
                 e.printStackTrace()
             }
 
@@ -217,6 +224,22 @@ class MainPresenter {
                 callback()
             }
         })
+    }
+
+    /**
+     * Dummy function for opening and closing locket.
+     */
+    fun dummyOpen(): Bitmap {
+        if (tempCollection.size > 0 && lastPerm) {
+            tempIdx++
+            lastPerm = !lastPerm
+            if (tempIdx >= tempCollection.size) tempIdx %= tempCollection.size
+            return tempCollection[tempIdx]
+        }
+        permIdx++
+        if (permIdx >= permCollection.size) permIdx %= permCollection.size
+        lastPerm = !lastPerm
+        return permCollection[permIdx]
     }
 
     interface View {
