@@ -36,7 +36,7 @@ class MainActivity : WearableActivity(), MainPresenter.View {
 
         Log.d("OnCreate", "Getting a connection")
 
-        presenter.generateToken {presenter.updateSemanticContext()}
+        presenter.generateToken {presenter.fetchAllMedia()}
 
         rotationRecogniser = RotationRecogniser(this)
     }
@@ -82,19 +82,15 @@ class MainActivity : WearableActivity(), MainPresenter.View {
     private val rotationListener = object : RotationRecogniser.Listener {
 
         override fun onRotateUp() {
-            presenter.cycle(Direction.FORWARD)
         }
 
         override fun onRotateDown() {
-            presenter.cycle(Direction.BACKWARDS)
         }
 
         override fun onRotateLeft() {
-            presenter.updateSemanticContext()
         }
 
         override fun onRotateRight() {
-            presenter.updateSemanticContext()
         }
 
         override fun onStandby() {
