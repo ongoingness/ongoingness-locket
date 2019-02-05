@@ -18,6 +18,8 @@ class MainPresenter {
     private val idsFile = "ids.txt"
     private val permCollection: ArrayList<Bitmap> = ArrayList()
     private val tempCollection: ArrayList<Bitmap> = ArrayList()
+    private var maxPerm: Int = 0
+    private var maxTemp: Int = 0
     private var allMedia: Array<Media>? = null
     private var token: String? = null
     private val client: OkHttpClient = OkHttpClient.Builder()
@@ -96,8 +98,11 @@ class MainPresenter {
         if (!hasConnection(context)) return
 
         for (id in links) {
-            val url = "$apiUrl/media/show/$id/$token"
-            val request = Request.Builder().url(url).build()
+            val url = "$apiUrl/media/$id/"
+            val request = Request.Builder()
+                    .url(url)
+                    .header("x-access-token", token)
+                    .build()
 
             Log.d("fetchBitmaps", "Fetching bitmap from $url")
 
@@ -142,12 +147,17 @@ class MainPresenter {
     fun fetchAllMedia() {
         val gson = Gson()
         val url = "$apiUrl/media"
-        val request = Request.Builder().url(url).build()
 
         if (token == null) throw Error("Token cannot be empty")
         if (!hasConnection(context)) return
 
+        val request = Request.Builder()
+                .url(url)
+                .header("x-access-token", token!!)
+                .build()
+
         Log.d("fetchAllMedia", "Getting all media")
+        Log.d("fetchAllMedia", url)
 
         client.newCall(request).enqueue(object : Callback {
             /**
@@ -160,38 +170,44 @@ class MainPresenter {
 
             override fun onResponse(call: Call, response: Response) {
                 val mediaResponse: MediaResponse = gson.fromJson(response.body()?.string(), MediaResponse::class.java)
+
                 allMedia = mediaResponse.payload
                 val file = File(context?.filesDir, idsFile)
                 var same = true
+
+                val permMedia: List<Media> = allMedia!!.filter { media: Media -> media.locket == "perm" }
+                val tempMedia: List<Media> = allMedia!!.filter { media: Media -> media.locket == "temp" }
+
+                maxPerm = permMedia.size
+                maxTemp = tempMedia.size
+
                 if (file.exists()) {
                     val ids: List<String> = file.readLines()
-                    allMedia!!
-                            .filter { media: Media -> media.locket == "perm" }
-                            .forEach { media : Media ->
-                                run {
-                                    if (!ids.contains(media._id)) same = false
-                                }
-                            }
+                    permMedia.forEach { media : Media ->
+                        run {
+                            if (!ids.contains(media._id)) same = false
+                        }
+                    }
                 } else {
                     same = false
                 }
 
                 if (!same) {
-                    allMedia?.forEach { m: Media -> file.writeText("${m._id}\n") }
+                    permMedia.forEach { m: Media -> file.writeText("${m._id}\n") }
                     // Populate perm
 
                     fetchBitmaps(
-                            allMedia!!.filter { media: Media -> media.locket == "perm" }
-                                    .map { media: Media -> media._id }
-                                    .toTypedArray(),
-                            Container.PERM
+                        permMedia
+                            .map { media: Media -> media._id }
+                            .toTypedArray(),
+                        Container.PERM
                     )
                 }
                 fetchBitmaps(
-                        allMedia!!.filter { media: Media -> media.locket == "temp" }
-                                .map { media: Media -> media._id }
-                                .toTypedArray(),
-                        Container.TEMP
+                    tempMedia
+                        .map { media: Media -> media._id }
+                        .toTypedArray(),
+                    Container.TEMP
                 )
             }
         })
@@ -240,11 +256,11 @@ class MainPresenter {
         }
 
         if(isPerm) {
-            if (permCollection.size < 5) return
+            if (permCollection.size < maxPerm) return
             dummyOpen()
             storePermCollection()
         } else {
-            if (tempCollection.size < 5) return
+            if (tempCollection.size < maxTemp) return
         }
     }
 
