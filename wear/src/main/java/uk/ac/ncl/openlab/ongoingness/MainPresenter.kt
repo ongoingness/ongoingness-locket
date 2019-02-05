@@ -123,6 +123,7 @@ class MainPresenter {
                             }
                         }
 
+                        // Handle item being added to a container
                         onContainerUpdate(container)
                     } catch (error: Error) {
                         error.printStackTrace()

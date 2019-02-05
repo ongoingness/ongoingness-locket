@@ -13,6 +13,11 @@ import kotlin.collections.ArrayList
 
 const val minBandwidthKbps: Int = 320
 
+/**
+ * Clear contents of media folder
+ *
+ * @param context Context Application context
+ */
 fun clearMediaFolder(context: Context) {
     context.filesDir.listFiles().forEach { file: File? -> file?.delete() }
 }
