@@ -34,8 +34,6 @@ class MainActivity : WearableActivity(), MainPresenter.View {
         updateBackground(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
                 resources, R.drawable.placeholder), getScreenSize(), getScreenSize(), false)!!)
 
-        clearMediaFolder(this.applicationContext)
-
         presenter.generateToken {presenter.fetchAllMedia()}
 
         rotationRecogniser = RotationRecogniser(this)

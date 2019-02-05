@@ -202,9 +202,6 @@ class MainPresenter {
 
                 // If files don't match, else load stored collection
                 if (!same) {
-                    // Store the id of each media to a text file.
-                    permMedia.forEach { m: Media -> file.writeText("${m._id}\n") }
-
                     // Get new perm collection
                     fetchBitmaps(
                         permIds!!,
