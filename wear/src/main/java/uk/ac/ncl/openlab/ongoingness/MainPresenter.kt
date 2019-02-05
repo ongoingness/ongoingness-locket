@@ -91,7 +91,7 @@ class MainPresenter {
      * @param container String name of container
      * @param callback callback for when item is placed in container.
      */
-    private fun fetchBitmaps(links: Array<String>, container: String) {
+    private fun fetchBitmaps(links: Array<String>, container: Container) {
         if (token == null) throw Error("Token cannot be empty")
         if (!hasConnection(context)) return
 
@@ -110,16 +110,15 @@ class MainPresenter {
                     try {
                         val inputStream = response.body()?.byteStream()
                         when (container) {
-                            "temp" -> {
+                            Container.TEMP -> {
                                 tempCollection.add(Bitmap.createScaledBitmap(
                                     BitmapFactory.decodeStream(inputStream),
                                     view?.getScreenSize()!!,
                                     view?.getScreenSize()!!,
                                     false))
-                                onContainerUpdate(container)
                             }
 
-                            "perm" -> {
+                            Container.PERM -> {
                                 permCollection.add(Bitmap.createScaledBitmap(
                                         BitmapFactory.decodeStream(inputStream),
                                         view?.getScreenSize()!!,
@@ -185,14 +184,14 @@ class MainPresenter {
                             allMedia!!.filter { media: Media -> media.locket == "perm" }
                                     .map { media: Media -> media._id }
                                     .toTypedArray(),
-                            "perm"
+                            Container.PERM
                     )
                 }
                 fetchBitmaps(
                         allMedia!!.filter { media: Media -> media.locket == "temp" }
                                 .map { media: Media -> media._id }
                                 .toTypedArray(),
-                        "temp"
+                        Container.TEMP
                 )
             }
         })
@@ -234,11 +233,10 @@ class MainPresenter {
         })
     }
 
-    private fun onContainerUpdate(containerName : String) {
-        val isPerm: Boolean = when(containerName) {
-            "perm" -> true
-            "temp" -> false
-            else -> return
+    private fun onContainerUpdate(container: Container) {
+        val isPerm: Boolean = when(container) {
+            Container.PERM -> true
+            Container.TEMP -> false
         }
 
         if(isPerm) {
