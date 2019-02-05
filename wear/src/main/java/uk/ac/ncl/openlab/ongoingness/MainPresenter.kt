@@ -87,7 +87,9 @@ class MainPresenter {
     /**
      * Fetch images of of the past and add to an array list.
      *
-     * @param links Array of links to fetch bitmaps from.
+     * @param links Array<String>
+     * @param container String name of container
+     * @param callback callback for when item is placed in container.
      */
     private fun fetchBitmaps(links: Array<String>, container: String) {
         if (token == null) throw Error("Token cannot be empty")
@@ -108,19 +110,25 @@ class MainPresenter {
                     try {
                         val inputStream = response.body()?.byteStream()
                         when (container) {
-                            "temp" -> tempCollection
-                                    .add(Bitmap.createScaledBitmap(
-                                            BitmapFactory.decodeStream(inputStream),
-                                            view?.getScreenSize()!!,
-                                            view?.getScreenSize()!!,
-                                            false))
-                            "perm" -> permCollection
-                                    .add(Bitmap.createScaledBitmap(
-                                            BitmapFactory.decodeStream(inputStream),
-                                            view?.getScreenSize()!!,
-                                            view?.getScreenSize()!!,
-                                            false))
+                            "temp" -> {
+                                tempCollection.add(Bitmap.createScaledBitmap(
+                                    BitmapFactory.decodeStream(inputStream),
+                                    view?.getScreenSize()!!,
+                                    view?.getScreenSize()!!,
+                                    false))
+                                onContainerUpdate(container)
+                            }
+
+                            "perm" -> {
+                                permCollection.add(Bitmap.createScaledBitmap(
+                                        BitmapFactory.decodeStream(inputStream),
+                                        view?.getScreenSize()!!,
+                                        view?.getScreenSize()!!,
+                                        false))
+                            }
                         }
+
+                        onContainerUpdate(container)
                     } catch (error: Error) {
                         error.printStackTrace()
                     }
@@ -224,6 +232,22 @@ class MainPresenter {
                 callback()
             }
         })
+    }
+
+    private fun onContainerUpdate(containerName : String) {
+        val isPerm: Boolean = when(containerName) {
+            "perm" -> true
+            "temp" -> false
+            else -> return
+        }
+
+        if(isPerm) {
+            if (permCollection.size < 5) return
+            dummyOpen()
+            storePermCollection()
+        } else {
+            if (tempCollection.size < 5) return
+        }
     }
 
     /**
