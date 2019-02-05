@@ -9,33 +9,63 @@ import android.util.Log
 import java.io.*
 import java.net.NetworkInterface
 import java.util.*
+import kotlin.collections.ArrayList
 
 const val minBandwidthKbps: Int = 320
 
-/**
- * Store a bitmap to file
- * @param bitmap Bitmap to store.
- *
- * @return bitmap path.
- */
-fun storeBitmap(bitmap: Bitmap, directory: File): String {
-    val path = File(directory, "last-image.png")
-    var fos: FileOutputStream? = null
+fun clearMediaFolder(context: Context) {
+    context.filesDir.listFiles().forEach { file: File? -> file?.delete() }
+}
 
-    try {
-        fos = FileOutputStream(path)
-        // Use the compress method on the BitMap object to write image to the OutputStream
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
-    } catch (e: Exception) {
-        e.printStackTrace()
-    } finally {
-        try {
-            fos?.close()
-        } catch (e: IOException) {
-            e.printStackTrace()
+/**
+ * Store an array to file
+ *
+ * @param arr Array<String>
+ * @param fileName string
+ * @param context Context
+ */
+fun persistArray(arr : Array<String>, fileName : String, context: Context) {
+    val file = File(context.filesDir, fileName)
+    arr.forEach { id : String -> file.writeText("$id\n") }
+}
+
+/**
+ * Store bitmaps to file
+ *
+ * @param bitmaps Array<Bitmap>
+ * @param context Context
+ */
+fun persistBitmaps(bitmaps : Array<Bitmap>, context: Context) {
+    bitmaps.forEach { bitmap : Bitmap ->
+        run {
+            val imageFile = File(context.filesDir, "${bitmap.hashCode()}.jpg")
+            var bos: ByteArrayOutputStream? = null
+            try {
+                bos = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
+                imageFile.writeBytes(bos.toByteArray())
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                bos?.close()
+            }
         }
     }
-    return directory.absolutePath
+}
+
+/**
+ * Load all bitmaps from file
+ *
+ * @param context Context
+ */
+fun loadBitmaps(context: Context) : ArrayList<Bitmap> {
+    val bitmaps : ArrayList<Bitmap> = ArrayList()
+    context.filesDir!!.listFiles().forEach { file: File -> run {
+        if (file.name.contains(".txt")) return@run
+        bitmaps.add(BitmapFactory.decodeFile(file.absolutePath))
+    } }
+
+    return bitmaps
 }
 
 /**
@@ -61,11 +91,14 @@ fun getBitmapFromFile(path: String): Bitmap? {
  */
 fun hasConnection(context: Context?): Boolean {
     // Check a network is available
-    val mConnectivityManager: ConnectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val mConnectivityManager: ConnectivityManager =
+            context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     val activeNetwork: Network? = mConnectivityManager.activeNetwork
 
     if (activeNetwork != null) {
-        val bandwidth = mConnectivityManager.getNetworkCapabilities(activeNetwork).linkDownstreamBandwidthKbps
+        val bandwidth = mConnectivityManager
+                .getNetworkCapabilities(activeNetwork)
+                .linkDownstreamBandwidthKbps
         if (bandwidth < minBandwidthKbps) {
             // Request a high-bandwidth network
             Log.d("OnCreate", "Request high-bandwidth network")
