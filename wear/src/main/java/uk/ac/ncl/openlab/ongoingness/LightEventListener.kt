@@ -6,7 +6,7 @@ import android.hardware.SensorEventListener
 import android.util.Log
 
 class LightEventListener(val view: MainPresenter.View): SensorEventListener {
-    private val closedThreshold: Float = 100.0f
+    private val closedThreshold: Float = 80.0f
     private var isClosed: Boolean = true
     private var lastRead: Long = 0
     private var timeThreshold: Long = 100
@@ -16,6 +16,8 @@ class LightEventListener(val view: MainPresenter.View): SensorEventListener {
     override fun onSensorChanged(p0: SensorEvent?) {
         val value: Float? = p0!!.values[0]
         val current: Long = System.currentTimeMillis()
+
+        Log.d("onSensorChanged", "Lux: $value")
 
         if(!view.getReady()) return
 

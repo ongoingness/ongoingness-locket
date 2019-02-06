@@ -170,13 +170,26 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
     override fun openLocket() {
         val bitmap: Bitmap? = presenter.updateBitmap()
         updateBackground(bitmap!!)
+        setBrightness(1.0f)
     }
 
     /**
      * Handle the locket being closed.
      */
     override fun closeLocket() {
+        setBrightness(0.01f)
         Log.d("closeLocket", "Locket closed")
+    }
+
+    /**
+     * Brightness should be between 0.00f and 0.01f
+     *
+     * TODO: Throw error when float out of range
+     */
+    private fun setBrightness(brightness: Float) {
+        val params: WindowManager.LayoutParams = window.attributes
+        params.screenBrightness = brightness
+        window.attributes = params
     }
 
     override fun getReady(): Boolean {
