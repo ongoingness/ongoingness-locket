@@ -146,6 +146,7 @@ class MyWatchFace : CanvasWatchFaceService() {
 
         private fun launchActivity() {
             val intent = Intent(applicationContext, MainActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(intent)
         }
     }
