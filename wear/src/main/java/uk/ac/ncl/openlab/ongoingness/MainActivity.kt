@@ -22,6 +22,7 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
     private var maxLight: Float = 0.0f
     private var sensorManager: SensorManager? = null
     private var lightSensor: Sensor? = null
+    private var lightEventListener: LightEventListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +57,9 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
             maxLight = lightSensor!!.maximumRange
         }
 
+        lightEventListener = LightEventListener(this)
+        sensorManager?.registerListener(lightEventListener, lightSensor!!, SensorManager.SENSOR_DELAY_FASTEST)
+
         // Create a background bit map from drawable
         updateBackground(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
                 resources, R.drawable.placeholder), getScreenSize(), getScreenSize(), false)!!)
@@ -72,7 +76,7 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
     override fun onResume() {
         super.onResume()
         rotationRecogniser?.start(rotationListener)
-        sensorManager?.registerListener(this, lightSensor!!, SensorManager.SENSOR_DELAY_FASTEST)
+        sensorManager?.registerListener(lightEventListener, lightSensor!!, SensorManager.SENSOR_DELAY_FASTEST)
     }
 
     /**
@@ -82,7 +86,7 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
     override fun onPause() {
         super.onPause()
         rotationRecogniser?.stop()
-        sensorManager?.unregisterListener(this)
+        sensorManager?.unregisterListener(lightEventListener)
 
     }
 
@@ -117,8 +121,8 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
     private val rotationListener = object : RotationRecogniser.Listener {
 
         override fun onRotateUp() {
-            val background = presenter.updateBitmap()
-            updateBackground(background)
+//            val background = presenter.updateBitmap()
+//            updateBackground(background)
         }
 
         override fun onRotateDown() {
@@ -157,5 +161,20 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
     override fun onSensorChanged(p0: SensorEvent?) {
         val value: Float? = p0!!.values[0]
         Log.d("onSensorChanged", "Lux: $value")
+    }
+
+    /**
+     * Handle the locket being opened.
+     */
+    override fun openLocket() {
+        val bitmap: Bitmap? = presenter.updateBitmap()
+        updateBackground(bitmap!!)
+    }
+
+    /**
+     * Handle the locket being closed.
+     */
+    override fun closeLocket() {
+        Log.d("closeLocket", "Locket closed")
     }
 }

@@ -157,8 +157,8 @@ class MainPresenter {
              */
             override fun onFailure(call: Call, e: IOException) {
                 permCollection = loadBitmaps(context!!)
-                val bitmap: Bitmap = updateBitmap()
-                view?.updateBackground(bitmap)
+                val bitmap: Bitmap? = updateBitmap()
+                view?.updateBackground(bitmap!!)
                 e.printStackTrace()
             }
 
@@ -210,8 +210,8 @@ class MainPresenter {
                     )
                 } else {
                     permCollection = loadBitmaps(context!!)
-                    val bitmap: Bitmap = updateBitmap()
-                    view?.updateBackground(bitmap)
+                    val bitmap: Bitmap? = updateBitmap()
+                    view?.updateBackground(bitmap!!)
                 }
 
                 fetchBitmaps(
@@ -271,8 +271,8 @@ class MainPresenter {
 
         if(isPerm) {
             if (permCollection.size == maxPerm) {
-                val bitmap = updateBitmap()
-                view?.updateBackground(bitmap)
+                val bitmap: Bitmap? = updateBitmap()
+                view?.updateBackground(bitmap!!)
                 storePermCollection()
             }
         }
@@ -284,7 +284,7 @@ class MainPresenter {
      *
      * TODO: Change to locket open
      */
-    fun updateBitmap(): Bitmap {
+    fun updateBitmap(): Bitmap? {
         // If there are temp images and last image was perm...
         if (tempCollection.size > 0 && lastPerm) {
             /*
@@ -299,6 +299,8 @@ class MainPresenter {
             Log.d("updateBitmap", "Returning temp")
             return tempCollection[tempIdx]
         }
+
+        if(permCollection.size < 0) return null
 
         /*
          * Default to perm
@@ -321,5 +323,7 @@ class MainPresenter {
     interface View {
         fun updateBackground(bitmap: Bitmap)
         fun getScreenSize(): Int
+        fun openLocket()
+        fun closeLocket()
     }
 }
