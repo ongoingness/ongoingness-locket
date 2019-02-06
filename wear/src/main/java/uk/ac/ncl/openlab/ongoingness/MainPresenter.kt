@@ -288,8 +288,6 @@ class MainPresenter {
     /**
      * Dummy function for opening and closing locket.
      * Should alternate between returning a permanent or temp bitmap
-     *
-     * TODO: Change to locket open
      */
     fun updateBitmap(): Bitmap? {
         // If there are temp images and last image was perm...

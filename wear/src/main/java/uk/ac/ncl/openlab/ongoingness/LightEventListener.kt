@@ -17,8 +17,6 @@ class LightEventListener(val view: MainPresenter.View): SensorEventListener {
         val value: Float? = p0!!.values[0]
         val current: Long = System.currentTimeMillis()
 
-        Log.d("onSensorChanged", "Lux: $value")
-
         if(!view.getReady()) return
 
         // Too recent
