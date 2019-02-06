@@ -9,8 +9,6 @@ import android.support.wearable.watchface.WatchFaceStyle
 import android.util.Log
 import android.view.SurfaceHolder
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileNotFoundException
 
 /**
  * Important Note: Because watch face apps do not have a default Activity in

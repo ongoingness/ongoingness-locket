@@ -1,9 +1,15 @@
 package uk.ac.ncl.openlab.ongoingness
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
+import android.hardware.Sensor
+import android.hardware.Sensor.TYPE_LIGHT
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.support.wear.widget.BoxInsetLayout
 import android.support.wearable.activity.WearableActivity
@@ -11,9 +17,11 @@ import android.util.Log
 import android.view.WindowManager
 
 
-class MainActivity : WearableActivity(), MainPresenter.View {
-
+class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener {
     private val presenter: MainPresenter = MainPresenter()
+    private var maxLight: Float = 0.0f
+    private var sensorManager: SensorManager? = null
+    private var lightSensor: Sensor? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +38,24 @@ class MainActivity : WearableActivity(), MainPresenter.View {
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        /*
+         * Create the sensor manager.
+         * Get a light sensor, will return null if there is no sensor.
+         *
+         * TODO: Add flag for when sensor is not present, fallback to accelerometer
+         */
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        lightSensor = sensorManager?.getDefaultSensor(TYPE_LIGHT)
+
+        /*
+         * If there is a light sensor, then get the maximum range.
+         */
+        if (lightSensor == null) {
+            Log.d("onCreate", "No light sensor")
+        } else {
+            maxLight = lightSensor!!.maximumRange
+        }
+
         // Create a background bit map from drawable
         updateBackground(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
                 resources, R.drawable.placeholder), getScreenSize(), getScreenSize(), false)!!)
@@ -39,19 +65,30 @@ class MainActivity : WearableActivity(), MainPresenter.View {
         rotationRecogniser = RotationRecogniser(this)
     }
 
-    // Restart the activity recogniser
+    /**
+     * Restart the activity recogniser
+     * Register the lightEventSensor
+     */
     override fun onResume() {
         super.onResume()
         rotationRecogniser?.start(rotationListener)
+        sensorManager?.registerListener(this, lightSensor!!, SensorManager.SENSOR_DELAY_FASTEST)
     }
 
-    // Pause the activity recogniser
+    /**
+     * Stop the activity recogniser
+     * Unregister the light event listener
+     */
     override fun onPause() {
         super.onPause()
         rotationRecogniser?.stop()
+        sensorManager?.unregisterListener(this)
 
     }
 
+    /**
+     * Detach the presenter
+     */
     override fun onDestroy() {
         super.onDestroy()
         presenter.detachView()
@@ -108,5 +145,17 @@ class MainActivity : WearableActivity(), MainPresenter.View {
         val size = Point()
         display.getSize(size)
         return (size.x * scaleFactor).toInt()
+    }
+
+    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
+        // TODO: Implement
+    }
+
+    /**
+     * Handle a change from the light sensor
+     */
+    override fun onSensorChanged(p0: SensorEvent?) {
+        val value: Float? = p0!!.values[0]
+        Log.d("onSensorChanged", "Lux: $value")
     }
 }
