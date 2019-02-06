@@ -71,6 +71,16 @@ class MainPresenter {
     }
 
     /**
+     * Load a collection from saved files.
+     */
+    private fun loadPermCollection() {
+        permCollection = loadBitmaps(context!!)
+        val bitmap: Bitmap? = updateBitmap()
+        view?.updateBackground(bitmap!!)
+        view?.setReady(true)
+    }
+
+    /**
      * Fetch images of of the past and add to an array list.
      *
      * @param links Array<String>
@@ -156,9 +166,7 @@ class MainPresenter {
              * On error, just load permanent collection
              */
             override fun onFailure(call: Call, e: IOException) {
-                permCollection = loadBitmaps(context!!)
-                val bitmap: Bitmap? = updateBitmap()
-                view?.updateBackground(bitmap!!)
+                loadPermCollection()
                 e.printStackTrace()
             }
 
@@ -209,9 +217,7 @@ class MainPresenter {
                         Container.PERM
                     )
                 } else {
-                    permCollection = loadBitmaps(context!!)
-                    val bitmap: Bitmap? = updateBitmap()
-                    view?.updateBackground(bitmap!!)
+                    loadPermCollection()
                 }
 
                 fetchBitmaps(
@@ -273,6 +279,7 @@ class MainPresenter {
             if (permCollection.size == maxPerm) {
                 val bitmap: Bitmap? = updateBitmap()
                 view?.updateBackground(bitmap!!)
+                view?.setReady(true)
                 storePermCollection()
             }
         }
@@ -325,5 +332,7 @@ class MainPresenter {
         fun getScreenSize(): Int
         fun openLocket()
         fun closeLocket()
+        fun getReady(): Boolean
+        fun setReady(ready : Boolean)
     }
 }

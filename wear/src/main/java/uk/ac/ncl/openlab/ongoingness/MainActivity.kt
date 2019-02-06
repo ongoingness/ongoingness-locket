@@ -23,6 +23,7 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
     private var sensorManager: SensorManager? = null
     private var lightSensor: Sensor? = null
     private var lightEventListener: LightEventListener? = null
+    private var isReady: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -176,5 +177,13 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
      */
     override fun closeLocket() {
         Log.d("closeLocket", "Locket closed")
+    }
+
+    override fun getReady(): Boolean {
+        return this.isReady
+    }
+
+    override fun setReady(ready: Boolean) {
+        this.isReady = ready
     }
 }

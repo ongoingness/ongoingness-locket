@@ -17,6 +17,8 @@ class LightEventListener(val view: MainPresenter.View): SensorEventListener {
         val value: Float? = p0!!.values[0]
         val current: Long = System.currentTimeMillis()
 
+        if(!view.getReady()) return
+
         // Too recent
         if ((current - lastRead) <= timeThreshold) {
             lastRead = current
