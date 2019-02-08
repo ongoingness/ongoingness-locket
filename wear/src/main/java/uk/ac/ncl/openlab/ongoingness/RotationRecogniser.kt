@@ -10,13 +10,12 @@ import com.gvillani.rxsensors.RxSensor
 import com.gvillani.rxsensors.RxSensorEvent
 import com.gvillani.rxsensors.RxSensorFilter
 import com.gvillani.rxsensors.RxSensorTransformer
+import com.gvillani.rxsensors.exceptions.SensorNotFoundException
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.PublishSubject
-
-
 
 /**
  * Created by Kyle Montague on 10/11/2018.
@@ -116,36 +115,30 @@ open class RotationRecogniser(val context: Context) {
         lastChanged = System.currentTimeMillis()
         timeoutHandler.postDelayed(timeoutRunnable,timeoutInterval)
 
-        disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GRAVITY, SensorManager.SENSOR_DELAY_GAME)
-                .subscribeOn(Schedulers.computation())
-                .distinctUntilChanged(RxSensorFilter.uniqueEventValues())
-                .compose<RxSensorEvent>(RxSensorTransformer.lowPassFilter(0.2f))
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { rxSensorEvent -> process(rxSensorEvent) })
+        try {
+            Log.d("RotationRecogniser", "Sensor missing, running without sensors")
+        } catch (e : SensorNotFoundException) {
+            disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GRAVITY, SensorManager.SENSOR_DELAY_GAME)
+                    .subscribeOn(Schedulers.computation())
+                    .distinctUntilChanged(RxSensorFilter.uniqueEventValues())
+                    .compose<RxSensorEvent>(RxSensorTransformer.lowPassFilter(0.2f))
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { rxSensorEvent -> process(rxSensorEvent) })
 
-        disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GAME_ROTATION_VECTOR, SensorManager.SENSOR_DELAY_NORMAL)
-                .subscribeOn(Schedulers.computation())
-                .distinctUntilChanged(RxSensorFilter.uniqueEventValues())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { rxSensorEvent -> checkMotion(rxSensorEvent) })
+            disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GAME_ROTATION_VECTOR, SensorManager.SENSOR_DELAY_NORMAL)
+                    .subscribeOn(Schedulers.computation())
+                    .distinctUntilChanged(RxSensorFilter.uniqueEventValues())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { rxSensorEvent -> checkMotion(rxSensorEvent) })
 
-        states = ObservableList()
-        disposables.add(states.observable
-                .subscribeOn(Schedulers.io())
-                .distinctUntilChanged()
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { state -> onStateChange(state) })
-
-//        orientations = ObservableList()
-//        disposables.add(orientations.observable
-//                .subscribeOn(Schedulers.io())
-//                .distinctUntilChanged()
-//                .observeOn(AndroidSchedulers.mainThread())
-//                .subscribe { orientation -> onOrientationChange(orientation) })
+            states = ObservableList()
+            disposables.add(states.observable
+                    .subscribeOn(Schedulers.io())
+                    .distinctUntilChanged()
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { state -> onStateChange(state) })
+        }
     }
-
-
-
 
     fun stop(){
         this.listener = null

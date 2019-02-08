@@ -103,8 +103,10 @@ class MainPresenter {
      * @param container String name of container
      */
     private fun fetchBitmaps(links: Array<String>, container: Container) {
-        if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection(context)) return
+        if (token == null || !hasConnection(context)) {
+            onNetworkError()
+            return
+        }
 
         for (id in links) {
             val url = "$apiUrl/media/$id/"
@@ -166,8 +168,10 @@ class MainPresenter {
         val gson = Gson()
         val url = "$apiUrl/media"
 
-        if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection(context)) return
+        if (token == null || !hasConnection(context)) {
+            onNetworkError()
+            return
+        }
 
         val request = Request.Builder()
                 .url(url)
@@ -252,8 +256,13 @@ class MainPresenter {
     fun generateToken(callback: () -> Unit) {
         val url = "$apiUrl/auth/mac"
         val gson = Gson()
+
+        if (!hasConnection(context)) {
+            onNetworkError()
+            return
+        }
+
         val mac: String = getMacAddress() // Get mac address
-        println(mac)
         val formBody = FormBody.Builder()
                 .add("mac", mac)
                 .build()
@@ -336,6 +345,13 @@ class MainPresenter {
         lastPerm = !lastPerm
         Log.d("updateBitmap", "Returning perm")
         return permCollection[permIdx]
+    }
+
+    /**
+     * Handle a network error, default to loading perm collection
+     */
+    private fun onNetworkError() {
+        loadPermCollection()
     }
 
     /**
