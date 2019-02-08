@@ -67,7 +67,17 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
         updateBackground(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
                 resources, R.drawable.placeholder), getScreenSize(), getScreenSize(), false)!!)
 
-        presenter.generateToken {presenter.fetchAllMedia()}
+        /*
+         * Check if there is an internet connection
+         *
+         * If there is no connection then load the permanent collection,
+         * else fetch media from API.
+         */
+        if (hasConnection(applicationContext)) {
+            presenter.generateToken {presenter.fetchAllMedia()}
+        } else {
+            presenter.loadPermCollection()
+        }
 
         rotationRecogniser = RotationRecogniser(this)
     }
@@ -197,10 +207,22 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
         window.attributes = params
     }
 
+    /**
+     * Get the ready flag for the activity.
+     * This is used to start the lightSensorListener.
+     *
+     * @return Boolean
+     */
     override fun getReady(): Boolean {
         return this.isReady
     }
 
+    /**
+     * Get the ready flag for the activity.
+     * This is used to start the lightSensorListener.
+     *
+     * @param ready Boolean
+     */
     override fun setReady(ready: Boolean) {
         this.isReady = ready
     }

@@ -73,7 +73,7 @@ class MainPresenter {
     /**
      * Load a collection from saved files.
      */
-    private fun loadPermCollection() {
+    fun loadPermCollection() {
         permCollection = loadBitmaps(context!!)
         val bitmap: Bitmap? = updateBitmap()
         view?.updateBackground(bitmap!!)
