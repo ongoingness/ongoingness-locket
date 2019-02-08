@@ -7,8 +7,6 @@ import android.graphics.Point
 import android.graphics.drawable.BitmapDrawable
 import android.hardware.Sensor
 import android.hardware.Sensor.TYPE_LIGHT
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
 import android.support.wear.widget.BoxInsetLayout
@@ -17,7 +15,7 @@ import android.util.Log
 import android.view.WindowManager
 
 
-class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener {
+class MainActivity : WearableActivity(), MainPresenter.View {
     private val presenter: MainPresenter = MainPresenter()
     private var maxLight: Float = 0.0f
     private var sensorManager: SensorManager? = null
@@ -133,19 +131,13 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
     private var rotationRecogniser: RotationRecogniser? = null
     private val rotationListener = object : RotationRecogniser.Listener {
 
-        override fun onRotateUp() {
-//            val background = presenter.updateBitmap()
-//            updateBackground(background)
-        }
+        override fun onRotateUp() {}
 
-        override fun onRotateDown() {
-        }
+        override fun onRotateDown() {}
 
-        override fun onRotateLeft() {
-        }
+        override fun onRotateLeft() {}
 
-        override fun onRotateRight() {
-        }
+        override fun onRotateRight() {}
 
         override fun onStandby() {
             Log.d("WATCH", "standby")
@@ -162,18 +154,6 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
         val size = Point()
         display.getSize(size)
         return (size.x * scaleFactor).toInt()
-    }
-
-    override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-        // TODO: Implement
-    }
-
-    /**
-     * Handle a change from the light sensor
-     */
-    override fun onSensorChanged(p0: SensorEvent?) {
-        val value: Float? = p0!!.values[0]
-        Log.d("onSensorChanged", "Lux: $value")
     }
 
     /**
@@ -196,7 +176,7 @@ class MainActivity : WearableActivity(), MainPresenter.View, SensorEventListener
     /**
      * Brightness should be between 0.00f and 0.01f
      *
-     * @param float brightness
+     * @param brightness Float
      */
     private fun setBrightness(brightness: Float) {
         if (brightness.compareTo(minBrightness) < 0) return
