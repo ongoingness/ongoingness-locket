@@ -75,6 +75,22 @@ class MainPresenter {
      */
     fun loadPermCollection() {
         permCollection = loadBitmaps(context!!)
+
+        // If in online mode and there are no stored images
+        // Return the place holder.
+        if (permCollection.size == 0) {
+            val screenSize: Int? = view?.getScreenSize()
+            // Get a scaled bitmap of the placeholder image.
+            val placeholder = Bitmap.createScaledBitmap(
+                    BitmapFactory.decodeResource(
+                            context?.resources,
+                            R.drawable.placeholder),
+                    screenSize!!,
+                    screenSize,
+                    false)
+            permCollection.add(placeholder)
+        }
+
         val bitmap: Bitmap? = updateBitmap()
         view?.updateBackground(bitmap!!)
         view?.setReady(true)
