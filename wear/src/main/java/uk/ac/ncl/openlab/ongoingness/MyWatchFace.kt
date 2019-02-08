@@ -8,9 +8,8 @@ import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
 import android.util.Log
 import android.view.SurfaceHolder
+import android.view.WindowManager
 import java.io.File
-import java.io.FileInputStream
-import java.io.FileNotFoundException
 
 /**
  * Important Note: Because watch face apps do not have a default Activity in
@@ -50,7 +49,7 @@ class MyWatchFace : CanvasWatchFaceService() {
             mBackgroundPaint = Paint().apply {
                 color = Color.BLACK
             }
-            mBackgroundBitmap = BitmapFactory.decodeResource(resources, R.drawable.placeholder)
+            mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.placeholder), getScreenSize(), getScreenSize(), false)
         }
 
         override fun onPropertiesChanged(properties: Bundle) {
@@ -129,10 +128,20 @@ class MyWatchFace : CanvasWatchFaceService() {
 
                 // If the bitmap is null, then show a placeholder, else show the stored file.
                 if (bitmap != null) {
-                    val resized = Bitmap.createScaledBitmap(bitmap, 400, 400, false)
+                    val resized = Bitmap.createScaledBitmap(
+                            bitmap,
+                            getScreenSize(),
+                            getScreenSize(),
+                            false)
                     canvas.drawBitmap(resized, 0f, 0f, mBackgroundPaint)
                 } else {
-                    val placeholder = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.placeholder), 400, 400, false)
+                    val placeholder = Bitmap.createScaledBitmap(
+                            BitmapFactory.decodeResource(
+                                    applicationContext.resources,
+                                    R.drawable.placeholder),
+                            getScreenSize(),
+                            getScreenSize(),
+                            false)
                     canvas.drawBitmap(placeholder, 0f, 0f, mBackgroundPaint)
                 }
             }
@@ -148,7 +157,19 @@ class MyWatchFace : CanvasWatchFaceService() {
 
         private fun launchActivity() {
             val intent = Intent(applicationContext, MainActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(intent)
+        }
+
+        /**
+         * Get the screen size of a device.
+         */
+        private fun getScreenSize(): Int {
+            val windowManager = applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val display = windowManager.defaultDisplay
+            val size = Point()
+            display.getSize(size)
+            return size.x
         }
     }
 }

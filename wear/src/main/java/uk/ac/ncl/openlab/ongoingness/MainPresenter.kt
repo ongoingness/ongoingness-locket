@@ -1,7 +1,6 @@
 package uk.ac.ncl.openlab.ongoingness
 
 import android.content.Context
-import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
@@ -14,16 +13,26 @@ import kotlin.collections.ArrayList
 
 class MainPresenter {
     private var view: View? = null
-    private val apiUrl = "http://46.101.47.18:3000/api"
-    private var index = -1
-    private val imageList: ArrayList<Bitmap>? = ArrayList()
-    private var presentImage: Bitmap? = null
+    private val apiUrl = "https://ongoingness-api.openlab.ncl.ac.uk/api"
+    private val idsFile = "ids.txt"
+    private var permCollection: ArrayList<Bitmap> = ArrayList()
+    private val tempCollection: ArrayList<Bitmap> = ArrayList()
+    private var maxPerm: Int = 0
+    private var maxTemp: Int = 0
+    private var allMedia: Array<Media>? = null
     private var token: String? = null
-    private val client: OkHttpClient = OkHttpClient.Builder()
-            .connectionSpecs(Arrays.asList(ConnectionSpec.MODERN_TLS, ConnectionSpec.CLEARTEXT))
+    private val client: OkHttpClient = OkHttpClient
+            .Builder()
+            .connectionSpecs(
+                    Arrays.asList(ConnectionSpec.MODERN_TLS,
+                    ConnectionSpec.CLEARTEXT))
             .build()
-    private var presentId: String? = null
     private var context: Context? = null
+    private var lastPerm = false
+    private var permIdx = 0
+    private var tempIdx = 0
+    private var tempIds: Array<String>? = null
+    private var permIds: Array<String>? = null
 
     /**
      * Attach the view to the presenter
@@ -52,171 +61,59 @@ class MainPresenter {
     }
 
     /**
-     * Cycle to next image in the semantic set.
-     *
-     * @param direction Which direction to increment the images by.
+     * Store the perm collection
      */
-    fun cycle(direction: Direction) {
-        // Return if there are no more images in cluster
-        if (imageList == null || imageList.isEmpty()) {
-            return
+    private fun storePermCollection() {
+        clearMediaFolder(context!!)
+
+        persistArray(permIds!!, idsFile, context!!)
+        persistBitmaps(permCollection.toTypedArray(), context!!)
+    }
+
+    /**
+     * Load a collection from saved files.
+     */
+    fun loadPermCollection() {
+        permCollection = loadBitmaps(context!!)
+
+        // If in online mode and there are no stored images
+        // Return the place holder.
+        if (permCollection.size == 0) {
+            val screenSize: Int? = view?.getScreenSize()
+            // Get a scaled bitmap of the placeholder image.
+            val placeholder = Bitmap.createScaledBitmap(
+                    BitmapFactory.decodeResource(
+                            context?.resources,
+                            R.drawable.placeholder),
+                    screenSize!!,
+                    screenSize,
+                    false)
+            permCollection.add(placeholder)
         }
 
-        var bitmapToDraw: Bitmap? = null
-
-        when (direction) {
-            Direction.BACKWARDS -> {
-                index += -1
-                if (index < 0) {
-                    bitmapToDraw = presentImage
-                    index = -1
-                } else {
-                    bitmapToDraw = imageList[index]
-                }
-            }
-            Direction.FORWARD -> {
-                index += 1
-                if (index == imageList.size) {
-                    index = imageList.size - 1
-                    bitmapToDraw = imageList[index]
-                } else {
-                    bitmapToDraw = imageList[index]
-                }
-            }
-        }
-
-        view?.updateBackground(bitmapToDraw!!)
-
-        val cw = ContextWrapper(context)
-        val directory: File = cw.getDir("imageDir", Context.MODE_PRIVATE)
-        storeBitmap(bitmapToDraw!!, directory)
-    }
-
-    /**
-     * Get an id of an image from the present,
-     * get links of new item of media
-     * draw the image of the present on the background.
-     *
-     * Requires a client to get the next present image id from api, get new images, and download
-     * the next image to show.
-     */
-    fun updateSemanticContext() {
-        if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection(context)) return
-
-        val url = "$apiUrl/media/request/present"
-        val gson = Gson()
-        val request = Request.Builder()
-                .url(url)
-                .header("x-access-token", token!!)
-                .build()
-
-        Log.d("updateSemanticContext", "Updating semantic context")
-
-        client.newCall(request)
-                .enqueue(object : Callback {
-                    override fun onFailure(call: Call, e: IOException) {
-                        e.printStackTrace()
-                    }
-
-                    override fun onResponse(call: Call, response: Response) {
-                        val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
-                        val id = genericResponse.payload
-                        presentId = id
-
-                        populateImages(presentId!!)
-                        fetchPresentImage(presentId!!)
-                    }
-                })
-    }
-
-    /**
-     * Prefetch images from the past and store in an array of bitmaps.
-     *
-     * @param presentId
-     */
-    fun populateImages(presentId: String) {
-        if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection(context)) return
-
-        val url = "$apiUrl/media/links/$presentId"
-        val gson = Gson()
-        val request = Request.Builder()
-                .url(url)
-                .header("x-access-token", token!!)
-                .build()
-
-        Log.d("getImageIdsInSet", "Getting ids in set")
-
-        client.newCall(request)
-                .enqueue(object : Callback {
-                    override fun onFailure(call: Call, e: IOException) {
-                        Log.e("getImageIdsInSet", "Error in request")
-                        e.printStackTrace()
-                    }
-
-                    override fun onResponse(call: Call, response: Response) {
-                        val linkResponse: LinkResponse = gson.fromJson(response.body()?.string(), LinkResponse::class.java)
-                        val links = linkResponse.payload
-
-                        // Clear array of image bitmaps.
-                        imageList?.clear()
-                        index = -1
-
-                        // Pre fetch images
-                        fetchBitmaps(links)
-                    }
-                })
-    }
-
-    /**
-     * Fetch the present image from the api and tell view to update display.
-     *
-     * @param presentId Id of present image.
-     */
-    private fun fetchPresentImage(presentId: String) {
-        if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection(context)) return
-
-        val url = "$apiUrl/media/show/$presentId/$token"
-        val request = Request.Builder().url(url).build()
-
-        Log.d("fetchPresentImage", "Fetching image from $url")
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call?, e: IOException?) {
-                e?.printStackTrace()
-            }
-
-            override fun onResponse(call: Call?, response: Response) {
-                try {
-                    // Create an input stream from the image.
-                    val inputStream = response.body()?.byteStream()
-
-                    // Scale it to match device size.
-                    presentImage = Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), view?.getScreenSize()!!, view?.getScreenSize()!!, false)
-
-                    // Update background to downloaded image.
-                    view?.updateBackground(presentImage!!)
-                } catch (error: Error) {
-                    error.printStackTrace()
-                }
-            }
-        })
+        val bitmap: Bitmap? = updateBitmap()
+        view?.updateBackground(bitmap!!)
+        view?.setReady(true)
     }
 
     /**
      * Fetch images of of the past and add to an array list.
      *
-     * @param links Array of links to fetch bitmaps from.
+     * @param links Array<String>
+     * @param container String name of container
      */
-    private fun fetchBitmaps(links: Array<String>) {
-        if (token == null) throw Error("Token cannot be empty")
-        if (!hasConnection(context)) return
+    private fun fetchBitmaps(links: Array<String>, container: Container) {
+        if (token == null || !hasConnection(context)) {
+            onNetworkError()
+            return
+        }
 
         for (id in links) {
-            val url = "$apiUrl/media/show/$id/$token"
-            val request = Request.Builder().url(url).build()
+            val url = "$apiUrl/media/$id/"
+            val request = Request.Builder()
+                    .url(url)
+                    .header("x-access-token", token!!)
+                    .build()
 
             Log.d("fetchBitmaps", "Fetching bitmap from $url")
 
@@ -225,16 +122,130 @@ class MainPresenter {
                     e?.printStackTrace()
                 }
 
+                /**
+                 * Create a bitmap from the returned image.
+                 */
                 override fun onResponse(call: Call?, response: Response) {
                     try {
+                        // Get an input stream
                         val inputStream = response.body()?.byteStream()
-                        imageList?.add(Bitmap.createScaledBitmap(BitmapFactory.decodeStream(inputStream), view?.getScreenSize()!!, view?.getScreenSize()!!, false))
+
+                        // Get container to place image
+                        when (container) {
+                            Container.TEMP -> {
+                                // Create a scaled bitmap to screen size from input stream.
+                                tempCollection.add(Bitmap.createScaledBitmap(
+                                    BitmapFactory.decodeStream(inputStream),
+                                    view?.getScreenSize()!!,
+                                    view?.getScreenSize()!!,
+                                    false))
+                            }
+
+                            Container.PERM -> {
+                                // Create a scaled bitmap to screen size from input stream.
+                                permCollection.add(Bitmap.createScaledBitmap(
+                                        BitmapFactory.decodeStream(inputStream),
+                                        view?.getScreenSize()!!,
+                                        view?.getScreenSize()!!,
+                                        false))
+                            }
+                        }
+
+                        // Handle item being added to a container
+                        onContainerUpdate(container)
                     } catch (error: Error) {
                         error.printStackTrace()
                     }
                 }
             })
         }
+    }
+
+    /**
+     * Fetch all media from the api.
+     */
+    fun fetchAllMedia() {
+        val gson = Gson()
+        val url = "$apiUrl/media"
+
+        if (token == null || !hasConnection(context)) {
+            onNetworkError()
+            return
+        }
+
+        val request = Request.Builder()
+                .url(url)
+                .header("x-access-token", token!!)
+                .build()
+
+        Log.d("fetchAllMedia", "Getting all media")
+        Log.d("fetchAllMedia", url)
+
+        client.newCall(request).enqueue(object : Callback {
+            /**
+             * On error, just load permanent collection
+             */
+            override fun onFailure(call: Call, e: IOException) {
+                loadPermCollection()
+                e.printStackTrace()
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val file = File(context?.filesDir, idsFile)
+                var same = true
+
+                // Parse response to Media response.
+                // Typed array of Media
+                val mediaResponse: MediaResponse = gson.fromJson(
+                        response.body()?.string(),
+                        MediaResponse::class.java)
+
+                allMedia = mediaResponse.payload
+
+                // Split into two filtered arrays
+                val permMedia: List<Media> = allMedia!!
+                        .filter { media: Media -> media.locket == "perm" }
+                val tempMedia: List<Media> = allMedia!!
+                        .filter { media: Media -> media.locket == "temp" }
+
+                // Set global media maxims
+                maxPerm = permMedia.size
+                maxTemp = tempMedia.size
+
+                // Get a list of ids from the media
+                permIds = permMedia.map { media: Media -> media._id }.toTypedArray()
+                tempIds = tempMedia.map { media: Media -> media._id }.toTypedArray()
+
+                // If an IDS file exits, then check if perm collection needs updating.
+                if (file.exists()) {
+                    val ids: List<String> = file.readLines()
+                    permMedia.forEach { media : Media ->
+                        run {
+                            // If not all new media is found, then stored files need updating.
+                            if (!ids.contains(media._id)) same = false
+                        }
+                    }
+                } else {
+                    same = false
+                }
+
+                // If files don't match, else load stored collection
+                if (!same) {
+                    // Get new perm collection
+                    fetchBitmaps(
+                        permIds!!,
+                        Container.PERM
+                    )
+                } else {
+                    loadPermCollection()
+                }
+
+                fetchBitmaps(
+                    tempIds!!,
+                    Container.TEMP
+                )
+            }
+        })
     }
 
     /**
@@ -245,6 +256,12 @@ class MainPresenter {
     fun generateToken(callback: () -> Unit) {
         val url = "$apiUrl/auth/mac"
         val gson = Gson()
+
+        if (!hasConnection(context)) {
+            onNetworkError()
+            return
+        }
+
         val mac: String = getMacAddress() // Get mac address
         val formBody = FormBody.Builder()
                 .add("mac", mac)
@@ -260,7 +277,9 @@ class MainPresenter {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val genericResponse: GenericResponse = gson.fromJson(response.body()?.string(), GenericResponse::class.java)
+                val genericResponse: GenericResponse = gson.fromJson(
+                        response.body()?.string(),
+                        GenericResponse::class.java)
 
                 // Set token
                 token = genericResponse.payload
@@ -270,8 +289,80 @@ class MainPresenter {
         })
     }
 
+    /**
+     * Handler for item placed in container
+     *
+     * @param container Container
+     */
+    private fun onContainerUpdate(container: Container) {
+        val isPerm: Boolean = when(container) {
+            Container.PERM -> true
+            Container.TEMP -> false
+        }
+
+        if(isPerm) {
+            if (permCollection.size == maxPerm) {
+                val bitmap: Bitmap? = updateBitmap()
+                view?.updateBackground(bitmap!!)
+                view?.setReady(true)
+                storePermCollection()
+            }
+        }
+    }
+
+    /**
+     * Dummy function for opening and closing locket.
+     * Should alternate between returning a permanent or temp bitmap
+     */
+    fun updateBitmap(): Bitmap? {
+        // If there are temp images and last image was perm...
+        if (tempCollection.size > 0 && lastPerm) {
+            /*
+             * Update the index
+             * flip lastPerm flag
+             * wrap around array if needed
+             * return bitmap.
+             */
+            tempIdx++
+            lastPerm = !lastPerm
+            if (tempIdx >= tempCollection.size) tempIdx %= tempCollection.size
+            Log.d("updateBitmap", "Returning temp")
+            return tempCollection[tempIdx]
+        }
+
+        if(permCollection.size < 0) return null
+
+        /*
+         * Default to perm
+         *
+         * update perm index
+         * wrap around array
+         * flip flag
+         * return perm bitmap.
+         */
+        permIdx++
+        if (permIdx >= permCollection.size) permIdx %= permCollection.size
+        lastPerm = !lastPerm
+        Log.d("updateBitmap", "Returning perm")
+        return permCollection[permIdx]
+    }
+
+    /**
+     * Handle a network error, default to loading perm collection
+     */
+    private fun onNetworkError() {
+        loadPermCollection()
+    }
+
+    /**
+     * Control the view, must implement these methods
+     */
     interface View {
         fun updateBackground(bitmap: Bitmap)
         fun getScreenSize(): Int
+        fun openLocket()
+        fun closeLocket()
+        fun getReady(): Boolean
+        fun setReady(ready : Boolean)
     }
 }
