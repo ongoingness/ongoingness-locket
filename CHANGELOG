@@ -1,0 +1,5 @@
+February 2019
+    * Version 0.1.0 (ea368df)
+        * First version of the locket. Can fetch and display media, as well as updating
+        media in response to light sensor events. Handles being offline and persists the
+        permanent collection.
