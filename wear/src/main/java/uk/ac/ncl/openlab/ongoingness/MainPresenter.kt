@@ -3,6 +3,7 @@ package uk.ac.ncl.openlab.ongoingness
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.util.Log
 import com.google.gson.Gson
 import okhttp3.*
@@ -79,21 +80,12 @@ class MainPresenter {
         // If in online mode and there are no stored images
         // Return the place holder.
         if (permCollection.size == 0) {
-            val screenSize: Int? = view?.getScreenSize()
-            // Get a scaled bitmap of the placeholder image.
-            val placeholder = Bitmap.createScaledBitmap(
-                    BitmapFactory.decodeResource(
-                            context?.resources,
-                            R.drawable.placeholder),
-                    screenSize!!,
-                    screenSize,
-                    false)
-            permCollection.add(placeholder)
+            displayCode()
+        } else {
+            val bitmap: Bitmap? = updateBitmap()
+            view?.updateBackground(bitmap!!)
+            view?.setReady(true)
         }
-
-        val bitmap: Bitmap? = updateBitmap()
-        view?.updateBackground(bitmap!!)
-        view?.setReady(true)
     }
 
     /**
@@ -355,10 +347,25 @@ class MainPresenter {
     }
 
     /**
+     * Display the devices mac address
+     */
+    private fun displayCode() {
+        var result = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        result.setPixel(0, 0, Color.WHITE)
+        result = Bitmap.createBitmap(result, 0, 0, 600, 600)
+        view?.updateBackground(result)
+
+        val mac = getMacAddress()
+        val txt = "Device Code:\n$mac"
+        view?.displayText(txt)
+    }
+
+    /**
      * Control the view, must implement these methods
      */
     interface View {
         fun updateBackground(bitmap: Bitmap)
+        fun displayText(addr: String)
         fun getScreenSize(): Int
         fun openLocket()
         fun closeLocket()

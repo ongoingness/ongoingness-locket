@@ -1,9 +1,7 @@
 package uk.ac.ncl.openlab.ongoingness
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Point
+import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.hardware.Sensor
 import android.hardware.Sensor.TYPE_LIGHT
@@ -12,8 +10,9 @@ import android.os.Bundle
 import android.support.wear.widget.BoxInsetLayout
 import android.support.wearable.activity.WearableActivity
 import android.util.Log
+import android.view.View
 import android.view.WindowManager
-
+import android.widget.TextView
 
 class MainActivity : WearableActivity(), MainPresenter.View {
     private val presenter: MainPresenter = MainPresenter()
@@ -119,6 +118,9 @@ class MainActivity : WearableActivity(), MainPresenter.View {
         runOnUiThread {
             // Stuff that updates the UI
             try {
+                val macAddress = findViewById<TextView>(R.id.macAddress);
+                macAddress.visibility = View.INVISIBLE
+
                 val background = findViewById<BoxInsetLayout>(R.id.background)
                 background.background = BitmapDrawable(resources, bitmap)
             } catch (e: java.lang.Error) {
@@ -205,5 +207,21 @@ class MainActivity : WearableActivity(), MainPresenter.View {
      */
     override fun setReady(ready: Boolean) {
         this.isReady = ready
+    }
+
+    /**
+     * Display text on the device
+     */
+    override fun displayText(addr: String) {
+        runOnUiThread {
+            // Stuff that updates the UI
+            try {
+                val macAddress = findViewById<TextView>(R.id.macAddress)
+                macAddress.visibility = View.VISIBLE
+                macAddress.text = addr
+            } catch (e: java.lang.Error) {
+                e.printStackTrace()
+            }
+        }
     }
 }
