@@ -204,6 +204,15 @@ class MainPresenter {
                 maxPerm = permMedia.size
                 maxTemp = tempMedia.size
 
+                /*
+                 * If there is no uploaded media, then default to setup.
+                 * Should display the device's code.
+                 */
+                if (maxPerm == 0 && maxTemp == 0) {
+                    view?.displayText("Device Code:\n${getMacAddress()}")
+                    return
+                }
+
                 // Get a list of ids from the media
                 permIds = permMedia.map { media: Media -> media._id }.toTypedArray()
                 tempIds = tempMedia.map { media: Media -> media._id }.toTypedArray()
