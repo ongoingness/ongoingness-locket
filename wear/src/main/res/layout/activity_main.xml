@@ -5,16 +5,20 @@
     android:id="@+id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/placeholder"
     android:padding="@dimen/box_inset_layout_padding"
     tools:context=".MainActivity"
     tools:deviceIds="wear">
+
+    <ImageView
+        android:id="@+id/image"
+        android:src="@drawable/placeholder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
     <TextView
         android:id="@+id/macAddress"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:text="TextView"
         android:textAlignment="center" />
 </android.support.wear.widget.BoxInsetLayout>

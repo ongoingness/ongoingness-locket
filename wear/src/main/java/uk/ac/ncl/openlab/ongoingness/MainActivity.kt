@@ -13,6 +13,9 @@ import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
+import com.bumptech.glide.Glide
+import kotlinx.android.synthetic.main.activity_main.*
+import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 
 class MainActivity : WearableActivity(), MainPresenter.View {
     private val presenter: MainPresenter = MainPresenter()
@@ -39,44 +42,31 @@ class MainActivity : WearableActivity(), MainPresenter.View {
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        /*
-         * Create the sensor manager.
-         * Get a light sensor, will return null if there is no sensor.
-         *
-         * TODO: Add flag for when sensor is not present, fallback to accelerometer
-         */
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        lightSensor = sensorManager?.getDefaultSensor(TYPE_LIGHT)
+        Glide.with(this).load(R.drawable.placeholder).into(image)
 
-        /*
-         * If there is a light sensor, then get the maximum range.
-         */
-        if (lightSensor == null) {
-            Log.d("onCreate", "No light sensor")
-        } else {
-            maxLight = lightSensor!!.maximumRange
+
+        when(FLAVOR){
+            "locket" ->{
+                sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+                lightSensor = sensorManager?.getDefaultSensor(TYPE_LIGHT)
+
+                /*
+                 * If there is a light sensor, then get the maximum range.
+                 */
+                if (lightSensor == null) {
+                    Log.d("onCreate", "No light sensor")
+                } else {
+                    maxLight = lightSensor!!.maximumRange
+                }
+
+                lightEventListener = LightEventListener(this)
+                sensorManager?.registerListener(lightEventListener, lightSensor!!, SensorManager.SENSOR_DELAY_FASTEST)
+
+            }
+            "refind" -> { rotationRecogniser = RotationRecogniser(this)}
         }
 
-        lightEventListener = LightEventListener(this)
-        sensorManager?.registerListener(lightEventListener, lightSensor!!, SensorManager.SENSOR_DELAY_FASTEST)
 
-        // Create a background bit map from drawable
-        updateBackground(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(
-                resources, R.drawable.placeholder), getScreenSize(), getScreenSize(), false)!!)
-
-        /*
-         * Check if there is an internet connection
-         *
-         * If there is no connection then load the permanent collection,
-         * else fetch media from API.
-         */
-        if (hasConnection(applicationContext)) {
-            presenter.generateToken {presenter.fetchAllMedia()}
-        } else {
-            presenter.loadPermCollection()
-        }
-
-        rotationRecogniser = RotationRecogniser(this)
     }
 
     /**
@@ -85,8 +75,21 @@ class MainActivity : WearableActivity(), MainPresenter.View {
      */
     override fun onResume() {
         super.onResume()
-        rotationRecogniser?.start(rotationListener)
-        sensorManager?.registerListener(lightEventListener, lightSensor!!, SensorManager.SENSOR_DELAY_FASTEST)
+
+        if(isConfigured(applicationContext)){
+            presenter.loadPermCollection()
+        }else{
+            presenter.displayCode()
+        }
+
+        if (hasConnection(applicationContext)) {
+            presenter.fetchAllMedia()
+        }
+
+        when(FLAVOR){
+            "locket" ->{ sensorManager?.registerListener(lightEventListener, lightSensor!!, SensorManager.SENSOR_DELAY_FASTEST) }
+            "refind" -> { rotationRecogniser?.start(rotationListener) }
+        }
     }
 
     /**
@@ -95,8 +98,10 @@ class MainActivity : WearableActivity(), MainPresenter.View {
      */
     override fun onPause() {
         super.onPause()
-        rotationRecogniser?.stop()
-        sensorManager?.unregisterListener(lightEventListener)
+        when(FLAVOR){
+            "locket" ->{ sensorManager?.unregisterListener(lightEventListener) }
+            "refind" -> { rotationRecogniser?.stop() }
+        }
 
     }
 
@@ -116,17 +121,8 @@ class MainActivity : WearableActivity(), MainPresenter.View {
      */
     override fun updateBackground(bitmap: Bitmap) {
         runOnUiThread {
-            // Stuff that updates the UI
-            try {
-                val macAddress = findViewById<TextView>(R.id.macAddress);
-                macAddress.visibility = View.INVISIBLE
-
-                val background = findViewById<BoxInsetLayout>(R.id.background)
-                background.background = BitmapDrawable(resources, bitmap)
-            } catch (e: java.lang.Error) {
-                e.printStackTrace()
-            }
-
+            macAddress.visibility = View.INVISIBLE
+            Glide.with(this).load(bitmap).into(image)
         }
     }
 
@@ -214,14 +210,8 @@ class MainActivity : WearableActivity(), MainPresenter.View {
      */
     override fun displayText(addr: String) {
         runOnUiThread {
-            // Stuff that updates the UI
-            try {
-                val macAddress = findViewById<TextView>(R.id.macAddress)
-                macAddress.visibility = View.VISIBLE
-                macAddress.text = addr
-            } catch (e: java.lang.Error) {
-                e.printStackTrace()
-            }
+            macAddress.visibility = View.VISIBLE
+            macAddress.text = addr
         }
     }
 }

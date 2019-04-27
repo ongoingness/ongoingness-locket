@@ -140,3 +140,16 @@ fun getMacAddress(): String {
     }
     return ""
 }
+
+
+
+const val PREFS = "uk.ac.ncl.openlab.ongoingness.PREFS"
+const val PREFS_CONFIGURED = "uk.ac.ncl.openlab.ongoingness.PREFS_CONFIGURED"
+
+fun isConfigured(context: Context): Boolean{
+    return context.getSharedPreferences(PREFS, 0).getBoolean(PREFS_CONFIGURED,false)
+}
+
+fun setConfigured(context: Context, configured:Boolean){
+    context.getSharedPreferences(PREFS, 0).edit().putBoolean(PREFS_CONFIGURED,configured).apply()
+}
