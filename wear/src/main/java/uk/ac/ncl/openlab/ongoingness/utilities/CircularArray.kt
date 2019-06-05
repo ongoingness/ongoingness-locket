@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness
+package uk.ac.ncl.openlab.ongoingness.utilities
 
 /**
  * Created by Kyle Montague on 21/11/2018.

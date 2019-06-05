@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness
+package uk.ac.ncl.openlab.ongoingness.utilities
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -32,29 +32,26 @@ fun clearMediaFolder(context: Context) {
 fun persistArray(arr : Array<String>, fileName : String, context: Context) {
     val file = File(context.filesDir, fileName)
     arr.forEach { id : String -> file.writeText("$id\n") }
+    Log.d("Utils","stored file: ${file.absolutePath}")
 }
 
-/**
- * Store bitmaps to file
- *
- * @param bitmaps Array<Bitmap>
- * @param context Context
- */
-fun persistBitmaps(bitmaps : Array<Bitmap>, context: Context) {
-    bitmaps.forEach { bitmap : Bitmap ->
-        run {
-            val imageFile = File(context.filesDir, "${bitmap.hashCode()}.jpg")
-            var bos: ByteArrayOutputStream? = null
-            try {
-                bos = ByteArrayOutputStream()
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos)
-                imageFile.writeBytes(bos.toByteArray())
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                bos?.close()
-            }
-        }
+
+
+
+fun persistBitmap(bitmap: Bitmap, filename:String, context: Context){
+    val imageFile = File(context.filesDir, "$filename")
+    Log.d("Utils","try to store image ${imageFile.absolutePath}")
+
+    lateinit var stream: OutputStream
+    try {
+        stream = FileOutputStream(imageFile)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+        stream.flush()
+    } catch (e: IOException){ // Catch the exception
+        e.printStackTrace()
+    } finally {
+        stream.close()
+        Log.d("Utils","stored image: ${imageFile.absolutePath}")
     }
 }
 
@@ -67,10 +64,18 @@ fun loadBitmaps(context: Context) : ArrayList<Bitmap> {
     val bitmaps : ArrayList<Bitmap> = ArrayList()
     context.filesDir!!.listFiles().forEach { file: File -> run {
         if (file.name.contains(".txt")) return@run
-        bitmaps.add(BitmapFactory.decodeFile(file.absolutePath))
+            bitmaps.add(BitmapFactory.decodeFile(file.absolutePath))
     } }
 
     return bitmaps
+}
+
+
+fun hasLocalCopy(context: Context, fileName: String):Boolean{
+
+    val file =  File(context.filesDir,fileName)
+    Log.d("Utils","Checked for: ${file.absolutePath}")
+    return file.exists()
 }
 
 /**
@@ -79,13 +84,14 @@ fun loadBitmaps(context: Context) : ArrayList<Bitmap> {
  * @param path
  * @return Bitmap
  */
-fun getBitmapFromFile(path: String): Bitmap? {
-    try {
-        val f = File(path, "last-image.png")
-        return BitmapFactory.decodeStream(FileInputStream(f))
+fun getBitmapFromFile(context: Context,filename: String): Bitmap? {
+    return try {
+        val f = File(context.filesDir,filename)
+        BitmapFactory.decodeStream(FileInputStream(f))
     } catch (e: FileNotFoundException) {
+        null
     }
-    return null
+
 }
 
 /**
@@ -143,8 +149,8 @@ fun getMacAddress(): String {
 
 
 
-const val PREFS = "uk.ac.ncl.openlab.ongoingness.PREFS"
-const val PREFS_CONFIGURED = "uk.ac.ncl.openlab.ongoingness.PREFS_CONFIGURED"
+const val PREFS = "uk.ac.ncl.openlab.ongoingness.utilities.PREFS"
+const val PREFS_CONFIGURED = "uk.ac.ncl.openlab.ongoingness.utilities.PREFS_CONFIGURED"
 
 fun isConfigured(context: Context): Boolean{
     return context.getSharedPreferences(PREFS, 0).getBoolean(PREFS_CONFIGURED,false)

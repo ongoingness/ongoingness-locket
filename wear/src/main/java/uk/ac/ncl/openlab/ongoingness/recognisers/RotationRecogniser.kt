@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness
+package uk.ac.ncl.openlab.ongoingness.recognisers
 
 
 import android.content.Context
@@ -16,13 +16,14 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.PublishSubject
+import uk.ac.ncl.openlab.ongoingness.utilities.CircularArray
 
 /**
  * Created by Kyle Montague on 10/11/2018.
  */
 open class RotationRecogniser(val context: Context) {
     private val TAG = "RR"
-    var listener: RotationRecogniser.Listener? = null
+    var listener: Listener? = null
     var disposables: ArrayList<Disposable> = arrayListOf()
     private var states = ObservableList<State>()
 
@@ -126,7 +127,7 @@ open class RotationRecogniser(val context: Context) {
     }
 
 
-    private fun onStateChange(currentState: RotationRecogniser.State) {
+    private fun onStateChange(currentState: State) {
 
         if (currentState == State.DOWN) {
             //entering

@@ -9,7 +9,9 @@ import android.support.wearable.watchface.WatchFaceStyle
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.WindowManager
-import java.io.File
+import uk.ac.ncl.openlab.ongoingness.utilities.getBitmapFromFile
+import uk.ac.ncl.openlab.ongoingness.views.MainActivity
+import uk.ac.ncl.openlab.ongoingness.views.OngoingnessActivity
 
 /**
  * Important Note: Because watch face apps do not have a default Activity in
@@ -19,7 +21,7 @@ import java.io.File
  * in the Google Watch Face Code Lab:
  * https://codelabs.developers.google.com/codelabs/watchface/index.html#0
  */
-class MyWatchFace : CanvasWatchFaceService() {
+class WatchFace : CanvasWatchFaceService() {
 
     override fun onCreateEngine(): Engine {
         return Engine()
@@ -37,7 +39,7 @@ class MyWatchFace : CanvasWatchFaceService() {
         override fun onCreate(holder: SurfaceHolder) {
             super.onCreate(holder)
 
-            setWatchFaceStyle(WatchFaceStyle.Builder(this@MyWatchFace)
+            setWatchFaceStyle(WatchFaceStyle.Builder(this@WatchFace)
                     .setAcceptsTapEvents(true)
                     .setHideNotificationIndicator(true)
                     .build())
@@ -122,9 +124,7 @@ class MyWatchFace : CanvasWatchFaceService() {
             } else {
                 // Draw the background when the watch is awake.
                 // Get the last drawn image from the activity from the file.
-                val cw = ContextWrapper(applicationContext)
-                val directory: File = cw.getDir("imageDir", Context.MODE_PRIVATE)
-                val bitmap = getBitmapFromFile(directory.absolutePath)
+                val bitmap = getBitmapFromFile(this@WatchFace, "last-image.jpg")
 
                 // If the bitmap is null, then show a placeholder, else show the stored file.
                 if (bitmap != null) {
@@ -156,7 +156,11 @@ class MyWatchFace : CanvasWatchFaceService() {
         }
 
         private fun launchActivity() {
-            val intent = Intent(applicationContext, MainActivity::class.java)
+
+            val intent = Intent(applicationContext, OngoingnessActivity::class.java)
+
+
+            //val intent = Intent(applicationContext, MainActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(intent)
         }

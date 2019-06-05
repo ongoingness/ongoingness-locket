@@ -1,33 +1,34 @@
-package uk.ac.ncl.openlab.ongoingness
+package uk.ac.ncl.openlab.ongoingness.viewmodel
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import com.google.gson.Gson
-import okhttp3.*
+import uk.ac.ncl.openlab.ongoingness.utilities.*
 import java.io.File
-import java.io.IOException
-import java.util.*
+import java.lang.Exception
 import kotlin.collections.ArrayList
 
 class MainPresenter {
 
-    private val api:API = API()
+    private val api: API = API()
     private var view: View? = null
     private val idsFile = "ids.txt"
     private var permCollection: ArrayList<Bitmap> = ArrayList()
     private val tempCollection: ArrayList<Bitmap> = ArrayList()
-    private var collection: ArrayList<Bitmap> = ArrayList()
+    private var collection:ArrayList<Bitmap> = ArrayList()
     private var maxPerm: Int = 0
     private var maxTemp: Int = 0
 
     private var context: Context? = null
     private var tempIds: Array<String>? = null
     private var permIds: Array<String>? = null
+
+
+
+
+
+
 
     /**
      * Attach the view to the presenter
@@ -44,6 +45,7 @@ class MainPresenter {
      */
     fun detachView() {
         this.view = null
+
     }
 
     /**
@@ -53,25 +55,18 @@ class MainPresenter {
      */
     fun setContext(context: Context) {
         this.context = context
-        api.generateToken { token ->  Log.d("API",token) }
+
     }
 
     /**
      * Store the perm collection
      */
-    private fun storeCollection(container: Container) {
+    private fun storeCollection() {
 
 
         clearMediaFolder(context!!)
-        when(container){
-            Container.PERM ->{
-                persistArray(permIds!!, idsFile, context!!)
-                persistBitmaps(permCollection.toTypedArray(), context!!)
-            }
-            Container.TEMP ->{
-                persistBitmaps(tempCollection.toTypedArray(), context!!)
-            }
-        }
+        persistArray(permIds!!, idsFile, context!!)
+
 
 
 
@@ -83,7 +78,24 @@ class MainPresenter {
      */
     fun loadPermCollection() {
 
-        if (permCollection.size == 0) {
+
+        val file = File(context?.filesDir, idsFile)
+        if (file.exists()) {
+            val ids: List<String> = file.readLines()
+            for(filename in ids){
+                Log.d("Loading",filename)
+                try {
+                    permCollection.add(getBitmapFromFile(context!!, filename)!!)
+                }catch(e:Exception){
+                    Log.e("Loading",e.toString())
+                }
+            }
+        }
+
+        collection = permCollection
+
+
+        if (collection.size == 0) {
             displayCode()
         } else {
             val bitmap: Bitmap? = updateBitmap()
@@ -100,15 +112,35 @@ class MainPresenter {
      */
     private fun fetchBitmaps(links: Array<String>, container: Container) {
 
-        links.forEach { link ->
-            api.fetchBitmap(link) { image ->
-                when (container) {
-                    Container.TEMP -> { tempCollection.add(Bitmap.createScaledBitmap(image, view?.getScreenSize()!!, view?.getScreenSize()!!, false)) }
-                    Container.PERM ->{ permCollection.add(Bitmap.createScaledBitmap(image, view?.getScreenSize()!!, view?.getScreenSize()!!, false)) }
+        links.forEach{link ->
+
+            val filename = "$link.jpg"
+
+            if(!hasLocalCopy(context!!, filename)) {
+
+                api.fetchBitmap(link, view?.getScreenSize()!!) { body ->
+                    val inputStream = body?.byteStream()
+                    val image = BitmapFactory.decodeStream(inputStream)
+                    Log.d("Presenter", "Got image: $image")
+                    when (container) {
+                        Container.TEMP -> {
+                            tempCollection.add(image)
+                        }
+                        Container.PERM -> {
+                            permCollection.add(image)
+                        }
+                    }
+
+                    persistBitmap(image, filename, context!!)
+                    collection.add(image)
+
+                    Log.d("Presenter", "Perm: ${permCollection.size} Temp: ${tempCollection.size}")
                 }
+            }else{
+                Log.d("Presenter","using Local Copy")
+                collection.add(getBitmapFromFile(context!!, filename)!!)
             }
         }
-        onContainerUpdate(container)
     }
 
     /**
@@ -116,14 +148,17 @@ class MainPresenter {
      */
     fun fetchAllMedia() {
 
-        api.fetchAllMedia { allMedia ->
+
+        api.fetchMedia { allMedia ->
+
+            setConfigured(context!!, true)
 
             val file = File(context?.filesDir, idsFile)
             var same = true
 
             // Split into two filtered arrays
             val permMedia: List<Media> = allMedia!!.filter { media: Media -> media.locket == "perm" }
-            val tempMedia: List<Media> = allMedia!!.filter { media: Media -> media.locket == "temp" }
+            val tempMedia: List<Media> = allMedia.filter { media: Media -> media.locket == "temp" }
 
             // Set global media maxims
             maxPerm = permMedia.size
@@ -135,10 +170,12 @@ class MainPresenter {
              */
             if (maxPerm == 0 && maxTemp == 0) {
                 view?.displayText("Device Code:\n${getMacAddress()}")
-                return@fetchAllMedia
+                return@fetchMedia
             }
 
             // Get a list of ids from the media
+            var permFilenames = permMedia.map { media: Media -> "${media._id}.jpg" }.toTypedArray()
+
             permIds = permMedia.map { media: Media -> media._id }.toTypedArray()
             tempIds = tempMedia.map { media: Media -> media._id }.toTypedArray()
 
@@ -155,21 +192,17 @@ class MainPresenter {
                 same = false
             }
 
+            persistArray(permFilenames, idsFile, context!!)
+
             // If files don't match, else load stored collection
             if (!same) {
                 // Get new perm collection
-                fetchBitmaps(
-                        permIds!!,
-                        Container.PERM
-                )
+                fetchBitmaps(permIds!!, Container.PERM)
             } else {
                 loadPermCollection()
             }
 
-            fetchBitmaps(
-                    tempIds!!,
-                    Container.TEMP
-            )
+            fetchBitmaps(tempIds!!, Container.TEMP)
         }
     }
 
@@ -192,11 +225,13 @@ class MainPresenter {
                 view?.updateBackground(bitmap!!)
                 view?.setReady(true)
             }
+            storeCollection()
         }
 
         collection = (permCollection + tempCollection) as ArrayList<Bitmap>
 
-        storeCollection(container)
+        Log.d("Presenter","Collection: ${collection.size} Perm: ${permCollection.size} Temp: ${tempCollection.size}")
+
 
     }
 
@@ -211,13 +246,6 @@ class MainPresenter {
         }else{
             null
         }
-    }
-
-    /**
-     * Handle a network error, default to loading perm collection
-     */
-    private fun onNetworkError() {
-        loadPermCollection()
     }
 
     /**

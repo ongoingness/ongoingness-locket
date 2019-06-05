@@ -1,21 +1,23 @@
-package uk.ac.ncl.openlab.ongoingness
+package uk.ac.ncl.openlab.ongoingness.views
 
 import android.content.Context
 import android.graphics.*
-import android.graphics.drawable.BitmapDrawable
 import android.hardware.Sensor
 import android.hardware.Sensor.TYPE_LIGHT
 import android.hardware.SensorManager
 import android.os.Bundle
-import android.support.wear.widget.BoxInsetLayout
 import android.support.wearable.activity.WearableActivity
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
-import android.widget.TextView
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.activity_main.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
+import uk.ac.ncl.openlab.ongoingness.R
+import uk.ac.ncl.openlab.ongoingness.recognisers.LightEventListener
+import uk.ac.ncl.openlab.ongoingness.recognisers.RotationRecogniser
+import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
+import uk.ac.ncl.openlab.ongoingness.viewmodel.MainPresenter
 
 class MainActivity : WearableActivity(), MainPresenter.View {
     private val presenter: MainPresenter = MainPresenter()
@@ -63,7 +65,8 @@ class MainActivity : WearableActivity(), MainPresenter.View {
                 sensorManager?.registerListener(lightEventListener, lightSensor!!, SensorManager.SENSOR_DELAY_FASTEST)
 
             }
-            "refind" -> { rotationRecogniser = RotationRecogniser(this)}
+            "refind" -> { rotationRecogniser = RotationRecogniser(this)
+            }
         }
 
 
@@ -76,11 +79,9 @@ class MainActivity : WearableActivity(), MainPresenter.View {
     override fun onResume() {
         super.onResume()
 
-        if(isConfigured(applicationContext)){
-            presenter.loadPermCollection()
-        }else{
-            presenter.displayCode()
-        }
+
+        presenter.loadPermCollection()
+
 
         if (hasConnection(applicationContext)) {
             presenter.fetchAllMedia()

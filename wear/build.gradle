@@ -14,7 +14,7 @@ android {
         versionName "1.0"
         multiDexEnabled true
 
-        buildConfigField('String','API_URL','"https://ongoingness-api.openlab.ncl.ac.uk/api"')
+        buildConfigField('String','API_URL','"https://ongoingness-api.openlab.ncl.ac.uk/api/"')
 
     }
     buildTypes {
@@ -52,13 +52,19 @@ dependencies {
     implementation 'com.android.support:palette-v7:28.0.0'
     implementation 'com.android.support:wear:28.0.0'
     compileOnly 'com.google.android.wearable:wearable:2.4.0'
-    implementation 'com.squareup.okhttp3:okhttp:3.11.0'
-    implementation "com.squareup.retrofit2:retrofit:2.4.0"
-    implementation "com.squareup.retrofit2:adapter-rxjava2:2.4.0"
-    implementation "com.squareup.retrofit2:converter-gson:2.3.0"
+    implementation 'com.squareup.okhttp3:okhttp:3.12.0'
+
 
     implementation 'com.github.bumptech.glide:glide:4.9.0'
 
     implementation 'com.gvillani:rxsensors:1.0'
     implementation 'io.reactivex.rxjava2:rxkotlin:2.3.0'
+
+
+    implementation 'com.squareup.retrofit2:retrofit:2.5.0'
+    implementation "com.squareup.retrofit2:adapter-rxjava2:2.5.0"
+    implementation "com.squareup.retrofit2:converter-gson:2.5.0"
+
+
+
 }

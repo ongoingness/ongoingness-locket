@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness
+package uk.ac.ncl.openlab.ongoingness.utilities
 
 data class GenericResponse(
         val code: Int,
