@@ -12,15 +12,16 @@ import com.gvillani.rxsensors.RxSensorTransformer
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
-import uk.ac.ncl.openlab.ongoingness.utilities.CircularArray
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class RevealRecogniser(private val context: Context): Observable() {
+class RevealRecogniser(private val context: Context) : Observable() {
 
     enum class State{
         STANDBY,
+        AWAKECOVER,
         AWAKE,
+        PRECOVERED,
         COVERED,
         ACTIVE,
         OFF,
@@ -51,52 +52,57 @@ class RevealRecogniser(private val context: Context): Observable() {
 
     enum class Events{
         STARTED,
-        STOPPED,
         COVERED,
+        AWAKE,
         SHORT_REVEAL,
-        LONG_REVEAL,
-        STATE_CHANGED
+        SLEEP,
+        STOPPED,
+        HIDE,
+        SHOW,
     }
 
-    var lightLevels: CircularArray<Float> = CircularArray(10)
-
     private var currentState: State = State.OFF
-
     private var previousState: State = State.UNKNOWN
+    private var previousPreviousState: State = State.UNKNOWN
+
     private var disposables: ArrayList<Disposable> = arrayListOf()
     private var currentOrientation = Orientation.UNKNOWN
     private var previousOrientation = Orientation.UNKNOWN
+    private var lastEventChange:Long = System.currentTimeMillis()
 
-    private var currentLight = LightLevel.UNKNOWN
-    private var previousLight = LightLevel.UNKNOWN
+    private var buffer: Deque<Pair<Long, Float>> = ArrayDeque<Pair<Long, Float>>()
+    private var bufferSize: Int = 10
 
+    private var max: Float = 0F
+    private var min: Float = 100F
 
-    private var lightDelta = LightChange.UNKNOWN
+    private var lastSampleTime: Long = System.currentTimeMillis()
+    private var lastSample: RxSensorEvent? = null
+
+    private var lastCoverSampleTime: Long = System.currentTimeMillis()
+
+    private  var currentLightLevel: LightLevel = LightLevel.UNKNOWN
+
+    private var shortRevealHappened: Boolean = false
+    private var wokeUpAndShown: Boolean = false
 
     private var revealHandler = Handler()
     private var revealRunnable: Runnable? = null
-
-    private var revealDuration = 1000L * 3 // three seconds
-    private var shortRevealDuration = 500L // 500 milliseconds
     private val interval = 100L //100 milliseconds
 
-    private var isActive = false
-
-    private var coverStart:Long = System.currentTimeMillis()
-
-    private var lastEventChange:Long = System.currentTimeMillis()
-
     init {
-        revealRunnable = Runnable {
-            Log.d(TAG,"checking for sleep / wake action")
+        revealRunnable = kotlinx.coroutines.Runnable {
             //check if the light level has remained constant
-            revealHandler.postDelayed(revealRunnable,interval)
-            checkForReveal()
+            revealHandler.postDelayed(revealRunnable, interval)
+            if(currentState == State.COVERED && lastSample != null && System.currentTimeMillis() - lastSampleTime > 1000) {
+                lastSample!!.timestamp = System.currentTimeMillis() * 1000000
+                Log.d("THREAD", "ADDED light")
+                processLight(lastSample!!)
+            }
         }
     }
 
     fun start(){
-        isActive = true
         disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GRAVITY, SensorManager.SENSOR_DELAY_UI)
                 .subscribeOn(Schedulers.computation())
                 .distinctUntilChanged(RxSensorFilter.uniqueEventValues())
@@ -105,20 +111,24 @@ class RevealRecogniser(private val context: Context): Observable() {
                 .subscribe { rxSensorEvent -> processGravity(rxSensorEvent) })
 
 
-        disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_LIGHT, SensorManager.SENSOR_DELAY_NORMAL)
+        disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_LIGHT, SensorManager.SENSOR_DELAY_FASTEST)
                 .subscribeOn(Schedulers.computation())
-                .debounce(50,TimeUnit.MILLISECONDS)
-                .distinctUntilChanged(RxSensorFilter.uniqueEventValues())
-                .compose<RxSensorEvent>(RxSensorTransformer.lowPassFilter(0.2f))
+                .debounce(0, TimeUnit.MILLISECONDS)
+                //.distinctUntilChanged(RxSensorFilter.uniqueEventValues())
+                //.distinctUntilChanged(RxSensorFilter.minAccuracy(SensorManager.SENSOR_STATUS_ACCURACY_LOW))
+                //  .compose<RxSensorEvent>(RxSensorTransformer.lowPassFilter(0.1f))
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { rxSensorEvent -> processLight(rxSensorEvent) })
+
+
+
+        revealRunnable!!.run()
+
         setChanged()
         notifyObservers(Events.STARTED)
     }
 
-
     fun stop() {
-        isActive = false
         for (disposable in disposables) {
             disposable.dispose()
         }
@@ -126,74 +136,209 @@ class RevealRecogniser(private val context: Context): Observable() {
         notifyObservers(Events.STOPPED)
     }
 
-    fun setWakeDuration(milliseconds:Long){
-        if(milliseconds >= 1000){
-            revealDuration = milliseconds
-        }
-    }
-
-    fun isActive():Boolean{
-        return isActive
-    }
-
-    fun getState(): State {
-        return currentState
-    }
-
     private fun enabled():Boolean{
-        return arrayListOf(State.ACTIVE,State.STANDBY,State.COVERED,State.AWAKE).contains(currentState)
-    }
-    private fun processLight(event: RxSensorEvent) {
-
-        if(!enabled())
-            return
-
-
-        val current = event.values[0]
-        var previous = 0F
-        if(lightLevels.size > 0) {
-            previous = lightLevels.last()
-        }
-
-        lightLevels.add(current) //push value to  circular array
-
-        if(lightLevels.size <= 2)
-            return
-
-
-        lateinit var ordered:List<Float>
-        synchronized(lightLevels) {
-            ordered = lightLevels.sortedBy { it }
-        }
-
-        val min = ordered.first()
-        val max = ordered.last()
-        val median = ordered[(ordered.size/2)-1]
-
-        val delta = previous - current
-
-        val deltaRel = delta / (max-min)
-
-        Log.d(TAG,"Lux:$current Max:$max Median:$median Min:$min Range:${max - min} Delta:$delta Delta-Rel:$deltaRel")
-
-//        Log.d(TAG,"Lux:$current")
-
-
-        if(currentLight != LightLevel.HIGH && delta >= LIGHT_DELTA_THRESHOLD ){
-            updateLightLevel(LightLevel.HIGH)
-        }else if(currentLight != LightLevel.LOW && delta <= 0-LIGHT_DELTA_THRESHOLD){
-            updateLightLevel(LightLevel.LOW)
-        }
-
+        return arrayListOf(State.ACTIVE,State.STANDBY,State.COVERED,State.AWAKE,State.PRECOVERED, State.AWAKECOVER).contains(currentState)
     }
 
+    private fun updateState(state: State){
+        synchronized(currentState) {
+            if (state == currentState)
+                return //no change, so no need to notify of change
 
+            previousPreviousState = previousState
+            previousState = currentState
+            currentState = state
+        }
+    }
 
+    private fun updateOrientation(orientation: Orientation){
+        previousOrientation = currentOrientation
+        currentOrientation = orientation
+    }
 
     private fun notifyEvent(event: Events) {
         lastEventChange = System.currentTimeMillis()
         setChanged()
         notifyObservers(event)
+    }
+
+    private fun processLight(event: RxSensorEvent) {
+        Log.d("Data", "${event.values[0]}")
+
+        if(enabled()) {
+
+            if (System.currentTimeMillis() - lastSampleTime > 500) {
+
+                lastSampleTime = System.currentTimeMillis()
+                lastSample = event
+
+                if (buffer!!.size == bufferSize)
+                    buffer.removeFirst()
+                buffer.addLast(Pair(event.timestamp, event.values[0]))
+
+                lightStateChecker(event)
+
+                if (event.values[0] > max) {
+                    max = event.values[0]
+                } else if (event.values[0] < min) {
+                    min = event.values[0]
+                    Log.d("DOWNDOWN", "$min")
+                }
+
+            }
+            //Log.d("TESTING", "Last: ${event.values[0]}      Max: $max       Min: $min")
+
+        }
+    }
+
+
+    private fun lightStateChecker(event: RxSensorEvent) {
+
+        var lightChange: LightChange = getLightChange((event.values[0]))
+        Log.d("Pre", "$lightChange" )
+        /*
+        if (!checkLightChange(3, lightChange))
+            lightChange = LightChange.NONE
+        */
+
+       var lightChanged: Boolean = false
+
+        if(currentLightLevel != LightLevel.HIGH && lightChange == LightChange.INCREASE) {
+            currentLightLevel = LightLevel.HIGH
+            lightChanged = true
+        } else if(currentLightLevel != LightLevel.LOW && lightChange == LightChange.DECREASE) {
+            currentLightLevel = LightLevel.LOW
+            lightChanged = true
+        } else if (currentLightLevel == LightLevel.HIGH && lightChange == LightChange.INCREASE) {
+            lightChange = LightChange.NONE
+        } else if (currentLightLevel == LightLevel.LOW && lightChange == LightChange.DECREASE) {
+            lightChange = LightChange.NONE
+        }
+
+
+        /*
+
+        if(previousLightChange == lightChange)
+            lightChange = LightChange.NONE
+        else
+            previousLightChange = lightChange
+        */
+
+
+        Log.d("Testing",  "$currentLightLevel $lightChange $currentState ${event.values[0]} $lightChanged")
+
+
+        when(currentState) {
+
+            State.STANDBY -> {
+
+                Log.d("Standby", "enter" )
+
+
+                if(currentLightLevel == LightLevel.LOW && lightChanged) {
+                    Log.d("Standby", "Light decrease" )
+                    lastCoverSampleTime = event.timestamp
+                    updateState(State.AWAKECOVER)
+                }
+
+            }
+
+            State.PRECOVERED -> {
+                Log.d("Precovered", "enter" )
+                if(currentLightLevel == LightLevel.LOW && lightChanged && wokeUpAndShown) {
+                    Log.d("PRECOVERED", "Light decrease" )
+                    lastCoverSampleTime = event.timestamp
+                    updateState(State.COVERED)
+                }
+
+            }
+
+            State.AWAKECOVER -> {
+
+                if(currentLightLevel == LightLevel.HIGH && lightChanged) {
+                    updateState(State.STANDBY)
+                } else if (currentLightLevel == LightLevel.LOW && !lightChanged && event.timestamp - lastCoverSampleTime > 5000000000) {
+                    notifyEvent(Events.AWAKE)
+                    updateState(State.ACTIVE)
+                }
+
+            }
+
+            State.COVERED -> {
+
+                when(previousPreviousState) {
+
+                    State.ACTIVE -> {
+
+                        if(currentLightLevel == LightLevel.HIGH && lightChanged) {
+                            updateState(State.ACTIVE)
+                            shortRevealHappened = false
+                        } else if (currentLightLevel== LightLevel.LOW && !lightChanged) {
+                            if (event.timestamp - lastCoverSampleTime > 5000000000 && shortRevealHappened) {
+                                notifyEvent(Events.SLEEP)
+                                updateState(State.STANDBY)
+                                shortRevealHappened = false
+                                wokeUpAndShown = false
+                            } else if (event.timestamp - lastCoverSampleTime > 100000000 && !shortRevealHappened) {
+                                notifyEvent(Events.SHORT_REVEAL)
+                                shortRevealHappened = true
+                            }
+                        }
+
+                    }
+
+                }
+            }
+
+            State.ACTIVE -> {
+
+                if(currentLightLevel == LightLevel.LOW && lightChanged) {
+                    lastCoverSampleTime = event.timestamp
+                    updateState(State.COVERED)
+                }
+
+            }
+
+        }
+    }
+
+    private fun getLightChange(value: Float): LightChange {
+
+        var minWindowTop: Float = min + min / 2
+        var maxWindowBottom: Float = max - max / 2
+
+
+        if(minWindowTop < 20) {
+            minWindowTop = 2 * min
+        }
+
+        Log.d("HUM", "$minWindowTop  $maxWindowBottom")
+
+        if(value < minWindowTop) {
+            return LightChange.DECREASE
+        } else if(value > maxWindowBottom) {
+            return LightChange.INCREASE
+        }
+
+
+
+        return LightChange.NONE
+    }
+
+    private fun checkLightChange(n: Int, changeType: LightChange): Boolean {
+
+        if(buffer.size >= n) {
+            for(i in 1..n) {
+                if(getLightChange(buffer.toMutableList()[buffer.size-i].second) != changeType)
+                    return false
+            }
+        } else {
+            buffer.forEach { element ->
+                if(getLightChange(element.second) != changeType)
+                    return false
+            }
+        }
+        return true
     }
 
     private fun processGravity(event: RxSensorEvent) {
@@ -207,85 +352,42 @@ class RevealRecogniser(private val context: Context): Observable() {
             y <= -thresholdGravity -> updateOrientation(Orientation.AWAY)
         }
 
-        if (currentState == State.OFF && currentOrientation == Orientation.UP) {
+        gravityStateChecker()
+    }
+
+
+    private fun gravityStateChecker() {
+
+        if (currentState == State.OFF && currentOrientation == Orientation.TOWARDS) {
             //entered standby orientation
             updateState(State.STANDBY)
-        }else if (currentState == State.ACTIVE)
-        {
-            if(currentOrientation == Orientation.UP){
-                //still active
-            }else{
-                //start timer for sleep mode as the device is in an other position???
-            }
-
+            notifyEvent(Events.STARTED)
+        } else if(currentState == State.ACTIVE && currentOrientation == Orientation.UP) {
+            updateState(State.PRECOVERED)
+            notifyEvent(Events.HIDE)
+        } else if(currentState == State.PRECOVERED && currentOrientation == Orientation.TOWARDS) {
+            updateState(State.ACTIVE)
+            notifyEvent(Events.SHOW)
+        } else if(currentState == State.ACTIVE && currentOrientation == Orientation.TOWARDS) {
+            if(!wokeUpAndShown)
+                wokeUpAndShown = true
+        } else if(currentState != State.OFF && (currentOrientation == Orientation.AWAY || currentOrientation == Orientation.DOWN)) {
+            // entered off orientation
+            updateState(State.OFF)
+            notifyEvent(Events.STOPPED)
+        } else if(currentState == State.COVERED && currentOrientation == Orientation.TOWARDS) {
+            shortRevealHappened = false
+            updateState(State.ACTIVE)
+            notifyEvent(Events.SHOW)
         }
+
     }
-
-
-    private fun checkForReveal(){
-    }
-
-    private fun updateState(state: State){
-        synchronized(currentState) {
-            if (state == currentState)
-                return //no change, so no need to notify of change
-
-            previousState = currentState
-            currentState = state
-            setChanged()
-            notifyObservers(currentState)
-        }
-    }
-
-    private fun updateOrientation(orientation: Orientation){
-        previousOrientation = currentOrientation
-        currentOrientation = orientation
-    }
-
-
-    //FIXME - Going to have some issues with the sensor values, as it is currently set to notify when the value changes. Not using a regular sampling rate.
-    private fun updateLightLevel(lightLevel: LightLevel) {
-        synchronized(currentLight) {
-            previousLight = currentLight
-            currentLight = lightLevel
-
-            if ((previousLight == LightLevel.UNKNOWN && currentLight != previousLight) || previousLight == currentLight) {
-                lightDelta = LightChange.NONE
-            } else if (previousLight.ordinal > currentLight.ordinal && currentLight != LightLevel.UNKNOWN) {
-                lightDelta = LightChange.DECREASE
-            } else if (previousLight.ordinal < currentLight.ordinal && currentLight != LightLevel.UNKNOWN) {
-                lightDelta = LightChange.INCREASE
-            }
-
-
-            if (currentState != State.COVERED && currentLight == LightLevel.LOW && lightDelta == LightChange.DECREASE) { //entered a covered state
-                coverStart = System.currentTimeMillis()
-                updateState(State.COVERED)
-                notifyEvent(Events.COVERED)
-            } else if (currentState == State.COVERED && currentLight.ordinal > LightLevel.LOW.ordinal && lightDelta == LightChange.INCREASE) { //exited a covered state
-                updateState(State.ACTIVE)
-
-                val deltaCover = System.currentTimeMillis() - coverStart
-                if (deltaCover >= revealDuration && debounceEvent()) { //alert the observers that a long reveal has happened
-                    notifyEvent(Events.LONG_REVEAL)
-                } else if (deltaCover >= shortRevealDuration && currentState == State.ACTIVE && debounceEvent()) { //alert the observers that a short reveal has happened
-                    notifyEvent(Events.SHORT_REVEAL)
-                }
-
-
-            }
-        }
-    }
-
-    fun debounceEvent():Boolean{
-        return (System.currentTimeMillis() - lastEventChange) >= 100
-    }
-
 
     companion object {
         private const val standardGravity = SensorManager.STANDARD_GRAVITY
         const val thresholdGravity = standardGravity / 1.3
         const val LIGHT_DELTA_THRESHOLD = 0.35F
-        const val TAG = "RevealRecogniser"
+        const val TAG = "RevealRecogniserOld"
     }
+
 }

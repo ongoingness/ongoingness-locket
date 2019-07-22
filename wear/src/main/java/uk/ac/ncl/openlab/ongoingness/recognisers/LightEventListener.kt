@@ -51,10 +51,10 @@ class LightEventListener(val view: MainPresenter.View): SensorEventListener {
          * If the locket should be open, update the background bitmap.
          */
         if (isClosed) {
-            view.closeLocket()
+            //view.closeLocket()
             Log.d("onSensorChanged", "Closing Locket")
         } else {
-            view.openLocket()
+            //view.openLocket()
             Log.d("onSensorChanged", "Opening Locket")
         }
     }

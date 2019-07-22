@@ -1,5 +1,9 @@
 package uk.ac.ncl.openlab.ongoingness.utilities
 
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
 data class GenericResponse(
         val code: Int,
         val errors: Boolean,
@@ -55,10 +59,10 @@ data class LinkResponse(
 }
  */
 data class Media(
+        val _id: String,
         val links: Array<String>,
         val era: String,
         val emotions: Array<String>,
-        val _id: String,
         val path: String,
         val mimetype: String,
         val user: String,

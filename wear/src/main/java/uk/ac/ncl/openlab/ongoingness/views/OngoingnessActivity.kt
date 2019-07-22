@@ -1,73 +1,85 @@
 package uk.ac.ncl.openlab.ongoingness.views
 
 import android.app.Activity
-import android.support.v7.app.AppCompatActivity
+
 import android.os.Bundle
-import android.util.Log
-import android.view.View
 import android.view.WindowManager
-import com.bumptech.glide.Glide
-import kotlinx.android.synthetic.main.activity_main.*
 import uk.ac.ncl.openlab.ongoingness.R
-import uk.ac.ncl.openlab.ongoingness.recognisers.RevealRecogniser
-import java.util.*
+import uk.ac.ncl.openlab.ongoingness.recognisers.LightRecogniser
 
 class OngoingnessActivity : Activity() {
 
     val TAG = "ONGOING"
 
+    /*
     private val revealObserver = Observer { _, arg ->
 
-        if(arg is RevealRecogniser.State){
+        if(arg is RevealRecogniserOld.State){
             Log.d(TAG, arg.name)
         }else {
 
-            macAddress.text = (arg as RevealRecogniser.Events).name
+            macAddress.text = (arg as RevealRecogniserOld.Events).name
             Log.d(TAG, macAddress.text.toString())
 
             when (arg) {
-                RevealRecogniser.Events.COVERED -> {
+                RevealRecogniserOld.Events.STARTED -> {
                 }
-                RevealRecogniser.Events.SHORT_REVEAL -> {
+                RevealRecogniserOld.Events.COVERED -> {
                 }
-                RevealRecogniser.Events.LONG_REVEAL -> {
+                RevealRecogniserOld.Events.AWAKE -> {
                 }
-                RevealRecogniser.Events.STARTED -> {
+                RevealRecogniserOld.Events.SHORT_REVEAL -> {
                 }
-                RevealRecogniser.Events.STOPPED -> {
+                RevealRecogniserOld.Events.SLEEP -> {
+                }
+                RevealRecogniserOld.Events.STOPPED -> {
                 }
             }
         }
     }
 
-    private val revealRecogniser: RevealRecogniser = RevealRecogniser(this)
+    private val revealRecogniser: RevealRecogniserOld = RevealRecogniserOld(this)
+    */
 
+    private val rec: LightRecogniser = LightRecogniser(this)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
 
+
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
 
-        macAddress.visibility = View.VISIBLE
-        Glide.with(this).load(R.drawable.placeholder).into(image)
+        var params: WindowManager.LayoutParams = window.attributes
+        params.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL
+        window.attributes = params
+        /*
+               macAddress.visibility = View.VISIBLE
+               Glide.with(this).load(R.drawable.placeholder).into(image)
+               //Glide.with(this).load(R.drawable.test).into(image)
 
-        revealRecogniser.addObserver(revealObserver)
+               revealRecogniser.addObserver(revealObserver)
+
+               */
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        revealRecogniser.deleteObserver(revealObserver)
+        //revealRecogniser.deleteObserver(revealObserver)
     }
 
     override fun onResume() {
         super.onResume()
-        revealRecogniser.start()
+        //revealRecogniser.start()
+        rec.start()
     }
 
     override fun onPause() {
         super.onPause()
-        revealRecogniser.stop()
+        //revealRecogniser.stop()
+        rec.stop()
     }
 
 

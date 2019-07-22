@@ -9,9 +9,7 @@ import android.support.wearable.watchface.WatchFaceStyle
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.WindowManager
-import uk.ac.ncl.openlab.ongoingness.utilities.getBitmapFromFile
 import uk.ac.ncl.openlab.ongoingness.views.MainActivity
-import uk.ac.ncl.openlab.ongoingness.views.OngoingnessActivity
 
 /**
  * Important Note: Because watch face apps do not have a default Activity in
@@ -31,7 +29,6 @@ class WatchFace : CanvasWatchFaceService() {
         private var mMuteMode: Boolean = false
         private lateinit var mBackgroundPaint: Paint
         private lateinit var mBackgroundBitmap: Bitmap
-        private lateinit var mGrayBackgroundBitmap: Bitmap
         private var mAmbient: Boolean = false
         private var mLowBitAmbient: Boolean = false
         private var mBurnInProtection: Boolean = false
@@ -51,7 +48,7 @@ class WatchFace : CanvasWatchFaceService() {
             mBackgroundPaint = Paint().apply {
                 color = Color.BLACK
             }
-            mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.placeholder), getScreenSize(), getScreenSize(), false)
+            mBackgroundBitmap = getCoverBitmap()
         }
 
         override fun onPropertiesChanged(properties: Bundle) {
@@ -118,34 +115,38 @@ class WatchFace : CanvasWatchFaceService() {
          */
         private fun drawBackground(canvas: Canvas) {
             if (mAmbient && (mLowBitAmbient || mBurnInProtection)) {
-                canvas.drawColor(Color.BLACK)
+                canvas.drawBitmap(mBackgroundBitmap, 0f, 0f, mBackgroundPaint)
             } else if (mAmbient) {
-                canvas.drawBitmap(mGrayBackgroundBitmap, 0f, 0f, mBackgroundPaint)
+                canvas.drawBitmap(mBackgroundBitmap, 0f, 0f, mBackgroundPaint)
             } else {
-                // Draw the background when the watch is awake.
-                // Get the last drawn image from the activity from the file.
-                val bitmap = getBitmapFromFile(this@WatchFace, "last-image.jpg")
-
-                // If the bitmap is null, then show a placeholder, else show the stored file.
-                if (bitmap != null) {
-                    val resized = Bitmap.createScaledBitmap(
-                            bitmap,
-                            getScreenSize(),
-                            getScreenSize(),
-                            false)
-                    canvas.drawBitmap(resized, 0f, 0f, mBackgroundPaint)
-                } else {
-                    val placeholder = Bitmap.createScaledBitmap(
-                            BitmapFactory.decodeResource(
-                                    applicationContext.resources,
-                                    R.drawable.placeholder),
-                            getScreenSize(),
-                            getScreenSize(),
-                            false)
-                    canvas.drawBitmap(placeholder, 0f, 0f, mBackgroundPaint)
-                }
+                canvas.drawBitmap(mBackgroundBitmap, 0f, 0f, mBackgroundPaint)
             }
         }
+
+        private fun getCoverBitmap(): Bitmap {
+
+            var coverID: Int? = null
+
+            when(BuildConfig.FLAVOR){
+                "locket" ->{ coverID = R.drawable.cover}
+                "refind" -> { coverID = R.drawable.refind_cover }
+            }
+
+            val bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, coverID!! ), getScreenSize(), getScreenSize(), false)
+
+            // If the bitmap is null, then show a black background
+            if (bitmap != null) {
+                val resized = Bitmap.createScaledBitmap(
+                        bitmap,
+                        getScreenSize(),
+                        getScreenSize(),
+                        false)
+                return resized
+            }
+            return Bitmap.createBitmap(getScreenSize(), getScreenSize(), Bitmap.Config.ARGB_8888)
+        }
+
+
 
         override fun onVisibilityChanged(visible: Boolean) {
             super.onVisibilityChanged(visible)
@@ -156,12 +157,9 @@ class WatchFace : CanvasWatchFaceService() {
         }
 
         private fun launchActivity() {
-
-            val intent = Intent(applicationContext, OngoingnessActivity::class.java)
-
-
-            //val intent = Intent(applicationContext, MainActivity::class.java)
+            val intent = Intent(applicationContext, MainActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
             startActivity(intent)
         }
 

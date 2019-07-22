@@ -22,6 +22,11 @@ fun clearMediaFolder(context: Context) {
     context.filesDir.listFiles().forEach { file: File? -> file?.delete() }
 }
 
+fun deleteFile(context: Context, filename: String) {
+    File(context.filesDir, filename)?.delete()
+}
+
+
 /**
  * Store an array to file
  *
@@ -89,6 +94,7 @@ fun getBitmapFromFile(context: Context,filename: String): Bitmap? {
         val f = File(context.filesDir,filename)
         BitmapFactory.decodeStream(FileInputStream(f))
     } catch (e: FileNotFoundException) {
+        Log.d("GETFILE", "$e")
         null
     }
 

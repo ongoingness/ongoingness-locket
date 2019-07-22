@@ -1,9 +1,18 @@
 package uk.ac.ncl.openlab.ongoingness.viewmodel
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.support.wearable.activity.WearableActivity
 import android.util.Log
+import android.view.View
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
+import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
+import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import java.io.File
 import java.lang.Exception
@@ -11,24 +20,98 @@ import kotlin.collections.ArrayList
 
 class MainPresenter {
 
-    private val api: API = API()
     private var view: View? = null
-    private val idsFile = "ids.txt"
-    private var permCollection: ArrayList<Bitmap> = ArrayList()
-    private val tempCollection: ArrayList<Bitmap> = ArrayList()
-    private var collection:ArrayList<Bitmap> = ArrayList()
-    private var maxPerm: Int = 0
-    private var maxTemp: Int = 0
-
     private var context: Context? = null
-    private var tempIds: Array<String>? = null
-    private var permIds: Array<String>? = null
+    private var mediaCollection: List<WatchMedia>? = null
+    private var currentIndex = 0;
+    private lateinit var watchMediaViewModel: WatchMediaViewModel
+    private var displayContent: Boolean = false
 
+    private var coverWhiteBitmap: Bitmap? = null
+    private var coverBitmap: Bitmap? = null
 
+    fun setWatchMediaRepository(activity: FragmentActivity) {
 
+        watchMediaViewModel = ViewModelProviders.of(activity).get(WatchMediaViewModel::class.java)
 
+        watchMediaViewModel.allWatchMedia.observe(activity, Observer { watchMedia ->
+            mediaCollection = watchMedia
+            if(displayContent)
+                setNewBitmap(mediaCollection)
+        })
 
+    }
 
+    fun pullingData(state: Boolean) {
+        if(state) {
+            displayContent = false
+            view?.updateBackground(coverWhiteBitmap!!)
+        } else {
+            displayContent()
+        }
+    }
+
+    fun goToNextImage(){
+        currentIndex++
+        if(displayContent) {
+
+            setNewBitmap(mediaCollection)
+            Log.d("Presenter", "Going to next image")
+        } else {
+            setScreenBlack(1)
+        }
+    }
+
+    fun goToPreviousImage() {
+        currentIndex--
+        if(displayContent) {
+            setNewBitmap(mediaCollection)
+            Log.d("Presenter", "Going to previous image")
+        } else {
+            setScreenBlack(1)
+        }
+    }
+
+    private fun setScreenBlack(type: Int) {
+        if(type == 1)
+            view?.updateBackground(coverBitmap!!)
+        else
+            view?.updateBackground(coverWhiteBitmap!!)
+        view?.setReady(true)
+    }
+
+    private fun setNewBitmap(localCollection: List<WatchMedia>?) {
+        var bitmap: Bitmap? = null
+        if (localCollection.isNullOrEmpty() || !displayContent) {
+            bitmap = coverBitmap
+            currentIndex = 0
+        } else {
+            if(currentIndex >= localCollection.size)
+                currentIndex %= localCollection.size
+            else if(currentIndex < 0)
+                currentIndex = localCollection.size-1
+            bitmap = getBitmapFromFile(this.context!!, localCollection[currentIndex].path)
+        }
+
+        if(bitmap == null) {
+            //Just in case something goes wrong with the file
+            watchMediaViewModel.delete(localCollection!![currentIndex], view!!.getContext())
+            goToNextImage()
+        } else {
+            view?.updateBackground(bitmap!!)
+            view?.setReady(true)
+        }
+    }
+
+    fun displayContent() {
+        this.displayContent = true
+        setNewBitmap(mediaCollection)
+    }
+
+    fun hideContent(type: Int) {
+        this.displayContent = false
+        setScreenBlack(type)
+    }
 
     /**
      * Attach the view to the presenter
@@ -37,6 +120,17 @@ class MainPresenter {
      */
     fun attachView(view: View) {
         this.view = view
+
+        when(FLAVOR){
+            "locket" -> {
+                coverBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover), view!!.getScreenSize(), view!!.getScreenSize(), false)
+                coverWhiteBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover_white), view!!.getScreenSize(), view!!.getScreenSize(), false)
+            }
+            "refind" -> {
+                coverBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.refind_cover), view!!.getScreenSize(), view!!.getScreenSize(), false)
+                coverWhiteBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.refind_cover_white), view!!.getScreenSize(), view!!.getScreenSize(), false)
+            }
+        }
     }
 
     /**
@@ -59,196 +153,6 @@ class MainPresenter {
     }
 
     /**
-     * Store the perm collection
-     */
-    private fun storeCollection() {
-
-
-        clearMediaFolder(context!!)
-        persistArray(permIds!!, idsFile, context!!)
-
-
-
-
-
-    }
-
-    /**
-     * Load a collection from saved files.
-     */
-    fun loadPermCollection() {
-
-
-        val file = File(context?.filesDir, idsFile)
-        if (file.exists()) {
-            val ids: List<String> = file.readLines()
-            for(filename in ids){
-                Log.d("Loading",filename)
-                try {
-                    permCollection.add(getBitmapFromFile(context!!, filename)!!)
-                }catch(e:Exception){
-                    Log.e("Loading",e.toString())
-                }
-            }
-        }
-
-        collection = permCollection
-
-
-        if (collection.size == 0) {
-            displayCode()
-        } else {
-            val bitmap: Bitmap? = updateBitmap()
-            view?.updateBackground(bitmap!!)
-            view?.setReady(true)
-        }
-    }
-
-    /**
-     * Fetch images of of the past and add to an array list.
-     *
-     * @param links Array<String>
-     * @param container String name of container
-     */
-    private fun fetchBitmaps(links: Array<String>, container: Container) {
-
-        links.forEach{link ->
-
-            val filename = "$link.jpg"
-
-            if(!hasLocalCopy(context!!, filename)) {
-
-                api.fetchBitmap(link, view?.getScreenSize()!!) { body ->
-                    val inputStream = body?.byteStream()
-                    val image = BitmapFactory.decodeStream(inputStream)
-                    Log.d("Presenter", "Got image: $image")
-                    when (container) {
-                        Container.TEMP -> {
-                            tempCollection.add(image)
-                        }
-                        Container.PERM -> {
-                            permCollection.add(image)
-                        }
-                    }
-
-                    persistBitmap(image, filename, context!!)
-                    collection.add(image)
-
-                    Log.d("Presenter", "Perm: ${permCollection.size} Temp: ${tempCollection.size}")
-                }
-            }else{
-                Log.d("Presenter","using Local Copy")
-                collection.add(getBitmapFromFile(context!!, filename)!!)
-            }
-        }
-    }
-
-    /**
-     * Fetch all media from the api.
-     */
-    fun fetchAllMedia() {
-
-
-        api.fetchMedia { allMedia ->
-
-            setConfigured(context!!, true)
-
-            val file = File(context?.filesDir, idsFile)
-            var same = true
-
-            // Split into two filtered arrays
-            val permMedia: List<Media> = allMedia!!.filter { media: Media -> media.locket == "perm" }
-            val tempMedia: List<Media> = allMedia.filter { media: Media -> media.locket == "temp" }
-
-            // Set global media maxims
-            maxPerm = permMedia.size
-            maxTemp = tempMedia.size
-
-            /*
-             * If there is no uploaded media, then default to setup.
-             * Should display the device's code.
-             */
-            if (maxPerm == 0 && maxTemp == 0) {
-                view?.displayText("Device Code:\n${getMacAddress()}")
-                return@fetchMedia
-            }
-
-            // Get a list of ids from the media
-            var permFilenames = permMedia.map { media: Media -> "${media._id}.jpg" }.toTypedArray()
-
-            permIds = permMedia.map { media: Media -> media._id }.toTypedArray()
-            tempIds = tempMedia.map { media: Media -> media._id }.toTypedArray()
-
-            // If an IDS file exits, then check if perm collection needs updating.
-            if (file.exists()) {
-                val ids: List<String> = file.readLines()
-                permMedia.forEach { media : Media ->
-                    run {
-                        // If not all new media is found, then stored files need updating.
-                        if (!ids.contains(media._id)) same = false
-                    }
-                }
-            } else {
-                same = false
-            }
-
-            persistArray(permFilenames, idsFile, context!!)
-
-            // If files don't match, else load stored collection
-            if (!same) {
-                // Get new perm collection
-                fetchBitmaps(permIds!!, Container.PERM)
-            } else {
-                loadPermCollection()
-            }
-
-            fetchBitmaps(tempIds!!, Container.TEMP)
-        }
-    }
-
-
-
-    /**
-     * Handler for item placed in container
-     *
-     * @param container Container
-     */
-    private fun onContainerUpdate(container: Container) {
-        val isPerm: Boolean = when(container) {
-            Container.PERM -> true
-            Container.TEMP -> false
-        }
-
-        if(isPerm) {
-            if (permCollection.size == maxPerm) {
-                val bitmap: Bitmap? = updateBitmap()
-                view?.updateBackground(bitmap!!)
-                view?.setReady(true)
-            }
-            storeCollection()
-        }
-
-        collection = (permCollection + tempCollection) as ArrayList<Bitmap>
-
-        Log.d("Presenter","Collection: ${collection.size} Perm: ${permCollection.size} Temp: ${tempCollection.size}")
-
-
-    }
-
-
-
-    var index = -1
-    fun updateBitmap(): Bitmap? {
-        return if(collection.size > 0){
-            index++
-            if(index >= collection.size) index %= collection.size
-            collection[index]
-        }else{
-            null
-        }
-    }
-
-    /**
      * Display the devices mac address
      */
     fun displayCode() {
@@ -264,9 +168,8 @@ class MainPresenter {
         fun updateBackground(bitmap: Bitmap)
         fun displayText(addr: String)
         fun getScreenSize(): Int
-        fun openLocket()
-        fun closeLocket()
         fun getReady(): Boolean
         fun setReady(ready : Boolean)
+        fun getContext(): Context
     }
 }

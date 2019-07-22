@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" /> <!-- Required for complications to receive complication data and open the provider chooser. -->
     <uses-permission android:name="com.google.android.wearable.permission.RECEIVE_COMPLICATION_DATA" />
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
 
     <application
         android:allowBackup="true"
@@ -42,6 +45,12 @@
             </intent-filter>
         </service>
 
+
+        <service
+            android:name=".utilities.MediaPullService"
+            android:exported="false"/>
+
+
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
@@ -49,6 +58,18 @@
         <uses-library
             android:name="com.google.android.wearable"
             android:required="true" />
+        <!--android:theme="@style/Theme.Transparent"-->
+        <activity
+            android:name=".views.MainActivity"
+            android:label="@string/title_activity_main"
+            android:launchMode = "singleTop"
+            >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+
+            </intent-filter>
+        </activity>
 
         <activity android:name=".views.OngoingnessActivity">
             <intent-filter>
@@ -58,14 +79,15 @@
         </activity>
 
 
-        <activity
-            android:name=".views.MainActivity"
-            android:label="@string/title_activity_main">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+
+
+
+
+
+
+
+
+
     </application>
 
 </manifest>

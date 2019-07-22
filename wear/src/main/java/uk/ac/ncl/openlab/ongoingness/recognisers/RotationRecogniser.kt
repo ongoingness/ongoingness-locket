@@ -32,7 +32,8 @@ open class RotationRecogniser(val context: Context) {
         TOWARDS,
         UP,
         AWAY,
-        DOWN
+        DOWN,
+        PICKED_UP,
     }
 
     var enterState = State.UNKNOWN
@@ -45,33 +46,42 @@ open class RotationRecogniser(val context: Context) {
     private var timeoutDuration = 1000L * 30 * 1 //one minute timeout
     private val timeoutInterval = 5000L
 
+    private var isPickUp = false;
+    private var onStandby = false;
+
     init {
         timeoutRunnable = Runnable {
 
             if ((System.currentTimeMillis() - lastChanged) >= timeoutDuration) {
                 Log.d(TAG, "onstanby")
+                isPickUp = false
+                onStandby = true
+                timeoutHandler.removeCallbacks(timeoutRunnable);
                 listener?.onStandby()
             } else {
                 timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval) //check again in 5seconds
-
             }
+
         }
     }
 
     fun start(listener: Listener) {
+        Log.d(TAG, "start")
+        Log.d(TAG, "$listener")
+
         this.listener = listener
         lastChanged = System.currentTimeMillis()
         timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval)
 
         try {
-            Log.d("RotationRecogniser", "Sensor missing, running without sensors")
-        } catch (e: SensorNotFoundException) {
+
             disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GRAVITY, SensorManager.SENSOR_DELAY_GAME)
                     .subscribeOn(Schedulers.computation())
                     .distinctUntilChanged(RxSensorFilter.uniqueEventValues())
                     .compose<RxSensorEvent>(RxSensorTransformer.lowPassFilter(0.2f))
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { rxSensorEvent -> process(rxSensorEvent) })
+
 
             disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GAME_ROTATION_VECTOR, SensorManager.SENSOR_DELAY_NORMAL)
                     .subscribeOn(Schedulers.computation())
@@ -85,6 +95,11 @@ open class RotationRecogniser(val context: Context) {
                     .distinctUntilChanged()
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe { state -> onStateChange(state) })
+
+
+        } catch (e: SensorNotFoundException) {
+            Log.d("RotationRecogniser", "Sensor missing, running without sensors")
+            throw e
         }
     }
 
@@ -110,6 +125,7 @@ open class RotationRecogniser(val context: Context) {
 
 
     private fun processState(event: RxSensorEvent) {
+
         val y = event.values[1]
         val z = event.values[2]
 
@@ -120,6 +136,8 @@ open class RotationRecogniser(val context: Context) {
             z <= -thresholdGraqvity -> currentState = State.DOWN
             y >= thresholdGraqvity -> currentState = State.TOWARDS
             y <= -thresholdGraqvity -> currentState = State.AWAY
+
+            !isPickUp && y >= 1.0 -> currentState = State.PICKED_UP
         }
 
         if (currentState != State.UNKNOWN)
@@ -129,7 +147,12 @@ open class RotationRecogniser(val context: Context) {
 
     private fun onStateChange(currentState: State) {
 
-        if (currentState == State.DOWN) {
+        Log.d("State", "$currentState")
+
+        if(currentState == State.PICKED_UP) {
+            Log.d(TAG, "OnPickUp")
+            onPickUp()
+        } else if (currentState == State.DOWN) {
             //entering
             enterState = previousState
             Log.d(TAG, "prev: $previousState current: $enterState")
@@ -152,6 +175,25 @@ open class RotationRecogniser(val context: Context) {
 
         previousState = currentState
         lastChanged = System.currentTimeMillis()
+
+        if(onStandby) {
+            onStandby = false
+            lastChanged = System.currentTimeMillis()
+            timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval)
+            timeoutRunnable = Runnable {
+
+                if ((System.currentTimeMillis() - lastChanged) >= timeoutDuration) {
+                    Log.d(TAG, "onstanby")
+                    isPickUp = false
+                    onStandby = true
+                    listener?.onStandby()
+                } else {
+                    timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval) //check again in 5seconds
+                }
+
+            }
+        }
+
     }
 
     private fun goForward() {
@@ -163,6 +205,14 @@ open class RotationRecogniser(val context: Context) {
         Log.d(TAG, "goback")
         listener?.onRotateDown()
     }
+
+    private fun onPickUp() {
+        Log.d(TAG, "onpickup")
+        isPickUp = true
+        listener?.onPickUp()
+
+    }
+
 
 
     class ObservableList<T> {
@@ -195,5 +245,8 @@ open class RotationRecogniser(val context: Context) {
         fun onRotateRight()
 
         fun onStandby()
+
+        fun onPickUp()
+
     }
 }

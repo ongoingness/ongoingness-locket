@@ -125,6 +125,9 @@ class API {
 
         val url = "auth/mac"
 
+
+        Log.d("MAC Address", getMacAddress());
+
         val mac: String = getMacAddress() // Get mac address
         val formBody = FormBody.Builder()
                 .add("mac", mac)
@@ -184,6 +187,40 @@ class API {
         }
     }
 
+
+    /**
+     * Fetch Inferred media from the api.
+     *
+     * @param callback function to call after retrieving the media
+     */
+    fun fetchInferredMedia(mediaID: String, callback: (Response?) -> Unit) {
+
+        generateToken { token ->  Log.d("API",token)
+
+            val url = "media/linkedMediaAll_Weighted/?mediaId=$mediaID&drawIfNew=1"
+            val request = Request.Builder()
+                    .url(apiUrl + url)
+                    .get()
+                    .header("x-access-token", token!!)
+                    .build()
+
+            client.newCall(request).enqueue(object : Callback {
+
+                override fun onFailure(call: Call, e: IOException) {
+                    e.printStackTrace()
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    /*val mediaResponse: MediaResponse = gson.fromJson(
+                            response.body()?.string(),
+                            MediaResponse::class.java)
+                    callback(mediaResponse.payload)
+                    */
+                    callback(response)
+                }
+            })
+        }
+    }
 
 
     /**
