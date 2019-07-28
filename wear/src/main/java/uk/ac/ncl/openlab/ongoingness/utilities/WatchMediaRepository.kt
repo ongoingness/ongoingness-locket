@@ -30,6 +30,6 @@ class WatchMediaRepository(private val watchMediaDao: WatchMediaDao) {
 
     @WorkerThread
     suspend fun getAll() : List<WatchMedia> {
-        return watchMediaDao.getAll();
+        return watchMediaDao.getAll()
     }
 }
