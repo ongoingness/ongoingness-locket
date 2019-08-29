@@ -2,13 +2,19 @@ package uk.ac.ncl.openlab.ongoingness.views
 
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.*
+import android.os.BatteryManager
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.util.Log
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.ImageView
+import androidx.core.view.GestureDetectorCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.wear.ambient.AmbientModeSupport
 import com.bumptech.glide.Glide
@@ -28,8 +34,9 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.util.Observer
+import java.time.LocalDateTime
 
-class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, MainPresenter.View {
+class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, MainPresenter.View, GestureDetector.OnGestureListener {
 
     private var presenter: MainPresenter?  = null
     private var isReady: Boolean = false
@@ -50,10 +57,82 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
     private lateinit var mediaPullRunnable : kotlinx.coroutines.Runnable
 
+
+    lateinit var mImageView: ImageView
+    lateinit var gesture : GestureDetector
+
+    /*
+    * Override long press gesture method. 500ms vibrate, and calls hideContent function from presenter.
+     */
+    override fun onLongPress(event: MotionEvent) {
+        Log.d("Gesture Detect", "onLongPress: $event")
+        vibrator?.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
+        presenter!!.hideContent(1)
+        writeToLogFile("Long press detected. Hiding content.")
+    }
+
+    /*
+    * Overriding singleTapUp - 100ms vibrate, and moves to next image.
+    */
+    override fun onSingleTapUp(event: MotionEvent): Boolean {
+
+
+        Log.d("Gesture Detect", "onSingleTapUp: $event")
+        writeToLogFile("Single press detected. Calling next image.")
+        vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
+        this.presenter!!.goToNextImage()
+        return true
+    }
+
+
+    /*
+    * Overriding onDown method - no functions called.
+     */
+    override fun onDown(event: MotionEvent): Boolean {
+        Log.d("Gesture Detect", "onDown: $event")
+        return true
+    }
+
+    /*
+    * Overriding onFling method - no functions called.
+     */
+    override fun onFling(
+            event1: MotionEvent,
+            event2: MotionEvent,
+            velocityX: Float,
+            velocityY: Float
+    ): Boolean {
+        Log.d("Gesture Detect", "onFling: $event1 $event2")
+        return true
+    }
+
+    /*
+    * Overriding onScroll - nothing called.
+     */
+    override fun onScroll(event1: MotionEvent, event2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
+        Log.d("Gesture Detect", "onScroll: $event1 $event2")
+        return true
+    }
+
+    /*
+    * Overriding onShowPress - nothing called.
+     */
+    override fun onShowPress(event: MotionEvent) {
+        Log.d("Gesture Detect", "onShowPress: $event")
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
+        gesture = GestureDetector(MainActivity@this, this)
+        var touch = View.OnTouchListener(){
+            v,events -> gesture.onTouchEvent(events)
+        }
+        mImageView = findViewById(R.id.image)
+        mImageView.setOnTouchListener(touch)
+
 
         // Enables Always-on
         //setAmbientEnabled()
@@ -66,8 +145,12 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-
         when(FLAVOR){
+            "locket_touch" -> {
+                presenter!!.setWatchMediaRepository(this)
+                Glide.with(this).load(R.drawable.cover).into(image)
+                setLocket()
+            }
             "locket" -> {
                 presenter!!.setWatchMediaRepository(this)
                 Glide.with(this).load(R.drawable.cover).into(image)
@@ -86,6 +169,120 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             when (FLAVOR) {
                 "locket" -> {
 
+                }
+
+                "locket_touch" -> {
+
+                    writeToLogFile("Locket touch. Checking media.")
+                    val api = API()
+
+                    val watchMediaDao = WatchMediaRoomDatabase.getDatabase(this.applicationContext).watchMediaDao()
+                    val repository = WatchMediaRepository(watchMediaDao);
+
+                    val context = this.applicationContext
+                    val filesDir = this.applicationContext.filesDir
+
+                    GlobalScope.launch {
+                        var mediaList = repository.getAll().sortedBy { it.order }
+                        var currentImageID: String
+                        currentImageID = if (mediaList.isNullOrEmpty()) {
+                            "test"
+                        } else {
+                            mediaList[0]._id
+                        }
+                        api.fetchInferredMedia(currentImageID) { response ->
+
+                            var stringResponse = response!!.body()?.string()
+
+                            if (stringResponse == "[]") {
+                                isGettingData = false
+                                rotationRecogniser?.start(rotationListener!!)
+                                presenter!!.pullingData(false)
+                            } else {
+
+                                for (mediaToRemove in mediaList) {
+                                    deleteFile(context, mediaToRemove.path)
+                                }
+
+                                repository.deleteAll()
+                                val jsonResponse = JSONObject(stringResponse)
+
+                                var payload: JSONArray = jsonResponse.getJSONArray("payload")
+                                if (payload.length() > 0) {
+
+                                    //Set present Image
+                                    var presentImage: JSONObject = payload.getJSONObject(0)
+                                    var newWatchMedia = WatchMedia(presentImage.getString("_id"),
+                                            presentImage.getString("path"),
+                                            presentImage.getString("locket"),
+                                            presentImage.getString("mimetype"), 0)
+
+                                    api.fetchBitmap(newWatchMedia._id) { body ->
+                                        val inputStream = body?.byteStream()
+                                        val image = BitmapFactory.decodeStream(inputStream)
+                                        val file = File(filesDir, newWatchMedia.path)
+                                        lateinit var stream: OutputStream
+                                        try {
+                                            stream = FileOutputStream(file)
+                                            image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                                            stream.flush()
+                                        } catch (e: IOException) { // Catch the exception
+                                            e.printStackTrace()
+                                        } finally {
+                                            stream.close()
+                                            inputStream?.close()
+                                            Log.d("Utils", "stored image: ${file.absolutePath}")
+                                            GlobalScope.launch {
+                                                repository.insert(newWatchMedia)
+                                            }
+                                        }
+                                    }
+
+                                    var pastImages = mutableListOf<WatchMedia>()
+                                    for (i in 1..5) {
+                                        try {
+                                            var pastImage: JSONObject = payload.getJSONObject(i)
+                                            pastImages.add(WatchMedia(pastImage.getString("id"),
+                                                    pastImage.getString("path"),
+                                                    "past",
+                                                    pastImage.getString("mimetype"), i))
+                                        } catch (e: java.lang.Exception) {
+                                            Log.d("EXCEPTION", "GOT a NULL???")
+                                        }
+                                    }
+
+                                    var imageCounter = 0
+                                    for (media: WatchMedia in pastImages) {
+                                        api.fetchBitmap(media._id) { body ->
+                                            val inputStream = body?.byteStream()
+                                            val image = BitmapFactory.decodeStream(inputStream)
+                                            val file = File(filesDir, media.path)
+                                            lateinit var stream: OutputStream
+                                            try {
+                                                stream = FileOutputStream(file)
+                                                image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                                                stream.flush()
+                                            } catch (e: IOException) { // Catch the exception
+                                                e.printStackTrace()
+                                            } finally {
+                                                inputStream?.close()
+                                                imageCounter += 1
+                                                stream.close()
+                                                Log.d("Utils", "stored image: ${file.absolutePath}")
+                                                GlobalScope.launch {
+                                                    repository.insert(media)
+                                                    if (imageCounter == pastImages.size) {
+                                                        rotationRecogniser?.start(rotationListener!!)
+                                                        presenter!!.pullingData(false)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 "refind" -> {
@@ -212,6 +409,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         super.onResume()
         when(FLAVOR){
             "locket" -> { revealRecogniser?.start() }
+            //"locket_touch" -> { revealRecogniser?.start() }
             "refind" -> { rotationRecogniser?.start(rotationListener!!) }
         }
     }
@@ -227,12 +425,16 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 "locket" -> {
                     revealRecogniser?.stop()
                 }
+                "locket_touch" -> {
+                    //revealRecogniser?.stop()
+                }
                 "refind" -> {
                     rotationRecogniser?.stop()
                 }
             }
         }
     }
+
 
     /**
      * Detach the presenter
@@ -242,6 +444,9 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         when (FLAVOR) {
             "locket" -> {
+                revealRecogniser?.deleteObserver(revealRecogniserObserver)
+            }
+            "locket_touch" -> {
                 revealRecogniser?.deleteObserver(revealRecogniserObserver)
             }
             "refind" -> {
@@ -420,6 +625,43 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         return MyAmbientCallback()
     }
 
+    /*
+    * General function for writing appending message to log file.
+     */
+    private fun writeToLogFile(message: String) {
+        var filePath = getFilesDir().getPath().toString() + "/locket_log_file.txt";
+        var f = File(filePath);
+        Log.d("Log File", "Log Path: " + filePath)
+        var batteryLevel = getBatteryLevel()
+        Log.d("Battery check", batteryLevel.toString())
+
+        f.appendText(LocalDateTime.now().toString() + ": " + message + "\n")
+    }
+
+    /*
+    * Function for sending log file contents to API and clearing lofile
+    */
+    //TODO
+    private fun uploadLogFileContents() {
+    }
+
+    /*
+    * Function returns current battery status.
+     */
+    private fun getBatteryLevel(): Float? {
+        val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
+            registerReceiver(null, ifilter)
+        }
+
+        val batteryPct: Float? = batteryStatus?.let { intent ->
+            val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            level / scale.toFloat()
+        }
+
+        return batteryPct
+    }
+
     // TODO
     private class MyAmbientCallback : AmbientModeSupport.AmbientCallback() {
 
@@ -435,5 +677,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             super.onExitAmbient()
         }
     }
+
 
 }
