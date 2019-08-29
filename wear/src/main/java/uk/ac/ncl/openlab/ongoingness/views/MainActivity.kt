@@ -65,23 +65,29 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     * Override long press gesture method. 500ms vibrate, and calls hideContent function from presenter.
      */
     override fun onLongPress(event: MotionEvent) {
-        Log.d("Gesture Detect", "onLongPress: $event")
-        vibrator?.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
-        presenter!!.hideContent(1)
-        writeToLogFile("Long press detected. Hiding content.")
+        when(FLAVOR) {
+            "locket_touch" -> {
+                Log.d("Gesture Detect", "onLongPress: $event")
+                vibrator?.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
+                presenter!!.hideContent(1)
+                writeToLogFile("Long press detected. Hiding content.")
+            }
+        }
     }
 
     /*
     * Overriding singleTapUp - 100ms vibrate, and moves to next image.
     */
     override fun onSingleTapUp(event: MotionEvent): Boolean {
-
-
-        Log.d("Gesture Detect", "onSingleTapUp: $event")
-        writeToLogFile("Single press detected. Calling next image.")
-        vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
-        this.presenter!!.goToNextImage()
-        return true
+        when(FLAVOR) {
+            "locket_touch" -> {
+                Log.d("Gesture Detect", "onSingleTapUp: $event")
+                writeToLogFile("Single press detected. Calling next image.")
+                vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
+                this.presenter!!.goToNextImage()
+                return true
+            }
+        }
     }
 
 
@@ -89,8 +95,12 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     * Overriding onDown method - no functions called.
      */
     override fun onDown(event: MotionEvent): Boolean {
-        Log.d("Gesture Detect", "onDown: $event")
-        return true
+        when(FLAVOR) {
+            "locket_touch" -> {
+                Log.d("Gesture Detect", "onDown: $event")
+                return true
+            }
+        }
     }
 
     /*
@@ -102,23 +112,35 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             velocityX: Float,
             velocityY: Float
     ): Boolean {
-        Log.d("Gesture Detect", "onFling: $event1 $event2")
-        return true
+        when(FLAVOR) {
+            "locket_touch" -> {
+                Log.d("Gesture Detect", "onFling: $event1 $event2")
+                return true
+            }
+        }
     }
 
     /*
     * Overriding onScroll - nothing called.
      */
     override fun onScroll(event1: MotionEvent, event2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
-        Log.d("Gesture Detect", "onScroll: $event1 $event2")
-        return true
+        when(FLAVOR) {
+            "locket_touch" -> {
+                Log.d("Gesture Detect", "onScroll: $event1 $event2")
+                return true
+            }
+        }
     }
 
     /*
     * Overriding onShowPress - nothing called.
      */
     override fun onShowPress(event: MotionEvent) {
-        Log.d("Gesture Detect", "onShowPress: $event")
+        when(FLAVOR) {
+            "locket_touch" -> {
+                Log.d("Gesture Detect", "onShowPress: $event")
+            }
+        }
     }
 
 
@@ -136,9 +158,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         // Enables Always-on
         //setAmbientEnabled()
-
         presenter = MainPresenter()
-
         presenter!!.attachView(this)
         presenter!!.setContext(applicationContext)
 
@@ -635,7 +655,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         var batteryLevel = getBatteryLevel()
         Log.d("Battery check", batteryLevel.toString())
 
-        f.appendText(LocalDateTime.now().toString() + ": " + message + "\n")
+        f.appendText(LocalDateTime.now().toString() + ": " + message + " Battery level: " + batteryLevel + "\n")
     }
 
     /*
