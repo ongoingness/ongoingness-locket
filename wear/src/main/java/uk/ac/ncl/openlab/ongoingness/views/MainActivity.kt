@@ -88,6 +88,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 return true
             }
         }
+
+        return true
     }
 
 
@@ -101,6 +103,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 return true
             }
         }
+
+        return true
     }
 
     /*
@@ -118,6 +122,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 return true
             }
         }
+        return true
     }
 
     /*
@@ -130,6 +135,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 return true
             }
         }
+        return true;
     }
 
     /*
