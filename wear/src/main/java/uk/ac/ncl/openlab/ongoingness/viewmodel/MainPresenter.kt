@@ -42,6 +42,12 @@ class MainPresenter {
 
     }
 
+    fun updateCoverBitmap(bitmap: Bitmap) {
+        this.coverBitmap = bitmap
+        if(!displayContent)
+            view?.updateBackground(coverBitmap!!)
+    }
+
     fun pullingData(state: Boolean) {
         if(state) {
             displayContent = false
@@ -122,6 +128,10 @@ class MainPresenter {
         this.view = view
 
         when(FLAVOR){
+            "locket_touch" -> {
+                coverBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover), view!!.getScreenSize(), view!!.getScreenSize(), false)
+                coverWhiteBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover_white), view!!.getScreenSize(), view!!.getScreenSize(), false)
+            }
             "locket" -> {
                 coverBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover), view!!.getScreenSize(), view!!.getScreenSize(), false)
                 coverWhiteBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover_white), view!!.getScreenSize(), view!!.getScreenSize(), false)

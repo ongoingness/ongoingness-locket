@@ -1,13 +1,12 @@
 package uk.ac.ncl.openlab.ongoingness.views
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.*
-import android.os.BatteryManager
-import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
+import android.nfc.Tag
+import android.os.*
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -27,6 +26,7 @@ import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.recognisers.RevealRecogniser
 import uk.ac.ncl.openlab.ongoingness.recognisers.RotationRecogniser
+import uk.ac.ncl.openlab.ongoingness.recognisers.TouchRevealRecogniser
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.viewmodel.MainPresenter
 import java.io.File
@@ -36,7 +36,7 @@ import java.io.OutputStream
 import java.util.Observer
 import java.time.LocalDateTime
 
-class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, MainPresenter.View, GestureDetector.OnGestureListener {
+class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, MainPresenter.View {
 
     private var presenter: MainPresenter?  = null
     private var isReady: Boolean = false
@@ -45,6 +45,10 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
     private var revealRecogniser:RevealRecogniser? = null
     private var revealRecogniserObserver: Observer? = null
+
+    private var touchRevealRecogniser: TouchRevealRecogniser? = null
+    private var touchRevealRecogniserObserver: Observer?  = null
+
     private var vibrator: Vibrator? = null
 
     private var rotationRecogniser: RotationRecogniser? = null
@@ -57,109 +61,33 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
     private lateinit var mediaPullRunnable : kotlinx.coroutines.Runnable
 
-
     lateinit var mImageView: ImageView
     lateinit var gesture : GestureDetector
+    lateinit var touchListener: View.OnTouchListener
 
-    /*
-    * Override long press gesture method. 500ms vibrate, and calls hideContent function from presenter.
-     */
-    override fun onLongPress(event: MotionEvent) {
-        when(FLAVOR) {
-            "locket_touch" -> {
-                Log.d("Gesture Detect", "onLongPress: $event")
-                vibrator?.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE));
-                presenter!!.hideContent(1)
-                writeToLogFile("Long press detected. Hiding content.")
-            }
-        }
-    }
-
-    /*
-    * Overriding singleTapUp - 100ms vibrate, and moves to next image.
-    */
-    override fun onSingleTapUp(event: MotionEvent): Boolean {
-        when(FLAVOR) {
-            "locket_touch" -> {
-                Log.d("Gesture Detect", "onSingleTapUp: $event")
-                writeToLogFile("Single press detected. Calling next image.")
-                vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
-                this.presenter!!.goToNextImage()
-                return true
-            }
-        }
-
-        return true
-    }
+    private lateinit var bitmapReceiver: BroadcastReceiver
 
 
-    /*
-    * Overriding onDown method - no functions called.
-     */
-    override fun onDown(event: MotionEvent): Boolean {
-        when(FLAVOR) {
-            "locket_touch" -> {
-                Log.d("Gesture Detect", "onDown: $event")
-                return true
-            }
-        }
-
-        return true
-    }
-
-    /*
-    * Overriding onFling method - no functions called.
-     */
-    override fun onFling(
-            event1: MotionEvent,
-            event2: MotionEvent,
-            velocityX: Float,
-            velocityY: Float
-    ): Boolean {
-        when(FLAVOR) {
-            "locket_touch" -> {
-                Log.d("Gesture Detect", "onFling: $event1 $event2")
-                return true
-            }
-        }
-        return true
-    }
-
-    /*
-    * Overriding onScroll - nothing called.
-     */
-    override fun onScroll(event1: MotionEvent, event2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
-        when(FLAVOR) {
-            "locket_touch" -> {
-                Log.d("Gesture Detect", "onScroll: $event1 $event2")
-                return true
-            }
-        }
-        return true;
-    }
-
-    /*
-    * Overriding onShowPress - nothing called.
-     */
-    override fun onShowPress(event: MotionEvent) {
-        when(FLAVOR) {
-            "locket_touch" -> {
-                Log.d("Gesture Detect", "onShowPress: $event")
-            }
-        }
-    }
-
+    private lateinit var killRunnable: Runnable
+    private val killHandler = Handler()
+    private var startTime = System.currentTimeMillis()
+    private val timeCheckInterval = 1000L
+    private val killDelta = 5 * 60 * 1000L //5 minutes
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_main)
-        gesture = GestureDetector(MainActivity@this, this)
-        var touch = View.OnTouchListener(){
-            v,events -> gesture.onTouchEvent(events)
+
+
+        killRunnable = Runnable {
+            if(System.currentTimeMillis() - startTime > killDelta)
+                finish()
+            else
+                killHandler.postDelayed(killRunnable, timeCheckInterval)
         }
-        mImageView = findViewById(R.id.image)
-        mImageView.setOnTouchListener(touch)
+
+        killRunnable!!.run()
 
 
         // Enables Always-on
@@ -175,7 +103,37 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             "locket_touch" -> {
                 presenter!!.setWatchMediaRepository(this)
                 Glide.with(this).load(R.drawable.cover).into(image)
-                setLocket()
+                if(intent.hasExtra("background")) {
+                    var bitmap = BitmapFactory.decodeByteArray(
+                            intent.getByteArrayExtra("background"), 0,
+                            intent.getByteArrayExtra("background").size)
+
+                    presenter!!.updateCoverBitmap(bitmap)
+
+                }
+
+                bitmapReceiver = object: BroadcastReceiver() {
+
+                    override fun onReceive(context: Context, intent: Intent) {
+
+                        Log.d("NewBitMap", "$intent")
+
+                        if(intent.hasExtra("background")) {
+                            var bitmap = BitmapFactory.decodeByteArray(
+                                    intent.getByteArrayExtra("background"),0,
+                                    intent.getByteArrayExtra("background").size)
+
+                            presenter!!.updateCoverBitmap(bitmap)
+
+                        }
+                    }
+                }
+
+                val filter = IntentFilter("BATTERY_INFO").apply {}
+
+                registerReceiver(bitmapReceiver, filter)
+
+                setLocketTouch()
             }
             "locket" -> {
                 presenter!!.setWatchMediaRepository(this)
@@ -188,6 +146,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 Glide.with(this).load(R.drawable.refind_cover).into(image)
             }
         }
+
 
         /* Thread that pulls media from the server*/
         mediaPullRunnable = kotlinx.coroutines.Runnable {
@@ -223,6 +182,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                             if (stringResponse == "[]") {
                                 isGettingData = false
                                 rotationRecogniser?.start(rotationListener!!)
+                                mImageView.setOnTouchListener(touchListener)
                                 presenter!!.pullingData(false)
                             } else {
 
@@ -298,7 +258,9 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                 GlobalScope.launch {
                                                     repository.insert(media)
                                                     if (imageCounter == pastImages.size) {
-                                                        rotationRecogniser?.start(rotationListener!!)
+                                                        Log.d("WHAT", "hummmm")
+                                                        //touchRevealRecogniser!!.ignoreTouch(false)
+                                                        mImageView.setOnTouchListener(touchListener)
                                                         presenter!!.pullingData(false)
                                                     }
                                                 }
@@ -427,6 +389,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         }
     }
 
+
     /**
      * Restart the activity recogniser
      * Register the lightEventSensor
@@ -435,7 +398,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         super.onResume()
         when(FLAVOR){
             "locket" -> { revealRecogniser?.start() }
-            //"locket_touch" -> { revealRecogniser?.start() }
+            "locket_touch" -> { touchRevealRecogniser?.start() }
             "refind" -> { rotationRecogniser?.start(rotationListener!!) }
         }
     }
@@ -446,13 +409,21 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
      */
     override fun onPause() {
         super.onPause()
+
+        var closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+        applicationContext.sendBroadcast(closeIntent)
+
+
+        Log.d("THTHTH", "close dialog please")
+
+
         if (isGoingToStop) {
             when (FLAVOR) {
                 "locket" -> {
                     revealRecogniser?.stop()
                 }
                 "locket_touch" -> {
-                    //revealRecogniser?.stop()
+                   touchRevealRecogniser?.stop()
                 }
                 "refind" -> {
                     rotationRecogniser?.stop()
@@ -473,13 +444,17 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 revealRecogniser?.deleteObserver(revealRecogniserObserver)
             }
             "locket_touch" -> {
-                revealRecogniser?.deleteObserver(revealRecogniserObserver)
+                touchRevealRecogniser?.deleteObserver(touchRevealRecogniserObserver)
+                unregisterReceiver(bitmapReceiver)
             }
             "refind" -> {
             }
         }
 
         presenter!!.detachView()
+
+       var closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+        applicationContext.sendBroadcast(closeIntent);
     }
 
     /**
@@ -493,6 +468,65 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             macAddress.visibility = View.INVISIBLE
             Glide.with(this).load(bitmap).into(image)
         }
+    }
+
+
+    private fun setLocketTouch() {
+
+        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+
+        touchRevealRecogniser = TouchRevealRecogniser(this)
+
+        touchRevealRecogniserObserver = Observer { _, arg ->
+            when (arg) {
+                TouchRevealRecogniser.Events.STARTED -> {
+
+                }
+
+                TouchRevealRecogniser.Events.AWAKE -> {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
+                    if(!gotData && hasConnection(applicationContext)) {
+                        mImageView.setOnTouchListener(null)
+                        gotData = true
+                        isGettingData = true
+                        presenter!!.pullingData(true)
+                        mediaPullRunnable.run()
+                    } else {
+
+                        presenter!!.displayContent()
+                    }
+
+                }
+                TouchRevealRecogniser.Events.NEXT -> {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
+                    presenter!!.goToNextImage()
+
+                }
+                TouchRevealRecogniser.Events.SLEEP -> {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
+                    presenter!!.hideContent(1)
+                    startTime = System.currentTimeMillis()
+
+                }
+                TouchRevealRecogniser.Events.STOPPED -> {
+                    isGoingToStop = true
+                    finish()
+                }
+            }
+            setBrightness(maxBrightness)
+        }
+
+        touchRevealRecogniser?.addObserver(touchRevealRecogniserObserver)
+
+
+        gesture = GestureDetector(MainActivity@this, touchRevealRecogniser)
+        touchListener = View.OnTouchListener(){
+            v,events -> gesture.onTouchEvent(events)
+        }
+        mImageView = findViewById(R.id.image)
+        mImageView.setOnTouchListener(touchListener)
+
+
     }
 
     private fun setLocket() {
@@ -658,10 +692,10 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         var filePath = getFilesDir().getPath().toString() + "/locket_log_file.txt";
         var f = File(filePath);
         Log.d("Log File", "Log Path: " + filePath)
-        var batteryLevel = getBatteryLevel()
-        Log.d("Battery check", batteryLevel.toString())
+        //var batteryLevel = getBatteryLevel()
+        //Log.d("Battery check", batteryLevel.toString())
 
-        f.appendText(LocalDateTime.now().toString() + ": " + message + " Battery level: " + batteryLevel + "\n")
+        //f.appendText(LocalDateTime.now().toString() + ": " + message + " Battery level: " + batteryLevel + "\n")
     }
 
     /*
@@ -674,6 +708,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     /*
     * Function returns current battery status.
      */
+    /*
     private fun getBatteryLevel(): Float? {
         val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
             registerReceiver(null, ifilter)
@@ -687,6 +722,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         return batteryPct
     }
+    */
 
     // TODO
     private class MyAmbientCallback : AmbientModeSupport.AmbientCallback() {
@@ -703,6 +739,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             super.onExitAmbient()
         }
     }
+
 
 
 }
