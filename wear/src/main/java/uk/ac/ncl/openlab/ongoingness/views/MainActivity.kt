@@ -175,6 +175,69 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         } else {
                             mediaList[0]._id
                         }
+
+
+                        api.fetchMediaPayload { response ->
+
+                            var stringResponse = response!!.body()?.string()
+
+
+                            if (stringResponse == "[]") {
+                                isGettingData = false
+                                mImageView.setOnTouchListener(touchListener)
+                                presenter!!.pullingData(false)
+                            } else {
+                                val jsonResponse = JSONObject(stringResponse)
+                                var payload: JSONArray = jsonResponse.getJSONArray("payload")
+
+                                if (payload.length() > 0) {
+
+                                    for(i in 0 until payload.length()) {
+                                        var media:JSONObject = payload.getJSONObject(i)
+                                        Log.d("gg", "${media.getString("path")}")
+
+                                    }
+
+
+
+                                    /*
+                                    //Set present Image
+                                    var presentImage: JSONObject = payload.getJSONObject(0)
+                                    var newWatchMedia = WatchMedia(presentImage.getString("_id"),
+                                            presentImage.getString("path"),
+                                            presentImage.getString("locket"),
+                                            presentImage.getString("mimetype"), 0)
+
+                                    api.fetchBitmap(newWatchMedia._id) { body ->
+                                        val inputStream = body?.byteStream()
+                                        val image = BitmapFactory.decodeStream(inputStream)
+                                        val file = File(filesDir, newWatchMedia.path)
+                                        lateinit var stream: OutputStream
+                                        try {
+                                            stream = FileOutputStream(file)
+                                            image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                                            stream.flush()
+                                        } catch (e: IOException) { // Catch the exception
+                                            e.printStackTrace()
+                                        } finally {
+                                            stream.close()
+                                            inputStream?.close()
+                                            Log.d("Utils", "stored image: ${file.absolutePath}")
+                                            GlobalScope.launch {
+                                                repository.insert(newWatchMedia)
+                                            }
+                                        }
+                                    }
+*/
+                                }
+
+                            }
+
+                        }
+
+
+/*
+
                         api.fetchInferredMedia(currentImageID) { response ->
 
                             var stringResponse = response!!.body()?.string()
@@ -269,7 +332,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                     }
                                 }
                             }
-                        }
+                        }*/
                     }
                 }
 

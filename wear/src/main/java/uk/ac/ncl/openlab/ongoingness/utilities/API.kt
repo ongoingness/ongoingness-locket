@@ -178,10 +178,37 @@ class API {
                 }
 
                 override fun onResponse(call: Call, response: Response) {
+
+                    Log.d("response", "${response.body()!!.string()}")
+
                     val mediaResponse: MediaResponse = gson.fromJson(
                             response.body()?.string(),
                             MediaResponse::class.java)
                     callback(mediaResponse.payload)
+                }
+            })
+        }
+    }
+
+    fun fetchMediaPayload(callback: (Response?) -> Unit) {
+
+        generateToken { token ->  Log.d("API",token)
+
+            val url = "media"
+            val request = Request.Builder()
+                    .url(apiUrl + url)
+                    .get()
+                    .header("x-access-token", token!!)
+                    .build()
+
+            client.newCall(request).enqueue(object : Callback {
+
+                override fun onFailure(call: Call, e: IOException) {
+                    e.printStackTrace()
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    callback(response)
                 }
             })
         }
@@ -222,6 +249,29 @@ class API {
         }
     }
 
+    fun fetchMediafromCollection(type: CollectionType, callback: (Response?) -> Unit) {
+
+        generateToken { token ->  Log.d("API",token)
+
+            val url = "media/collectionMedia/?collection=${type.name.toLowerCase()}"
+            val request = Request.Builder()
+                    .url(apiUrl + url)
+                    .get()
+                    .header("x-access-token", token!!)
+                    .build()
+
+            client.newCall(request).enqueue(object : Callback {
+
+                override fun onFailure(call: Call, e: IOException) {
+                    e.printStackTrace()
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    callback(response)
+                }
+            })
+        }
+    }
 
     /**
      * Fetch image from the link.
@@ -254,4 +304,11 @@ class API {
             })
         }
     }
+}
+
+enum class CollectionType {
+    TEMPORARY,
+    PERMANENT,
+    PAST,
+    PRESENT
 }
