@@ -10,7 +10,7 @@ import android.util.Log
 import uk.ac.ncl.openlab.ongoingness.R
 import java.io.ByteArrayOutputStream
 
-class BatteryInfoReceiverNew {
+class BatteryInfoReceiver {
 
     private var chargeReceiver: BroadcastReceiver
     private var batteryReceiver: BroadcastReceiver

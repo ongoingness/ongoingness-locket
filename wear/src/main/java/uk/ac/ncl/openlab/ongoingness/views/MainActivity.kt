@@ -5,21 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.*
-import android.graphics.drawable.Drawable
-import android.nfc.Tag
 import android.os.*
 import android.util.Log
 import android.view.GestureDetector
-import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
-import androidx.core.view.GestureDetectorCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.wear.ambient.AmbientModeSupport
 import com.bumptech.glide.Glide
-import com.bumptech.glide.gifdecoder.GifDecoder
-import com.bumptech.glide.load.resource.gif.GifFrameResourceDecoder
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -37,7 +31,6 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.util.Observer
-import java.time.LocalDateTime
 
 class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, MainPresenter.View {
 
@@ -70,7 +63,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
     private lateinit var bitmapReceiver: BroadcastReceiver
 
-
     private lateinit var killRunnable: Runnable
     private val killHandler = Handler()
     private var startTime = System.currentTimeMillis()
@@ -79,9 +71,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContentView(R.layout.activity_main)
-
 
         killRunnable = Runnable {
             if(System.currentTimeMillis() - startTime > killDelta)
@@ -92,83 +82,386 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         killRunnable!!.run()
 
-
-        // Enables Always-on
-        //setAmbientEnabled()
         presenter = MainPresenter()
         presenter!!.attachView(this)
         presenter!!.setContext(applicationContext)
+        presenter!!.setWatchMediaRepository(this)
 
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         when(FLAVOR){
+            "locket_touch" -> setLocketTouch()
+            "locket" -> setLocket()
+            "refind" -> setRefind()
+        }
+    }
+
+    /**
+     * Restart the activity recogniser
+     * Register the lightEventSensor
+     */
+    override fun onResume() {
+        super.onResume()
+        when(FLAVOR){
+            "locket" -> { revealRecogniser?.start() }
+            "locket_touch" -> { touchRevealRecogniser?.start() }
+            "refind" -> { rotationRecogniser?.start(rotationListener!!) }
+        }
+    }
+
+    /**
+     * Stop the activity recogniser
+     * Unregister the light event listener
+     */
+    override fun onPause() {
+        super.onPause()
+        if (isGoingToStop) {
+            when (FLAVOR) {
+                "locket" -> {
+                    revealRecogniser?.stop()
+                }
+                "locket_touch" -> {
+                   touchRevealRecogniser?.stop()
+                }
+                "refind" -> {
+                    rotationRecogniser?.stop()
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Detach the presenter
+     */
+    override fun onDestroy() {
+        super.onDestroy()
+
+        when (FLAVOR) {
+            "locket" -> {
+                revealRecogniser?.deleteObserver(revealRecogniserObserver)
+            }
             "locket_touch" -> {
-                presenter!!.setWatchMediaRepository(this)
-                Glide.with(this).load(R.drawable.cover).into(image)
+                touchRevealRecogniser?.deleteObserver(touchRevealRecogniserObserver)
+                unregisterReceiver(bitmapReceiver)
+            }
+            "refind" -> {}
+        }
+
+        presenter!!.detachView()
+    }
+
+    /**
+     * Update the background of the watch face.
+     *
+     * @param bitmap The bitmap to set the background to.
+     * @return Unit
+     */
+    override fun updateBackgroundWithBitmap(bitmap: Bitmap) {
+        runOnUiThread {
+            macAddress.visibility = View.INVISIBLE
+            Glide.with(this).load(bitmap).into(image)
+        }
+    }
+
+    /**
+     * Update the background of the watch face.
+     *
+     * @param bitmap The bitmap to set the background to.
+     * @return Unit
+     */
+    override fun updateBackground(file: File, mediaType: MainPresenter.View.MediaType) {
+        runOnUiThread {
+            macAddress.visibility = View.INVISIBLE
+            when(mediaType) {
+                MainPresenter.View.MediaType.IMAGE ->
+                    Glide.with(this).load(file).into(image)
+
+                MainPresenter.View.MediaType.GIF ->
+                    Glide.with(this).asGif().load(file).into(image)
+            }
+        }
+    }
+
+    /**
+     * Get the screen size of a device.
+     */
+    override fun getScreenSize(): Int {
+        val scaleFactor = 1.1
+        val display = windowManager.defaultDisplay
+        val size = Point()
+        display.getSize(size)
+        return (size.x * scaleFactor).toInt()
+    }
+
+    /**
+     * Get the ready flag for the activity.
+     * This is used to start the lightSensorListener.
+     *
+     * @return Boolean
+     */
+    override fun getReady(): Boolean {
+        return this.isReady
+    }
+
+    /**
+     * Get the ready flag for the activity.
+     * This is used to start the lightSensorListener.
+     *
+     * @param ready Boolean
+     */
+    override fun setReady(ready: Boolean) {
+        this.isReady = ready
+    }
+
+    /**
+     * Display text on the device
+     */
+    override fun displayText(addr: String) {
+        runOnUiThread {
+            macAddress.visibility = View.VISIBLE
+            macAddress.text = addr
+        }
+    }
+
+    override fun getContext(): Context {
+        return this.applicationContext
+    }
+
+    override fun getAmbientCallback(): AmbientModeSupport.AmbientCallback {
+        return MyAmbientCallback()
+    }
+
+    /**
+     * Brightness should be between 0.00f and 0.01f
+     *
+     * @param brightness Float
+     */
+    private fun setBrightness(brightness: Float) {
+        if (brightness.compareTo(minBrightness) < 0) return
+        if (brightness.compareTo(maxBrightness) > 0) return
+
+        val params: WindowManager.LayoutParams = window.attributes
+        params.screenBrightness = brightness
+        window.attributes = params
+    }
+
+    /**
+     *  Setup the Locket that has as input the watch position and the touch screen
+     */
+    private fun setLocketTouch() {
+
+        Glide.with(this).load(R.drawable.cover).into(image)
+
+        //Check if is charging
+        if(intent.hasExtra("background")) {
+            var bitmap = BitmapFactory.decodeByteArray(
+                    intent.getByteArrayExtra("background"), 0,
+                    intent.getByteArrayExtra("background").size)
+
+            presenter!!.updateCoverBitmap(bitmap)
+
+        }
+
+        //Charging background receiver
+        bitmapReceiver = object: BroadcastReceiver() {
+
+            override fun onReceive(context: Context, intent: Intent) {
+
+                Log.d("NewBitMap", "$intent")
+
                 if(intent.hasExtra("background")) {
                     var bitmap = BitmapFactory.decodeByteArray(
-                            intent.getByteArrayExtra("background"), 0,
+                            intent.getByteArrayExtra("background"),0,
                             intent.getByteArrayExtra("background").size)
 
                     presenter!!.updateCoverBitmap(bitmap)
 
                 }
-
-                bitmapReceiver = object: BroadcastReceiver() {
-
-                    override fun onReceive(context: Context, intent: Intent) {
-
-                        Log.d("NewBitMap", "$intent")
-
-                        if(intent.hasExtra("background")) {
-                            var bitmap = BitmapFactory.decodeByteArray(
-                                    intent.getByteArrayExtra("background"),0,
-                                    intent.getByteArrayExtra("background").size)
-
-                            presenter!!.updateCoverBitmap(bitmap)
-
-                        }
-                    }
-                }
-
-                val filter = IntentFilter("BATTERY_INFO").apply {}
-
-                registerReceiver(bitmapReceiver, filter)
-
-                setLocketTouch()
-            }
-            "locket" -> {
-                presenter!!.setWatchMediaRepository(this)
-                Glide.with(this).load(R.drawable.cover).into(image)
-                setLocket()
-            }
-            "refind" -> {
-                presenter!!.setWatchMediaRepository(this)
-                setRefind()
-                Glide.with(this).load(R.drawable.refind_cover).into(image)
             }
         }
+        val filter = IntentFilter("BATTERY_INFO").apply {}
+        registerReceiver(bitmapReceiver, filter)
 
+        //Thread to pull new media from the server
+        mediaPullRunnable = getPullMediaThread()
 
-        /* Thread that pulls media from the server*/
-        mediaPullRunnable = kotlinx.coroutines.Runnable {
-
-            when (FLAVOR) {
-                "locket" -> {
+        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+        touchRevealRecogniser = TouchRevealRecogniser(this)
+        touchRevealRecogniserObserver = Observer { _, arg ->
+            when (arg) {
+                TouchRevealRecogniser.Events.STARTED -> {
 
                 }
 
+                TouchRevealRecogniser.Events.AWAKE -> {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
+                    if(!gotData && hasConnection(applicationContext)) {
+                        mImageView.setOnTouchListener(null)
+                        gotData = true
+                        isGettingData = true
+                        presenter!!.pullingData(true)
+                        mediaPullRunnable.run()
+                    } else {
+                        presenter!!.restartIndex()
+                        presenter!!.displayContent()
+                    }
+
+                }
+                TouchRevealRecogniser.Events.NEXT -> {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
+                    presenter!!.goToNextImage()
+
+                }
+                TouchRevealRecogniser.Events.SLEEP -> {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
+                    presenter!!.hideContent(MainPresenter.CoverType.BLACK)
+                    startTime = System.currentTimeMillis()
+
+                }
+                TouchRevealRecogniser.Events.STOPPED -> {
+                    isGoingToStop = true
+                    finish()
+                }
+            }
+            setBrightness(maxBrightness)
+        }
+
+        touchRevealRecogniser?.addObserver(touchRevealRecogniserObserver)
+
+        gesture = GestureDetector(MainActivity@this, touchRevealRecogniser)
+        touchListener = View.OnTouchListener(){
+            v,events -> gesture.onTouchEvent(events)
+        }
+        mImageView = findViewById(R.id.image)
+        mImageView.setOnTouchListener(touchListener)
+
+    }
+
+    /**
+     *  Setup the Locket that has as input the watch position and the light sensor
+     */
+    private fun setLocket() {
+
+        Glide.with(this).load(R.drawable.cover).into(image)
+
+        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator;
+
+        revealRecogniser = RevealRecogniser(this)
+
+        revealRecogniserObserver = Observer { _, arg ->
+            when (arg) {
+                RevealRecogniser.Events.STARTED -> {
+
+                }
+                RevealRecogniser.Events.COVERED -> {
+
+                }
+                RevealRecogniser.Events.AWAKE -> {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
+                    presenter!!.displayContent()
+
+                }
+                RevealRecogniser.Events.SHORT_REVEAL -> {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
+                    presenter!!.goToNextImage()
+
+                }
+                RevealRecogniser.Events.SLEEP -> {
+                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
+                    presenter!!.hideContent(MainPresenter.CoverType.BLACK)
+
+                }
+                RevealRecogniser.Events.STOPPED -> {
+                    isGoingToStop = true
+                    finish()
+                }
+                RevealRecogniser.Events.HIDE -> {
+                    presenter!!.hideContent(MainPresenter.CoverType.BLACK)
+                }
+                RevealRecogniser.Events.SHOW -> {
+                    presenter!!.displayContent()
+                }
+            }
+            setBrightness(maxBrightness)
+        }
+
+        revealRecogniser?.addObserver(revealRecogniserObserver)
+
+    }
+
+    /**
+     *  Setup the Refind
+     */
+    private fun setRefind() {
+
+        Glide.with(this).load(R.drawable.refind_cover).into(image)
+
+        mediaPullRunnable = getPullMediaThread()
+
+        rotationRecogniser = RotationRecogniser(this)
+        rotationListener = object : RotationRecogniser.Listener {
+
+            override fun onPickUp() {
+                if(!gotData && hasConnection(applicationContext)) {
+                    gotData = true
+                    isGettingData = true
+                    rotationRecogniser?.stop()
+                    presenter!!.pullingData(true)
+                    mediaPullRunnable.run()
+                } else {
+                    presenter!!.displayContent()
+                }
+            }
+
+            override fun onRotateUp() {
+                presenter!!.goToNextImage()
+            }
+
+            override fun onRotateDown() {
+                presenter!!.goToPreviousImage()
+            }
+
+            override fun onRotateLeft() {
+
+            }
+
+            override fun onRotateRight() {
+
+            }
+
+            override fun onStandby() {
+                isGoingToStop = true
+                rotationRecogniser!!.stop()
+                rotationRecogniser = null
+                rotationListener = null
+                isGettingData = false
+                gotData = false
+                finish()
+            }
+
+        }
+
+    }
+
+
+    /**
+     * Creates the thread to pull new media from the server
+     */
+    private fun getPullMediaThread(): kotlinx.coroutines.Runnable {
+        return kotlinx.coroutines.Runnable {
+            val api = API()
+
+            val watchMediaDao = WatchMediaRoomDatabase.getDatabase(this.applicationContext).watchMediaDao()
+            val repository = WatchMediaRepository(watchMediaDao);
+
+            val context = this.applicationContext
+            val filesDir = this.applicationContext.filesDir
+
+
+            when(FLAVOR) {
                 "locket_touch" -> {
-
-                    writeToLogFile("Locket touch. Checking media.")
-                    val api = API()
-
-                    val watchMediaDao = WatchMediaRoomDatabase.getDatabase(this.applicationContext).watchMediaDao()
-                    val repository = WatchMediaRepository(watchMediaDao);
-
-                    val context = this.applicationContext
-                    val filesDir = this.applicationContext.filesDir
 
                     GlobalScope.launch {
                         var mediaList = repository.getAll().sortedWith(compareBy({it.collection}, {it.order}))
@@ -213,224 +506,62 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                 presenter!!.pullingData(false)
                                             }
                                         } else {
+                                            var gotFile = false
+                                            while(!gotFile) {
+                                                try {
+                                                    api.fetchBitmap(newMedia._id) { body ->
 
-                                            api.fetchBitmap(newMedia._id) { body ->
+                                                        val inputStream = body?.byteStream()
+                                                        val file = File(filesDir, newMedia.path)
+                                                        lateinit var outputStream: OutputStream
 
-                                               if(newMedia.mimetype == "video/mp4") {
-                                                    val inputStream = body?.byteStream()
-                                                    val file = File(filesDir, newMedia.path)
-
-                                                    lateinit var stream: OutputStream
-                                                    try {
-                                                        stream = FileOutputStream(file)
-
-                                                        inputStream.use { input ->
-                                                            stream.use { fileOut ->
-                                                                input!!.copyTo(fileOut)
-                                                            }
-                                                        }
-                                                        stream.flush()
-                                                        mediaFetch++
-                                                    } catch (e: IOException) { // Catch the exception
-                                                        e.printStackTrace()
-                                                    } finally {
-                                                        GlobalScope.launch {
-                                                            repository.insert(newMedia)
-                                                            Log.d("eegif", "$mediaFetch ${payload.length()}")
-
-
-                                                            if(mediaFetch == payload.length()) {
-                                                                Log.d("eegif", "yes")
-                                                                for(media in toBeRemoved) {
-                                                                    deleteFile(context, media.path)
+                                                        try {
+                                                            outputStream = FileOutputStream(file)
+                                                            if(newMedia.mimetype.contains("video") ||
+                                                                    newMedia.mimetype.contains("gif")) {
+                                                                inputStream.use { input ->
+                                                                    outputStream.use { fileOut ->
+                                                                        input!!.copyTo(fileOut)
+                                                                    }
                                                                 }
-                                                                mImageView.setOnTouchListener(touchListener)
-                                                                presenter!!.pullingData(false)
+                                                            } else {
+                                                                val image = BitmapFactory.decodeStream(inputStream)
+                                                                image.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                                            }
+                                                            outputStream.flush()
+                                                            mediaFetch++
+
+                                                        } catch (e: IOException) {
+                                                            throw Exception("File Fetching - Something went wrong")
+                                                        } finally {
+                                                            outputStream.close()
+                                                            inputStream?.close()
+                                                            GlobalScope.launch {
+                                                                repository.insert(newMedia)
+                                                                if(mediaFetch == payload.length()) {
+                                                                    for(media in toBeRemoved) {
+                                                                        deleteFile(context, media.path)
+                                                                    }
+                                                                    mImageView.setOnTouchListener(touchListener)
+                                                                    presenter!!.pullingData(false)
+                                                                }
                                                             }
                                                         }
                                                     }
-                                               } else {
-                                                    val inputStream = body?.byteStream()
-                                                    val image = BitmapFactory.decodeStream(inputStream)
-                                                    val file = File(filesDir, newMedia.path)
-                                                    lateinit var stream: OutputStream
-                                                    try {
-                                                        stream = FileOutputStream(file)
-                                                        image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                                        stream.flush()
-                                                        mediaFetch++
-                                                    } catch (e: IOException) { // Catch the exception
-                                                        e.printStackTrace()
-                                                    } finally {
-                                                        stream.close()
-                                                        inputStream?.close()
-                                                        Log.d("Utils", "stored image: ${file.absolutePath}")
-                                                        GlobalScope.launch {
-                                                            repository.insert(newMedia)
-
-                                                            if(mediaFetch == payload.length()) {
-                                                                Log.d("ee", "no $mediaFetch ${payload.length()}")
-                                                                for(media in toBeRemoved) {
-                                                                    deleteFile(context, media.path)
-                                                                }
-                                                                Log.d("WHAT", "hummmm")
-                                                                mImageView.setOnTouchListener(touchListener)
-                                                                presenter!!.pullingData(false)
-                                                            }
-                                                        }
-                                                    }
+                                                    gotFile = true
+                                                } catch(e: Exception) {
+                                                    gotFile = false
                                                 }
                                             }
                                         }
                                     }
-
-
-                                    /*
-                                    //Set present Image
-                                    var presentImage: JSONObject = payload.getJSONObject(0)
-                                    var newWatchMedia = WatchMedia(presentImage.getString("_id"),
-                                            presentImage.getString("path"),
-                                            presentImage.getString("locket"),
-                                            presentImage.getString("mimetype"), 0)
-
-                                    api.fetchBitmap(newWatchMedia._id) { body ->
-                                        val inputStream = body?.byteStream()
-                                        val image = BitmapFactory.decodeStream(inputStream)
-                                        val file = File(filesDir, newWatchMedia.path)
-                                        lateinit var stream: OutputStream
-                                        try {
-                                            stream = FileOutputStream(file)
-                                            image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                            stream.flush()
-                                        } catch (e: IOException) { // Catch the exception
-                                            e.printStackTrace()
-                                        } finally {
-                                            stream.close()
-                                            inputStream?.close()
-                                            Log.d("Utils", "stored image: ${file.absolutePath}")
-                                            GlobalScope.launch {
-                                                repository.insert(newWatchMedia)
-                                            }
-                                        }
-                                    }
-*/
                                 }
-
                             }
-
                         }
-
-
-/*
-
-                        api.fetchInferredMedia(currentImageID) { response ->
-
-                            var stringResponse = response!!.body()?.string()
-
-                            if (stringResponse == "[]") {
-                                isGettingData = false
-                                rotationRecogniser?.start(rotationListener!!)
-                                mImageView.setOnTouchListener(touchListener)
-                                presenter!!.pullingData(false)
-                            } else {
-
-                                for (mediaToRemove in mediaList) {
-                                    deleteFile(context, mediaToRemove.path)
-                                }
-
-                                repository.deleteAll()
-                                val jsonResponse = JSONObject(stringResponse)
-
-                                var payload: JSONArray = jsonResponse.getJSONArray("payload")
-                                if (payload.length() > 0) {
-
-                                    //Set present Image
-                                    var presentImage: JSONObject = payload.getJSONObject(0)
-                                    var newWatchMedia = WatchMedia(presentImage.getString("_id"),
-                                            presentImage.getString("path"),
-                                            presentImage.getString("locket"),
-                                            presentImage.getString("mimetype"), 0)
-
-                                    api.fetchBitmap(newWatchMedia._id) { body ->
-                                        val inputStream = body?.byteStream()
-                                        val image = BitmapFactory.decodeStream(inputStream)
-                                        val file = File(filesDir, newWatchMedia.path)
-                                        lateinit var stream: OutputStream
-                                        try {
-                                            stream = FileOutputStream(file)
-                                            image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                            stream.flush()
-                                        } catch (e: IOException) { // Catch the exception
-                                            e.printStackTrace()
-                                        } finally {
-                                            stream.close()
-                                            inputStream?.close()
-                                            Log.d("Utils", "stored image: ${file.absolutePath}")
-                                            GlobalScope.launch {
-                                                repository.insert(newWatchMedia)
-                                            }
-                                        }
-                                    }
-
-                                    var pastImages = mutableListOf<WatchMedia>()
-                                    for (i in 1..5) {
-                                        try {
-                                            var pastImage: JSONObject = payload.getJSONObject(i)
-                                            pastImages.add(WatchMedia(pastImage.getString("id"),
-                                                    pastImage.getString("path"),
-                                                    "past",
-                                                    pastImage.getString("mimetype"), i))
-                                        } catch (e: java.lang.Exception) {
-                                            Log.d("EXCEPTION", "GOT a NULL???")
-                                        }
-                                    }
-
-                                    var imageCounter = 0
-                                    for (media: WatchMedia in pastImages) {
-                                        api.fetchBitmap(media._id) { body ->
-                                            val inputStream = body?.byteStream()
-                                            val image = BitmapFactory.decodeStream(inputStream)
-                                            val file = File(filesDir, media.path)
-                                            lateinit var stream: OutputStream
-                                            try {
-                                                stream = FileOutputStream(file)
-                                                image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                                stream.flush()
-                                            } catch (e: IOException) { // Catch the exception
-                                                e.printStackTrace()
-                                            } finally {
-                                                inputStream?.close()
-                                                imageCounter += 1
-                                                stream.close()
-                                                Log.d("Utils", "stored image: ${file.absolutePath}")
-                                                GlobalScope.launch {
-                                                    repository.insert(media)
-                                                    if (imageCounter == pastImages.size) {
-                                                        Log.d("WHAT", "hummmm")
-                                                        //touchRevealRecogniser!!.ignoreTouch(false)
-                                                        mImageView.setOnTouchListener(touchListener)
-                                                        presenter!!.pullingData(false)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }*/
                     }
                 }
 
                 "refind" -> {
-
-                    val api = API()
-
-                    val watchMediaDao = WatchMediaRoomDatabase.getDatabase(this.applicationContext).watchMediaDao()
-                    val repository = WatchMediaRepository(watchMediaDao);
-
-                    val context = this.applicationContext
-                    val filesDir = this.applicationContext.filesDir
-
                     GlobalScope.launch {
                         var mediaList = repository.getAll().sortedBy { it.order }
                         var currentImageID: String
@@ -480,14 +611,13 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                         } finally {
                                             stream.close()
                                             inputStream?.close()
-                                            Log.d("Utils", "stored image: ${file.absolutePath}")
                                             GlobalScope.launch {
                                                 repository.insert(newWatchMedia)
                                             }
                                         }
                                     }
 
-                                    var pastImages = mutableListOf<WatchMedia>()
+                                    val pastImages = mutableListOf<WatchMedia>()
                                     for (i in 1..5) {
                                         try {
                                             var pastImage: JSONObject = payload.getJSONObject(i)
@@ -496,7 +626,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                     "past",
                                                     pastImage.getString("mimetype"), i))
                                         } catch (e: java.lang.Exception) {
-                                            Log.d("EXCEPTION", "GOT a NULL???")
+                                           e.printStackTrace()
                                         }
                                     }
 
@@ -517,7 +647,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                 inputStream?.close()
                                                 imageCounter += 1
                                                 stream.close()
-                                                Log.d("Utils", "stored image: ${file.absolutePath}")
                                                 GlobalScope.launch {
                                                     repository.insert(media)
                                                     if (imageCounter == pastImages.size) {
@@ -535,315 +664,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 }
             }
         }
-    }
-
-
-    /**
-     * Restart the activity recogniser
-     * Register the lightEventSensor
-     */
-    override fun onResume() {
-        super.onResume()
-        when(FLAVOR){
-            "locket" -> { revealRecogniser?.start() }
-            "locket_touch" -> { touchRevealRecogniser?.start() }
-            "refind" -> { rotationRecogniser?.start(rotationListener!!) }
-        }
-    }
-
-    /**
-     * Stop the activity recogniser
-     * Unregister the light event listener
-     */
-    override fun onPause() {
-        super.onPause()
-
-        var closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-        applicationContext.sendBroadcast(closeIntent)
-
-
-        Log.d("THTHTH", "close dialog please")
-
-
-        if (isGoingToStop) {
-            when (FLAVOR) {
-                "locket" -> {
-                    revealRecogniser?.stop()
-                }
-                "locket_touch" -> {
-                   touchRevealRecogniser?.stop()
-                }
-                "refind" -> {
-                    rotationRecogniser?.stop()
-                }
-            }
-        }
-    }
-
-
-    /**
-     * Detach the presenter
-     */
-    override fun onDestroy() {
-        super.onDestroy()
-
-        when (FLAVOR) {
-            "locket" -> {
-                revealRecogniser?.deleteObserver(revealRecogniserObserver)
-            }
-            "locket_touch" -> {
-                touchRevealRecogniser?.deleteObserver(touchRevealRecogniserObserver)
-                unregisterReceiver(bitmapReceiver)
-            }
-            "refind" -> {
-            }
-        }
-
-        presenter!!.detachView()
-
-       var closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-        applicationContext.sendBroadcast(closeIntent);
-    }
-
-    /**
-     * Update the background of the watch face.
-     *
-     * @param bitmap The bitmap to set the background to.
-     * @return Unit
-     */
-    override fun updateBackground(bitmap: Bitmap) {
-        runOnUiThread {
-            macAddress.visibility = View.INVISIBLE
-            Glide.with(this).load(bitmap).into(image)
-        }
-    }
-
-    /**
-     * Update the background of the watch face.
-     *
-     * @param bitmap The bitmap to set the background to.
-     * @return Unit
-     */
-    override fun updateBackgroundGif(file: File) {
-        runOnUiThread {
-            macAddress.visibility = View.INVISIBLE
-            Glide.with(this).asGif().load(file.readBytes()).into(image)
-        }
-    }
-
-
-    private fun setLocketTouch() {
-
-        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-
-        touchRevealRecogniser = TouchRevealRecogniser(this)
-
-        touchRevealRecogniserObserver = Observer { _, arg ->
-            when (arg) {
-                TouchRevealRecogniser.Events.STARTED -> {
-
-                }
-
-                TouchRevealRecogniser.Events.AWAKE -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
-                    if(!gotData && hasConnection(applicationContext)) {
-                        mImageView.setOnTouchListener(null)
-                        gotData = true
-                        isGettingData = true
-                        presenter!!.pullingData(true)
-                        mediaPullRunnable.run()
-                    } else {
-
-                        presenter!!.displayContent()
-                    }
-
-                }
-                TouchRevealRecogniser.Events.NEXT -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
-                    presenter!!.goToNextImage()
-
-                }
-                TouchRevealRecogniser.Events.SLEEP -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
-                    presenter!!.hideContent(1)
-                    startTime = System.currentTimeMillis()
-
-                }
-                TouchRevealRecogniser.Events.STOPPED -> {
-                    isGoingToStop = true
-                    finish()
-                }
-            }
-            setBrightness(maxBrightness)
-        }
-
-        touchRevealRecogniser?.addObserver(touchRevealRecogniserObserver)
-
-
-        gesture = GestureDetector(MainActivity@this, touchRevealRecogniser)
-        touchListener = View.OnTouchListener(){
-            v,events -> gesture.onTouchEvent(events)
-        }
-        mImageView = findViewById(R.id.image)
-        mImageView.setOnTouchListener(touchListener)
-
-
-    }
-
-    private fun setLocket() {
-
-        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator;
-
-        revealRecogniser = RevealRecogniser(this)
-
-        revealRecogniserObserver = Observer { _, arg ->
-            when (arg) {
-                RevealRecogniser.Events.STARTED -> {
-
-                }
-                RevealRecogniser.Events.COVERED -> {
-
-                }
-                RevealRecogniser.Events.AWAKE -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
-                    presenter!!.displayContent()
-
-                }
-                RevealRecogniser.Events.SHORT_REVEAL -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
-                    presenter!!.goToNextImage()
-
-                }
-                RevealRecogniser.Events.SLEEP -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
-                    presenter!!.hideContent(1)
-
-                }
-                RevealRecogniser.Events.STOPPED -> {
-                    isGoingToStop = true
-                    finish()
-                }
-                RevealRecogniser.Events.HIDE -> {
-                    presenter!!.hideContent(1)
-                }
-                RevealRecogniser.Events.SHOW -> {
-                    presenter!!.displayContent()
-                }
-            }
-            setBrightness(maxBrightness)
-        }
-
-        revealRecogniser?.addObserver(revealRecogniserObserver)
-    }
-
-    private fun setRefind() {
-
-        rotationRecogniser = RotationRecogniser(this)
-        rotationListener = object : RotationRecogniser.Listener {
-
-            override fun onPickUp() {
-                if(!gotData && hasConnection(applicationContext)) {
-                    gotData = true
-                    isGettingData = true
-                    rotationRecogniser?.stop()
-                    presenter!!.pullingData(true)
-                    mediaPullRunnable.run()
-                } else {
-                    presenter!!.displayContent()
-                }
-            }
-
-            override fun onRotateUp() {
-                presenter!!.goToNextImage()
-            }
-
-            override fun onRotateDown() {
-                presenter!!.goToPreviousImage()
-            }
-
-            override fun onRotateLeft() {
-
-            }
-
-            override fun onRotateRight() {
-
-            }
-
-            override fun onStandby() {
-                isGoingToStop = true
-                rotationRecogniser!!.stop()
-                rotationRecogniser = null
-                rotationListener = null
-                isGettingData = false
-                gotData = false
-                finish()
-            }
-
-        }
-
-    }
-
-    /**
-     * Get the screen size of a device.
-     */
-    override fun getScreenSize(): Int {
-        val scaleFactor = 1.1
-        val display = windowManager.defaultDisplay
-        val size = Point()
-        display.getSize(size)
-        return (size.x * scaleFactor).toInt()
-    }
-
-    /**
-     * Brightness should be between 0.00f and 0.01f
-     *
-     * @param brightness Float
-     */
-    private fun setBrightness(brightness: Float) {
-        if (brightness.compareTo(minBrightness) < 0) return
-        if (brightness.compareTo(maxBrightness) > 0) return
-
-        val params: WindowManager.LayoutParams = window.attributes
-        params.screenBrightness = brightness
-        window.attributes = params
-    }
-
-    /**
-     * Get the ready flag for the activity.
-     * This is used to start the lightSensorListener.
-     *
-     * @return Boolean
-     */
-    override fun getReady(): Boolean {
-        return this.isReady
-    }
-
-    /**
-     * Get the ready flag for the activity.
-     * This is used to start the lightSensorListener.
-     *
-     * @param ready Boolean
-     */
-    override fun setReady(ready: Boolean) {
-        this.isReady = ready
-    }
-
-    /**
-     * Display text on the device
-     */
-    override fun displayText(addr: String) {
-        runOnUiThread {
-            macAddress.visibility = View.VISIBLE
-            macAddress.text = addr
-        }
-    }
-
-    override fun getContext(): Context {
-        return this.applicationContext
-    }
-
-    override fun getAmbientCallback(): AmbientModeSupport.AmbientCallback {
-        return MyAmbientCallback()
     }
 
     /*
@@ -885,22 +705,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     }
     */
 
-    // TODO
-    private class MyAmbientCallback : AmbientModeSupport.AmbientCallback() {
 
-        override fun onEnterAmbient(ambientDetails: Bundle?) {
-            super.onEnterAmbient(ambientDetails)
-        }
-
-        override fun onUpdateAmbient() {
-            super.onUpdateAmbient()
-        }
-
-        override fun onExitAmbient() {
-            super.onExitAmbient()
-        }
-    }
-
+    private class MyAmbientCallback : AmbientModeSupport.AmbientCallback()
 
 
 }

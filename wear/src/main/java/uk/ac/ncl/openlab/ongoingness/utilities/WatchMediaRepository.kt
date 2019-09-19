@@ -13,7 +13,7 @@ class WatchMediaRepository(private val watchMediaDao: WatchMediaDao) {
     }
 
     @WorkerThread
-    suspend fun get(id: String) : WatchMedia {
+    fun get(id: String) : WatchMedia {
         return watchMediaDao.getMedia(id)
     }
 
@@ -27,14 +27,8 @@ class WatchMediaRepository(private val watchMediaDao: WatchMediaDao) {
         watchMediaDao.deleteAll()
     }
 
-
     @WorkerThread
-    suspend fun getAll() : List<WatchMedia> {
-
-
-
-
-
+    fun getAll() : List<WatchMedia> {
         return watchMediaDao.getAll()
     }
 }

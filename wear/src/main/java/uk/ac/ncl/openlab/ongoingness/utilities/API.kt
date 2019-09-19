@@ -92,8 +92,6 @@ class API2 {
     }
 }
 
-
-
 class API {
 
     val gson = Gson()
@@ -122,18 +120,13 @@ class API {
             callback(token)
             return
         }
-
-        val url = "auth/mac"
-
-
-        Log.d("MAC Address", getMacAddress());
-
         val mac: String = getMacAddress() // Get mac address
+        Log.d("MAC Address", "$mac")
         val formBody = FormBody.Builder()
                 .add("mac", mac)
                 .build()
         val request = Request.Builder()
-                .url(apiUrl+url)
+                .url(apiUrl+"auth/mac")
                 .post(formBody)
                 .build()
 
@@ -178,9 +171,6 @@ class API {
                 }
 
                 override fun onResponse(call: Call, response: Response) {
-
-                    Log.d("response", "${response.body()!!.string()}")
-
                     val mediaResponse: MediaResponse = gson.fromJson(
                             response.body()?.string(),
                             MediaResponse::class.java)
@@ -238,35 +228,6 @@ class API {
                 }
 
                 override fun onResponse(call: Call, response: Response) {
-                    /*val mediaResponse: MediaResponse = gson.fromJson(
-                            response.body()?.string(),
-                            MediaResponse::class.java)
-                    callback(mediaResponse.payload)
-                    */
-                    callback(response)
-                }
-            })
-        }
-    }
-
-    fun fetchMediafromCollection(type: CollectionType, callback: (Response?) -> Unit) {
-
-        generateToken { token ->  Log.d("API",token)
-
-            val url = "media/collectionMedia/?collection=${type.name.toLowerCase()}"
-            val request = Request.Builder()
-                    .url(apiUrl + url)
-                    .get()
-                    .header("x-access-token", token!!)
-                    .build()
-
-            client.newCall(request).enqueue(object : Callback {
-
-                override fun onFailure(call: Call, e: IOException) {
-                    e.printStackTrace()
-                }
-
-                override fun onResponse(call: Call, response: Response) {
                     callback(response)
                 }
             })
@@ -290,8 +251,6 @@ class API {
                     .header("x-access-token", token!!)
                     .build()
 
-            Log.d("fetchBitmaps", "Fetching bitmap from $apiUrl$url")
-
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call?, e: IOException?) {
                     Log.e("API", "Error here:"+e.toString())
@@ -304,11 +263,4 @@ class API {
             })
         }
     }
-}
-
-enum class CollectionType {
-    TEMPORARY,
-    PERMANENT,
-    PAST,
-    PRESENT
 }

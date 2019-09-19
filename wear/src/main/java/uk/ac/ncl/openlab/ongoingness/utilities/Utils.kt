@@ -12,6 +12,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 const val minBandwidthKbps: Int = 320
+const val TAG: String = "Utils"
 
 /**
  * Clear contents of media folder
@@ -26,26 +27,9 @@ fun deleteFile(context: Context, filename: String) {
     File(context.filesDir, filename)?.delete()
 }
 
-
-/**
- * Store an array to file
- *
- * @param arr Array<String>
- * @param fileName string
- * @param context Context
- */
-fun persistArray(arr : Array<String>, fileName : String, context: Context) {
-    val file = File(context.filesDir, fileName)
-    arr.forEach { id : String -> file.writeText("$id\n") }
-    Log.d("Utils","stored file: ${file.absolutePath}")
-}
-
-
-
-
 fun persistBitmap(bitmap: Bitmap, filename:String, context: Context){
     val imageFile = File(context.filesDir, "$filename")
-    Log.d("Utils","try to store image ${imageFile.absolutePath}")
+    Log.d(TAG,"try to store image ${imageFile.absolutePath}")
 
     lateinit var stream: OutputStream
     try {
@@ -56,30 +40,13 @@ fun persistBitmap(bitmap: Bitmap, filename:String, context: Context){
         e.printStackTrace()
     } finally {
         stream.close()
-        Log.d("Utils","stored image: ${imageFile.absolutePath}")
+        Log.d(TAG,"stored image: ${imageFile.absolutePath}")
     }
 }
 
-/**
- * Load all bitmaps from file
- *
- * @param context Context
- */
-fun loadBitmaps(context: Context) : ArrayList<Bitmap> {
-    val bitmaps : ArrayList<Bitmap> = ArrayList()
-    context.filesDir!!.listFiles().forEach { file: File -> run {
-        if (file.name.contains(".txt")) return@run
-            bitmaps.add(BitmapFactory.decodeFile(file.absolutePath))
-    } }
-
-    return bitmaps
-}
-
-
 fun hasLocalCopy(context: Context, fileName: String):Boolean{
-
     val file =  File(context.filesDir,fileName)
-    Log.d("Utils","Checked for: ${file.absolutePath}")
+    Log.d(TAG ,"Checked for: ${file.absolutePath}")
     return file.exists()
 }
 
@@ -94,10 +61,9 @@ fun getBitmapFromFile(context: Context,filename: String): Bitmap? {
         val f = File(context.filesDir,filename)
         BitmapFactory.decodeStream(FileInputStream(f))
     } catch (e: FileNotFoundException) {
-        Log.d("GETFILE", "$e")
+        e.printStackTrace()
         null
     }
-
 }
 
 /**

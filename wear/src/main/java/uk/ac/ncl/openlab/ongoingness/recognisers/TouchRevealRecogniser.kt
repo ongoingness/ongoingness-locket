@@ -19,7 +19,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
 
     override fun onLongPress(e: MotionEvent?) {
 
-        Log.d("touch", "Longpresss")
+        Log.d(TAG, "Long Press")
 
         when (currentState) {
             State.STANDBY -> {
@@ -39,7 +39,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
 
     override fun onSingleTapUp(e: MotionEvent?): Boolean {
 
-        Log.d("touch", "single press")
+        Log.d(TAG, "Single Press")
 
         when (currentState) {
             State.ACTIVE -> {
@@ -70,7 +70,6 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
 
     enum class State{
         STANDBY,
-        AWAKE,
         ACTIVE,
         OFF,
         UNKNOWN,
@@ -129,7 +128,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
             previousState = currentState
             currentState = state
 
-            Log.d("State Update", "$currentState")
+            Log.d(TAG, "State Update: $currentState")
         }
     }
 
@@ -142,7 +141,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
             currentOrientation = orientation
 
 
-            Log.d("Orientation Update", "$currentOrientation")
+            Log.d(TAG, "Orientation Update: $currentOrientation")
         }
     }
 

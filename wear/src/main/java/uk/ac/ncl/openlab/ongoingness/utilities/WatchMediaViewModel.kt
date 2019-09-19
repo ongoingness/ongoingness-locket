@@ -7,7 +7,6 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import uk.ac.ncl.openlab.ongoingness.BuildConfig
 
 class WatchMediaViewModel(application: Application) : AndroidViewModel(application) {
 

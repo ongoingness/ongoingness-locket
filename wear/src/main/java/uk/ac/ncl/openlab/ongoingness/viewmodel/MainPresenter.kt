@@ -1,15 +1,8 @@
 package uk.ac.ncl.openlab.ongoingness.viewmodel
 
-import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
-import android.graphics.drawable.Drawable
-import android.support.wearable.activity.WearableActivity
-import android.util.Log
-import android.view.View
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -17,9 +10,10 @@ import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import java.io.File
-import java.lang.Exception
-import kotlin.collections.ArrayList
 
+/**
+ * Connects the activity view to the media in the local database, allowing it to be displayed on screen.
+ */
 class MainPresenter {
 
     private var view: View? = null
@@ -32,6 +26,11 @@ class MainPresenter {
     private var coverWhiteBitmap: Bitmap? = null
     private var coverBitmap: Bitmap? = null
 
+    /**
+     * Gets the collection of images in the local database
+     *
+     * @param activity Activity here the media is going to be displayed
+     */
     fun setWatchMediaRepository(activity: FragmentActivity) {
 
         watchMediaViewModel = ViewModelProviders.of(activity).get(WatchMediaViewModel::class.java)
@@ -39,105 +38,113 @@ class MainPresenter {
         watchMediaViewModel.allWatchMedia.observe(activity, Observer { watchMedia ->
             mediaCollection = watchMedia.sortedWith(compareBy({it.collection}, {it.order}))
             if(displayContent)
-                setNewBitmap(mediaCollection)
+                displayNewMediaFromCollection(mediaCollection)
         })
 
     }
 
+    /**
+     * Restarts the index of to be displayed
+     */
+    fun restartIndex() {
+        currentIndex = 0
+    }
+
+    /**
+     * Updates the black cover
+     */
     fun updateCoverBitmap(bitmap: Bitmap) {
         this.coverBitmap = bitmap
         if(!displayContent)
-            view?.updateBackground(coverBitmap!!)
+            view?.updateBackgroundWithBitmap(coverBitmap!!)
     }
 
+    /**
+     * Display behaviour during the fetching of new media from the server
+     *
+     * @param state either is fetching data from the server or not
+     */
     fun pullingData(state: Boolean) {
-        if(state) {
-            displayContent = false
-            view?.updateBackground(coverWhiteBitmap!!)
-        } else {
-            displayContent()
-        }
+        if (state) hideContent(CoverType.WHITE) else displayContent()
     }
 
+    /**
+     * Displays the next image in the collection
+     */
     fun goToNextImage(){
-        currentIndex++
         if(displayContent) {
-
-            setNewBitmap(mediaCollection)
-            Log.d("Presenter", "Going to next image")
-        } else {
-            setScreenBlack(1)
+            currentIndex++
+            displayNewMediaFromCollection(mediaCollection)
         }
     }
 
+    /**
+     * Displays the previous images in the collection
+     */
     fun goToPreviousImage() {
-        currentIndex--
         if(displayContent) {
-            setNewBitmap(mediaCollection)
-            Log.d("Presenter", "Going to previous image")
-        } else {
-            setScreenBlack(1)
+            currentIndex--
+            displayNewMediaFromCollection(mediaCollection)
         }
     }
 
-    private fun setScreenBlack(type: Int) {
-        if(type == 1)
-            view?.updateBackground(coverBitmap!!)
-        else
-            view?.updateBackground(coverWhiteBitmap!!)
+    /**
+     * Sets the cover to be displayed
+     *
+     * @param coverType The type of cover to be displayed
+     */
+    private fun setCover(coverType: CoverType) {
+        when(coverType) {
+            CoverType.BLACK -> view?.updateBackgroundWithBitmap(coverBitmap!!)
+            CoverType.WHITE -> view?.updateBackgroundWithBitmap(coverWhiteBitmap!!)
+        }
         view?.setReady(true)
     }
 
-    private fun setNewBitmap(localCollection: List<WatchMedia>?) {
-        var bitmap: Bitmap? = null
+    /**
+     * Displays the media in the current index from a collection of media
+     *
+     * @param localCollection Collection of media
+     */
+    private fun displayNewMediaFromCollection(localCollection: List<WatchMedia>?) {
         if (localCollection.isNullOrEmpty() || !displayContent) {
-            bitmap = coverBitmap
             currentIndex = 0
         } else {
             if (currentIndex >= localCollection.size)
                 currentIndex %= localCollection.size
             else if (currentIndex < 0)
                 currentIndex = localCollection.size - 1
-
-            if (localCollection[currentIndex].mimetype == "video/mp4") {
-                var file = File(context!!.filesDir.toString() + '/' + localCollection[currentIndex].path)
-
-                    /*(
-                Log.d("wghwhw", "${file.readBytes()}")
-                Log.d("wghwhwss", "${file.length()}")
-
-
-                var source = ImageDecoder.createSource(file)
-                var drawable = ImageDecoder.decodeDrawable(source)
-                */
-
-                view?.updateBackgroundGif(file)
-                view?.setReady(true)
-
-
-            } else {
-                bitmap = getBitmapFromFile(this.context!!, localCollection[currentIndex].path)
-                if(bitmap == null) {
-                    //Just in case something goes wrong with the file
-                    watchMediaViewModel.delete(localCollection!![currentIndex], view!!.getContext())
-                    goToNextImage()
-                } else {
-                    view?.updateBackground(bitmap!!)
-                    view?.setReady(true)
-                }
+            var file  = File(context!!.filesDir, localCollection[currentIndex].path)
+            if(!file.exists()) {
+                //Just in case something goes wrong with the file
+                watchMediaViewModel.delete(localCollection!![currentIndex], view!!.getContext())
+                goToNextImage()
             }
+            if(localCollection[currentIndex].mimetype.contains("video")||
+                    localCollection[currentIndex].mimetype.contains("gif"))
+                view?.updateBackground(file, View.MediaType.GIF)
+            else
+                view?.updateBackground(file, View.MediaType.IMAGE)
+            view?.setReady(true)
         }
-
     }
 
+    /**
+     * Displays the current piece of media
+     */
     fun displayContent() {
         this.displayContent = true
-        setNewBitmap(mediaCollection)
+        displayNewMediaFromCollection(mediaCollection)
     }
 
-    fun hideContent(type: Int) {
+    /**
+     * Displays the cover
+     *
+     * @param coverType The type of the cover to be displayed
+     */
+    fun hideContent(coverType: CoverType) {
         this.displayContent = false
-        setScreenBlack(type)
+        setCover(coverType)
     }
 
     /**
@@ -196,12 +203,27 @@ class MainPresenter {
      * Control the view, must implement these methods
      */
     interface View {
-        fun updateBackground(bitmap: Bitmap)
-        fun updateBackgroundGif(file: File)
+        fun updateBackgroundWithBitmap(bitmap: Bitmap)
+        fun updateBackground(file: File, mediaType: MediaType)
         fun displayText(addr: String)
         fun getScreenSize(): Int
         fun getReady(): Boolean
         fun setReady(ready : Boolean)
         fun getContext(): Context
+
+        /**
+         * Types of media supported
+         */
+        enum class MediaType {
+            IMAGE, GIF
+        }
     }
+
+    /**
+     * Types of cover
+     */
+    enum class CoverType {
+        BLACK, WHITE
+    }
+
 }

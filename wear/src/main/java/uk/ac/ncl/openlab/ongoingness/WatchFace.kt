@@ -10,7 +10,7 @@ import android.util.Log
 import android.view.SurfaceHolder
 import android.view.WindowManager
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
-import uk.ac.ncl.openlab.ongoingness.utilities.BatteryInfoReceiverNew
+import uk.ac.ncl.openlab.ongoingness.utilities.BatteryInfoReceiver
 import uk.ac.ncl.openlab.ongoingness.views.MainActivity
 
 /**
@@ -35,7 +35,7 @@ class WatchFace : CanvasWatchFaceService() {
         private var mLowBitAmbient: Boolean = false
         private var mBurnInProtection: Boolean = false
 
-        private lateinit var  batR: BatteryInfoReceiverNew
+        private lateinit var  batteryInfoReceiver: BatteryInfoReceiver
         private lateinit var bitmapReceiver: BroadcastReceiver
 
         override fun onCreate(holder: SurfaceHolder) {
@@ -51,8 +51,8 @@ class WatchFace : CanvasWatchFaceService() {
 
             when(FLAVOR) {
                 "locket_touch" -> {
-                    batR = BatteryInfoReceiverNew(applicationContext, getScreenSize())
-                    batR.start()
+                    batteryInfoReceiver = BatteryInfoReceiver(applicationContext, getScreenSize())
+                    batteryInfoReceiver.start()
 
                     bitmapReceiver = object
                         : BroadcastReceiver() {
@@ -71,9 +71,7 @@ class WatchFace : CanvasWatchFaceService() {
                             }
                         }
                     }
-
-                    val filter = IntentFilter(batR.BROADCAST_INTENT_NAME).apply {}
-
+                    val filter = IntentFilter(batteryInfoReceiver.BROADCAST_INTENT_NAME).apply {}
                     registerReceiver(bitmapReceiver, filter)
                 }
             }
@@ -82,12 +80,10 @@ class WatchFace : CanvasWatchFaceService() {
         override fun onDestroy() {
             super.onDestroy()
             when(FLAVOR) {
-
                 "locket_touch" -> {
-                    batR.stop()
+                    batteryInfoReceiver.stop()
                     unregisterReceiver(bitmapReceiver)
                 }
-
             }
         }
 
@@ -117,10 +113,6 @@ class WatchFace : CanvasWatchFaceService() {
 
             if (!inAmbientMode) {
                 Log.d("WatchFace", "leaving ambient mode")
-
-                var closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-                applicationContext.sendBroadcast(closeIntent)
-
                 launchActivity()
             }
         }
@@ -160,10 +152,6 @@ class WatchFace : CanvasWatchFaceService() {
 
         override fun onDraw(canvas: Canvas, bounds: Rect) {
             drawBackground(canvas)
-
-            var closeIntent = Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
-            applicationContext.sendBroadcast(closeIntent)
-
         }
 
         /**
@@ -184,29 +172,18 @@ class WatchFace : CanvasWatchFaceService() {
 
             var coverID: Int? = null
 
-            when(BuildConfig.FLAVOR){
+            when(FLAVOR){
                 "locket" ->{ coverID = R.drawable.cover }
                 "locket_touch" ->{ coverID = R.drawable.cover }
                 "refind" -> { coverID = R.drawable.refind_cover }
             }
 
             val bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, coverID!! ), getScreenSize(), getScreenSize(), false)
-
-            // If the bitmap is null, then show a black background
-            if (bitmap != null) {
-                val resized = Bitmap.createScaledBitmap(
-                        bitmap,
-                        getScreenSize(),
-                        getScreenSize(),
-                        false)
-                return resized
-            }
-            return Bitmap.createBitmap(getScreenSize(), getScreenSize(), Bitmap.Config.ARGB_8888)
+            return bitmap ?: Bitmap.createBitmap(getScreenSize(), getScreenSize(), Bitmap.Config.ARGB_8888)
         }
 
         override fun onVisibilityChanged(visible: Boolean) {
             super.onVisibilityChanged(visible)
-
             if (visible) {
                 invalidate()
             }
@@ -219,8 +196,8 @@ class WatchFace : CanvasWatchFaceService() {
 
             when(FLAVOR) {
                 "locket_touch" -> {
-                    intent.putExtra("background", batR.currentBitmapByteArray)
-                    intent.putExtra("broadcastName", batR.BROADCAST_INTENT_NAME)
+                    intent.putExtra("background", batteryInfoReceiver.currentBitmapByteArray)
+                    intent.putExtra("broadcastName", batteryInfoReceiver.BROADCAST_INTENT_NAME)
                 }
             }
 
