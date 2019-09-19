@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.*
+import android.graphics.drawable.Drawable
 import android.nfc.Tag
 import android.os.*
 import android.util.Log
@@ -17,6 +18,8 @@ import androidx.core.view.GestureDetectorCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.wear.ambient.AmbientModeSupport
 import com.bumptech.glide.Glide
+import com.bumptech.glide.gifdecoder.GifDecoder
+import com.bumptech.glide.load.resource.gif.GifFrameResourceDecoder
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -168,19 +171,11 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                     val filesDir = this.applicationContext.filesDir
 
                     GlobalScope.launch {
-                        var mediaList = repository.getAll().sortedBy { it.order }
-                        var currentImageID: String
-                        currentImageID = if (mediaList.isNullOrEmpty()) {
-                            "test"
-                        } else {
-                            mediaList[0]._id
-                        }
-
+                        var mediaList = repository.getAll().sortedWith(compareBy({it.collection}, {it.order}))
 
                         api.fetchMediaPayload { response ->
 
                             var stringResponse = response!!.body()?.string()
-
 
                             if (stringResponse == "[]") {
                                 isGettingData = false
@@ -190,14 +185,104 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                 val jsonResponse = JSONObject(stringResponse)
                                 var payload: JSONArray = jsonResponse.getJSONArray("payload")
 
+                                var toBeRemoved = mediaList.toTypedArray().copyOf().toMutableList()
+
+                                var mediaFetch = 0
+
                                 if (payload.length() > 0) {
 
                                     for(i in 0 until payload.length()) {
                                         var media:JSONObject = payload.getJSONObject(i)
-                                        Log.d("gg", "${media.getString("path")}")
+                                        var newMedia = WatchMedia(media.getString("_id"),
+                                                media.getString("path"),
+                                                media.getString("locket"),
+                                                media.getString("mimetype"), i)
 
+                                        if(mediaList.contains(newMedia)) {
+                                            toBeRemoved.remove(newMedia)
+                                            mediaFetch++
+
+                                            if(mediaFetch == payload.length()) {
+                                                for(media in toBeRemoved) {
+                                                    GlobalScope.launch {
+                                                        repository.delete(media._id)
+                                                        deleteFile(context, media.path)
+                                                    }
+                                                }
+                                                mImageView.setOnTouchListener(touchListener)
+                                                presenter!!.pullingData(false)
+                                            }
+                                        } else {
+
+                                            api.fetchBitmap(newMedia._id) { body ->
+
+                                               if(newMedia.mimetype == "video/mp4") {
+                                                    val inputStream = body?.byteStream()
+                                                    val file = File(filesDir, newMedia.path)
+
+                                                    lateinit var stream: OutputStream
+                                                    try {
+                                                        stream = FileOutputStream(file)
+
+                                                        inputStream.use { input ->
+                                                            stream.use { fileOut ->
+                                                                input!!.copyTo(fileOut)
+                                                            }
+                                                        }
+                                                        stream.flush()
+                                                        mediaFetch++
+                                                    } catch (e: IOException) { // Catch the exception
+                                                        e.printStackTrace()
+                                                    } finally {
+                                                        GlobalScope.launch {
+                                                            repository.insert(newMedia)
+                                                            Log.d("eegif", "$mediaFetch ${payload.length()}")
+
+
+                                                            if(mediaFetch == payload.length()) {
+                                                                Log.d("eegif", "yes")
+                                                                for(media in toBeRemoved) {
+                                                                    deleteFile(context, media.path)
+                                                                }
+                                                                mImageView.setOnTouchListener(touchListener)
+                                                                presenter!!.pullingData(false)
+                                                            }
+                                                        }
+                                                    }
+                                               } else {
+                                                    val inputStream = body?.byteStream()
+                                                    val image = BitmapFactory.decodeStream(inputStream)
+                                                    val file = File(filesDir, newMedia.path)
+                                                    lateinit var stream: OutputStream
+                                                    try {
+                                                        stream = FileOutputStream(file)
+                                                        image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                                                        stream.flush()
+                                                        mediaFetch++
+                                                    } catch (e: IOException) { // Catch the exception
+                                                        e.printStackTrace()
+                                                    } finally {
+                                                        stream.close()
+                                                        inputStream?.close()
+                                                        Log.d("Utils", "stored image: ${file.absolutePath}")
+                                                        GlobalScope.launch {
+                                                            repository.insert(newMedia)
+
+                                                            if(mediaFetch == payload.length()) {
+                                                                Log.d("ee", "no $mediaFetch ${payload.length()}")
+                                                                for(media in toBeRemoved) {
+                                                                    deleteFile(context, media.path)
+                                                                }
+                                                                Log.d("WHAT", "hummmm")
+                                                                mImageView.setOnTouchListener(touchListener)
+                                                                presenter!!.pullingData(false)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
-
 
 
                                     /*
@@ -530,6 +615,19 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         runOnUiThread {
             macAddress.visibility = View.INVISIBLE
             Glide.with(this).load(bitmap).into(image)
+        }
+    }
+
+    /**
+     * Update the background of the watch face.
+     *
+     * @param bitmap The bitmap to set the background to.
+     * @return Unit
+     */
+    override fun updateBackgroundGif(file: File) {
+        runOnUiThread {
+            macAddress.visibility = View.INVISIBLE
+            Glide.with(this).asGif().load(file.readBytes()).into(image)
         }
     }
 

@@ -10,4 +10,18 @@ data class WatchMedia(
         @ColumnInfo(name = "path")            val path: String,
         @ColumnInfo(name = "collection")      val collection: String,
         @ColumnInfo(name = "mimetype")        val mimetype: String,
-        @ColumnInfo(name = "order")           val order: Int)
+        @ColumnInfo(name = "order")           val order: Int) {
+
+
+    override fun equals(other: Any?): Boolean {
+        if(other == null || other !is WatchMedia)
+            return false
+
+        return (this._id == other._id &&
+                this.path == other.path &&
+                this.collection == other.collection &&
+                this.mimetype == other.mimetype)
+    }
+
+}
+

@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.graphics.drawable.Drawable
 import android.support.wearable.activity.WearableActivity
 import android.util.Log
 import android.view.View
@@ -35,7 +37,7 @@ class MainPresenter {
         watchMediaViewModel = ViewModelProviders.of(activity).get(WatchMediaViewModel::class.java)
 
         watchMediaViewModel.allWatchMedia.observe(activity, Observer { watchMedia ->
-            mediaCollection = watchMedia
+            mediaCollection = watchMedia.sortedWith(compareBy({it.collection}, {it.order}))
             if(displayContent)
                 setNewBitmap(mediaCollection)
         })
@@ -92,21 +94,40 @@ class MainPresenter {
             bitmap = coverBitmap
             currentIndex = 0
         } else {
-            if(currentIndex >= localCollection.size)
+            if (currentIndex >= localCollection.size)
                 currentIndex %= localCollection.size
-            else if(currentIndex < 0)
-                currentIndex = localCollection.size-1
-            bitmap = getBitmapFromFile(this.context!!, localCollection[currentIndex].path)
+            else if (currentIndex < 0)
+                currentIndex = localCollection.size - 1
+
+            if (localCollection[currentIndex].mimetype == "video/mp4") {
+                var file = File(context!!.filesDir.toString() + '/' + localCollection[currentIndex].path)
+
+                    /*(
+                Log.d("wghwhw", "${file.readBytes()}")
+                Log.d("wghwhwss", "${file.length()}")
+
+
+                var source = ImageDecoder.createSource(file)
+                var drawable = ImageDecoder.decodeDrawable(source)
+                */
+
+                view?.updateBackgroundGif(file)
+                view?.setReady(true)
+
+
+            } else {
+                bitmap = getBitmapFromFile(this.context!!, localCollection[currentIndex].path)
+                if(bitmap == null) {
+                    //Just in case something goes wrong with the file
+                    watchMediaViewModel.delete(localCollection!![currentIndex], view!!.getContext())
+                    goToNextImage()
+                } else {
+                    view?.updateBackground(bitmap!!)
+                    view?.setReady(true)
+                }
+            }
         }
 
-        if(bitmap == null) {
-            //Just in case something goes wrong with the file
-            watchMediaViewModel.delete(localCollection!![currentIndex], view!!.getContext())
-            goToNextImage()
-        } else {
-            view?.updateBackground(bitmap!!)
-            view?.setReady(true)
-        }
     }
 
     fun displayContent() {
@@ -176,6 +197,7 @@ class MainPresenter {
      */
     interface View {
         fun updateBackground(bitmap: Bitmap)
+        fun updateBackgroundGif(file: File)
         fun displayText(addr: String)
         fun getScreenSize(): Int
         fun getReady(): Boolean
