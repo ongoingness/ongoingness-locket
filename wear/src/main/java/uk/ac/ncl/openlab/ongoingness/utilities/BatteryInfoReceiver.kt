@@ -10,6 +10,8 @@ import android.util.Log
 import uk.ac.ncl.openlab.ongoingness.R
 import java.io.ByteArrayOutputStream
 
+const val BROADCAST_INTENT_NAME: String = "BATTERY_INFO"
+
 class BatteryInfoReceiver {
 
     private var chargeReceiver: BroadcastReceiver
@@ -22,7 +24,7 @@ class BatteryInfoReceiver {
     private var checkingBatteryReceiverOn: Boolean = false
 
     private val CHARGE_DELTA: Float = 0.01f
-    val BROADCAST_INTENT_NAME: String = "BATTERY_INFO"
+
 
     private val TAG = "BatteryInfoReceiver"
     var currentBitmapByteArray: ByteArray
@@ -136,22 +138,36 @@ class BatteryInfoReceiver {
 
     private fun getChargingBackground(battery: Float): ByteArray {
 
+        //First layer
         var transparent = Bitmap.createBitmap(screenSize, screenSize,Bitmap.Config.ARGB_8888)
         var canvasT = Canvas(transparent)
         canvasT.drawColor(Color.BLACK)
 
-        var blue = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888);
-        var canvasB = Canvas(blue)
-
-        var circleSize = (battery * screenSize) / 2;
-
-        canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize, Paint().apply { color = Color.parseColor("#009FE3") })
-
+        //Second Layer
         var mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.flower_pattern_white), screenSize, screenSize, false)
 
-        var bitmap = overlayBitmaps(transparent, blue, mBackgroundBitmap, screenSize)
+        //Third Layer
+        var blue = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
 
-        var bs = ByteArrayOutputStream();
+        var canvasB = Canvas(blue)
+
+        var circleSize = (battery * screenSize) / 2
+
+        var circlePaint = Paint().apply { color = Color.parseColor("#009FE3")}
+        //circlePaint.shader = LinearGradient(0f, 0f, 0f, screenSize.toFloat(), Color.BLACK, Color.parseColor("#009FE3"), Shader.TileMode.MIRROR)
+        circlePaint.shader = RadialGradient(screenSize / 2F, screenSize / 2F, circleSize + circleSize / 2, Color.parseColor("#009FE3"), Color.BLACK, Shader.TileMode.MIRROR)
+
+        canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize,  circlePaint)
+
+        var alphaPaint = Paint()
+        alphaPaint.alpha = 250
+        alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+
+        canvasB.drawBitmap(mBackgroundBitmap, Matrix(), alphaPaint)
+
+        var bitmap = overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
+
+        var bs = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 50, bs);
 
         currentBitmapByteArray = bs.toByteArray()
@@ -165,8 +181,15 @@ class BatteryInfoReceiver {
         var bmOverlay: Bitmap  = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
         var canvas = Canvas(bmOverlay)
 
+        var secondLayerAlphaPaint = Paint()
+        secondLayerAlphaPaint.alpha = 80
+
+        var alphaPaint = Paint()
+        alphaPaint.alpha = 250
+        alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+
         canvas.drawBitmap(b1, Matrix(), null)
-        canvas.drawBitmap(b2, Matrix(), null)
+        canvas.drawBitmap(b2, Matrix(), secondLayerAlphaPaint)
         canvas.drawBitmap(b3, Matrix(), null)
 
         return Bitmap.createScaledBitmap(bmOverlay, screenSize, screenSize, false)
