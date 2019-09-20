@@ -4,16 +4,19 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import okhttp3.*
+import org.json.JSONObject
 import retrofit2.Retrofit
 import retrofit2.http.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig
 import java.io.IOException
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
 interface OngoingnessService{
@@ -100,21 +103,24 @@ class API {
     private var token: String? = null
     private val client: OkHttpClient = OkHttpClient
             .Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .connectionSpecs(
                     Arrays.asList(ConnectionSpec.MODERN_TLS,
                             ConnectionSpec.CLEARTEXT))
             .build()
 
     init {
-        generateToken {}
+        generateToken (callback = {}, onFailureCallback = {})
     }
 
     /**
-     * Generate a token from the api using the devices mac address.
+     * Generate a token from the api using the devices mac address.  ? = null
      *
      * @param callback function to call after generating a token
      */
-    private fun generateToken(callback: (token:String?) -> Unit) {
+    private fun generateToken(callback: (token:String?) -> Unit, onFailureCallback: (e: IOException) -> Unit) {
 
         if(token != null){
             callback(token)
@@ -133,16 +139,21 @@ class API {
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 e.printStackTrace()
+                onFailureCallback(e)
             }
 
             override fun onResponse(call: Call, response: Response) {
-                val genericResponse: GenericResponse = gson.fromJson(
-                        response.body()?.string(),
-                        GenericResponse::class.java)
+                if(response.code().toString().startsWith('5'))
+                    onFailureCallback(IOException("No server"))
+                else {
+                    val genericResponse: GenericResponse = gson.fromJson(
+                            response.body()?.string(),
+                            GenericResponse::class.java)
 
-                // Set token
-                token = genericResponse.payload
-                callback(token)
+                    // Set token
+                    token = genericResponse.payload
+                    callback(token)
+                }
             }
         })
     }
@@ -155,7 +166,7 @@ class API {
      */
     fun fetchMedia(callback: (Array<Media>?) -> Unit) {
 
-        generateToken { token ->  Log.d("API",token)
+        generateToken(callback = { token ->  Log.d("API",token)
 
             val url = "media"
             val request = Request.Builder()
@@ -177,12 +188,13 @@ class API {
                     callback(mediaResponse.payload)
                 }
             })
-        }
+        }, onFailureCallback = {})
+
     }
 
-    fun fetchMediaPayload(callback: (Response?) -> Unit) {
+    fun fetchMediaPayload(callback: (Response?) -> Unit, failure: (e: IOException) -> Unit) {
 
-        generateToken { token ->  Log.d("API",token)
+        generateToken( callback = { token ->  Log.d("API",token)
 
             val url = "media"
             val request = Request.Builder()
@@ -194,14 +206,22 @@ class API {
             client.newCall(request).enqueue(object : Callback {
 
                 override fun onFailure(call: Call, e: IOException) {
+
+                    Log.d("are we here??", "??????????????????????")
+
                     e.printStackTrace()
+                    failure(e)
                 }
 
                 override fun onResponse(call: Call, response: Response) {
                     callback(response)
                 }
+
+
             })
-        }
+        }, onFailureCallback = { e ->
+           failure(e)
+        })
     }
 
 
@@ -212,7 +232,7 @@ class API {
      */
     fun fetchInferredMedia(mediaID: String, callback: (Response?) -> Unit) {
 
-        generateToken { token ->  Log.d("API",token)
+        generateToken( callback =  { token ->  Log.d("API",token)
 
             val url = "media/linkedMediaAll_Weighted/?mediaId=$mediaID&drawIfNew=1"
             val request = Request.Builder()
@@ -231,7 +251,7 @@ class API {
                     callback(response)
                 }
             })
-        }
+        }, onFailureCallback = {} )
     }
 
     /**
@@ -241,7 +261,7 @@ class API {
      */
     fun fetchBitmap(link:String, size:Int = 300, callback: (ResponseBody?) -> Unit) {
 
-        generateToken { token ->
+        generateToken( callback =  { token ->
             Log.d("API", token)
 
             val url = "media/$link/?size=$size"
@@ -261,6 +281,6 @@ class API {
                     callback(response.body())
                 }
             })
-        }
+        }, onFailureCallback = {})
     }
 }

@@ -22,7 +22,7 @@ interface WatchMediaDao {
     fun getMedia(id: String) : WatchMedia
 
     @Query("DELETE FROM watch_media WHERE _id LIKE :id")
-    suspend  fun delete(id: String)
+    suspend fun delete(id: String)
 
     @Query("SELECT * from watch_media")
     fun getAll(): List<WatchMedia>

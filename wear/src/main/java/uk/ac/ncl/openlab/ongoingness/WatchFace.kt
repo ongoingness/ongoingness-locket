@@ -10,6 +10,7 @@ import android.util.Log
 import android.view.SurfaceHolder
 import android.view.WindowManager
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
+import uk.ac.ncl.openlab.ongoingness.utilities.BROADCAST_INTENT_NAME
 import uk.ac.ncl.openlab.ongoingness.utilities.BatteryInfoReceiver
 import uk.ac.ncl.openlab.ongoingness.views.MainActivity
 
@@ -71,7 +72,7 @@ class WatchFace : CanvasWatchFaceService() {
                             }
                         }
                     }
-                    val filter = IntentFilter(batteryInfoReceiver.BROADCAST_INTENT_NAME).apply {}
+                    val filter = IntentFilter(BROADCAST_INTENT_NAME).apply {}
                     registerReceiver(bitmapReceiver, filter)
                 }
             }
@@ -197,7 +198,7 @@ class WatchFace : CanvasWatchFaceService() {
             when(FLAVOR) {
                 "locket_touch" -> {
                     intent.putExtra("background", batteryInfoReceiver.currentBitmapByteArray)
-                    intent.putExtra("broadcastName", batteryInfoReceiver.BROADCAST_INTENT_NAME)
+                    intent.putExtra("broadcastName", BROADCAST_INTENT_NAME)
                 }
             }
 

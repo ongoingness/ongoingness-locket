@@ -466,16 +466,25 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                     GlobalScope.launch {
                         var mediaList = repository.getAll().sortedWith(compareBy({it.collection}, {it.order}))
 
-                        api.fetchMediaPayload { response ->
+                        api.fetchMediaPayload (
+
+                            callback = { response ->
 
                             var stringResponse = response!!.body()?.string()
+                            val jsonResponse = JSONObject(stringResponse)
 
-                            if (stringResponse == "[]") {
+                            Log.d("sa", stringResponse +  jsonResponse.getString("code"))
+
+                            var code = jsonResponse.getString("code")
+
+                            if (code.startsWith('5')) {
                                 isGettingData = false
                                 mImageView.setOnTouchListener(touchListener)
                                 presenter!!.pullingData(false)
-                            } else {
-                                val jsonResponse = JSONObject(stringResponse)
+                                if(mediaList.isEmpty())
+                                    presenter!!.hideContent(MainPresenter.CoverType.BLACK)
+                            } else if (code.startsWith('2')) {
+
                                 var payload: JSONArray = jsonResponse.getJSONArray("payload")
 
                                 var toBeRemoved = mediaList.toTypedArray().copyOf().toMutableList()
@@ -540,6 +549,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                                 repository.insert(newMedia)
                                                                 if(mediaFetch == payload.length()) {
                                                                     for(media in toBeRemoved) {
+                                                                        repository.delete(media._id)
                                                                         deleteFile(context, media.path)
                                                                     }
                                                                     mImageView.setOnTouchListener(touchListener)
@@ -555,9 +565,32 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                             }
                                         }
                                     }
+                                } else {
+                                    if(toBeRemoved.isNotEmpty()) {
+                                        GlobalScope.launch {
+
+                                            for(media in toBeRemoved) {
+                                                repository.delete(media._id)
+                                                deleteFile(context, media.path)
+                                            }
+                                            mImageView.setOnTouchListener(touchListener)
+                                            presenter!!.pullingData(false)
+                                            presenter!!.hideContent(MainPresenter.CoverType.BLACK)
+                                        }
+
+                                    } else {
+                                        mImageView.setOnTouchListener(touchListener)
+                                        presenter!!.pullingData(false)
+                                        presenter!!.hideContent(MainPresenter.CoverType.BLACK)
+                                    }
                                 }
                             }
-                        }
+                        },
+                        failure = { e ->
+                            isGettingData = false
+                            mImageView.setOnTouchListener(touchListener)
+                            presenter!!.pullingData(false)
+                        })
                     }
                 }
 
