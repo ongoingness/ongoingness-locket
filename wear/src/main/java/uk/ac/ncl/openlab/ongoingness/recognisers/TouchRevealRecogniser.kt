@@ -170,10 +170,19 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
             notifyEvent(Events.STARTED)
         } else if (currentState == State.STANDBY && currentOrientation == Orientation.UP){
             updateState(State.OFF)
+        }  else if (currentState == State.OFF && currentOrientation == Orientation.AWAY) {
+            stop()
         } else if (currentState != State.OFF && (currentOrientation == Orientation.AWAY || currentOrientation == Orientation.DOWN )) {
             updateState(State.OFF)
             stop()
         }
+
+        /*else if (currentState == State.STANDBY && currentOrientation == Orientation.UP){
+            updateState(State.OFF)
+        } else if (currentState != State.OFF && (currentOrientation == Orientation.AWAY || currentOrientation == Orientation.DOWN )) {
+            updateState(State.OFF)
+            stop()
+        }*/
 
     }
 
