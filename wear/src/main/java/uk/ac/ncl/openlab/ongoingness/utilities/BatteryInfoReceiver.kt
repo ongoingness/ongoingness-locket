@@ -24,8 +24,7 @@ class BatteryInfoReceiver {
     private var checkingBatteryReceiverOn: Boolean = false
 
     private val CHARGE_DELTA: Float = 0.01f
-
-
+    
     private val TAG = "BatteryInfoReceiver"
     var currentBitmapByteArray: ByteArray
 
@@ -42,10 +41,15 @@ class BatteryInfoReceiver {
 
                 if(intent.action == Intent.ACTION_POWER_CONNECTED) {
                     Log.d(TAG, " Connected")
+                    Logger.log(LogType.CHARGER_CONNECTED, listOf(), context)
                     startCheckingBatteryValues()
+
+                    var n = Logger.sendLogs()
+                    Log.d("uiui", "$n")
 
                 } else if(intent.action == Intent.ACTION_POWER_DISCONNECTED) {
                     Log.d(TAG, " Disconnected")
+                    Logger.log(LogType.CHARGER_DISCONNECTED, listOf(), context)
                     if(checkingBatteryReceiverOn)
                         stopCheckingBatteryValues()
                     sendBackgroundBroadcast(getDefaultCover())

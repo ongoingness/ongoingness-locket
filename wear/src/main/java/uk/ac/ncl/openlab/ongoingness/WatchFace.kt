@@ -43,7 +43,11 @@ class WatchFace : CanvasWatchFaceService() {
             super.onCreate(holder)
 
             setWatchFaceStyle(WatchFaceStyle.Builder(this@WatchFace)
-                    .setAcceptsTapEvents(true)
+                    .setAcceptsTapEvents(false)
+
+                    .setHideStatusBar(true)
+                    .setShowUnreadCountIndicator(false)
+
                     .setHideNotificationIndicator(true)
                     .build())
 

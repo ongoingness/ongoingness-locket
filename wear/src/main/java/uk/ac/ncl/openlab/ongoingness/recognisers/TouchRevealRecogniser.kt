@@ -106,7 +106,6 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { rxSensorEvent -> processGravity(rxSensorEvent) })
 
-
         setChanged()
         notifyObservers(Events.STARTED)
     }
@@ -116,8 +115,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
         for (disposable in disposables) {
             disposable.dispose()
         }
-        setChanged()
-        notifyObservers(Events.STOPPED)
+        notifyEvent(Events.STOPPED)
     }
 
     private fun updateState(state: State){
@@ -174,7 +172,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
             updateState(State.OFF)
         } else if (currentState != State.OFF && (currentOrientation == Orientation.AWAY || currentOrientation == Orientation.DOWN )) {
             updateState(State.OFF)
-            notifyEvent(Events.STOPPED)
+            stop()
         }
 
     }

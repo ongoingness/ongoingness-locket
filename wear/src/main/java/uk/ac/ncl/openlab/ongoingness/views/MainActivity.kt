@@ -73,10 +73,14 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        Logger.start(applicationContext)
+        Logger.log(LogType.ACTIVITY_STARTED, listOf(), applicationContext!!)
+
         killRunnable = Runnable {
-            if(System.currentTimeMillis() - startTime > killDelta)
+            if(System.currentTimeMillis() - startTime > killDelta) {
+                Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), applicationContext)
                 finish()
-            else
+            } else
                 killHandler.postDelayed(killRunnable, timeCheckInterval)
         }
 
@@ -95,6 +99,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             "locket" -> setLocket()
             "refind" -> setRefind()
         }
+
     }
 
     /**
@@ -259,9 +264,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             var bitmap = BitmapFactory.decodeByteArray(
                     intent.getByteArrayExtra("background"), 0,
                     intent.getByteArrayExtra("background").size)
-
             presenter!!.updateCoverBitmap(bitmap)
-
         }
 
         //Charging background receiver
@@ -308,6 +311,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         presenter!!.displayContent()
                     }
 
+                    Logger.log(LogType.WAKE_UP, listOf(), applicationContext)
                 }
                 TouchRevealRecogniser.Events.NEXT -> {
                     vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
@@ -318,11 +322,16 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                     vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
                     presenter!!.hideContent(MainPresenter.CoverType.BLACK)
                     startTime = System.currentTimeMillis()
+                    Logger.log(LogType.SLEEP, listOf(), applicationContext)
 
                 }
                 TouchRevealRecogniser.Events.STOPPED -> {
-                    isGoingToStop = true
-                    finish()
+                    if(!isGoingToStop) {
+                        isGoingToStop = true
+                        killHandler.removeCallbacks(killRunnable)
+                        Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), applicationContext)
+                        finish()
+                    }
                 }
             }
             setBrightness(maxBrightness)
@@ -698,46 +707,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             }
         }
     }
-
-    /*
-    * General function for writing appending message to log file.
-     */
-    private fun writeToLogFile(message: String) {
-        var filePath = getFilesDir().getPath().toString() + "/locket_log_file.txt";
-        var f = File(filePath);
-        Log.d("Log File", "Log Path: " + filePath)
-        //var batteryLevel = getBatteryLevel()
-        //Log.d("Battery check", batteryLevel.toString())
-
-        //f.appendText(LocalDateTime.now().toString() + ": " + message + " Battery level: " + batteryLevel + "\n")
-    }
-
-    /*
-    * Function for sending log file contents to API and clearing lofile
-    */
-    //TODO
-    private fun uploadLogFileContents() {
-    }
-
-    /*
-    * Function returns current battery status.
-     */
-    /*
-    private fun getBatteryLevel(): Float? {
-        val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
-            registerReceiver(null, ifilter)
-        }
-
-        val batteryPct: Float? = batteryStatus?.let { intent ->
-            val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-            val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
-            level / scale.toFloat()
-        }
-
-        return batteryPct
-    }
-    */
-
 
     private class MyAmbientCallback : AmbientModeSupport.AmbientCallback()
 

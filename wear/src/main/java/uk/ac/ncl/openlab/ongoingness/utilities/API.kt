@@ -283,4 +283,37 @@ class API {
             })
         }, onFailureCallback = {})
     }
+
+    /**
+     * Fetch image from the link.
+     *
+     * @param links Array<String>
+     */
+    fun sendLogs(logs:String, callback: (ResponseBody?) -> Unit) {
+
+        generateToken( callback =  { token ->
+            Log.d("API", token)
+
+            val formBody = FormBody.Builder()
+                    .add("logs", logs)
+                    .build()
+
+            val url = "log"
+            val request = Request.Builder()
+                    .url(apiUrl + url)
+                    .post(formBody)
+                    .header("x-access-token", token!!)
+                    .build()
+
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call?, e: IOException?) {
+                    Log.e("API", "Error here:"+e.toString())
+                }
+
+                override fun onResponse(call: Call?, response: Response) {
+                    callback(response.body())
+                }
+            })
+        }, onFailureCallback = {})
+    }
 }

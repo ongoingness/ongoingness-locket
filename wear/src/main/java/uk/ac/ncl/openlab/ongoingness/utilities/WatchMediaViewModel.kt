@@ -11,11 +11,14 @@ import kotlinx.coroutines.launch
 class WatchMediaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: WatchMediaRepository
+    private val logRepository: LogRepository
     val allWatchMedia: LiveData<List<WatchMedia>>
 
     init {
-        val watchMediaDao = WatchMediaRoomDatabase.getDatabase(application).watchMediaDao();
+        val watchMediaDao = WatchMediaRoomDatabase.getDatabase(application).watchMediaDao()
         repository = WatchMediaRepository(watchMediaDao)
+        val logDao = WatchMediaRoomDatabase.getDatabase(application).logDao()
+        logRepository = LogRepository(logDao)
         allWatchMedia = repository.allWatchMedia
     }
 

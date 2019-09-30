@@ -26,6 +26,9 @@ class MainPresenter {
     private var coverWhiteBitmap: Bitmap? = null
     private var coverBitmap: Bitmap? = null
 
+    private var newImageTime: Long? = null
+    private var indexTime: Int? = null
+
     /**
      * Gets the collection of images in the local database
      *
@@ -110,10 +113,28 @@ class MainPresenter {
         if (localCollection.isNullOrEmpty() || !displayContent) {
             currentIndex = 0
         } else {
+
             if (currentIndex >= localCollection.size)
                 currentIndex %= localCollection.size
             else if (currentIndex < 0)
                 currentIndex = localCollection.size - 1
+
+            if(newImageTime == null) {
+                newImageTime = System.currentTimeMillis()
+                indexTime = currentIndex
+            } else {
+                var timePassed = System.currentTimeMillis() - newImageTime!!
+                var content = listOf("imageID:${localCollection[currentIndex]._id}", "displayedTime:$timePassed")
+
+                if((indexTime == localCollection.size && currentIndex == 0) || currentIndex > indexTime!!)
+                    Logger.log(LogType.NEXT_IMAGE, content, context!! )
+                else if((indexTime == 0 && currentIndex == localCollection.size) || currentIndex < indexTime!!)
+                    Logger.log(LogType.PREV_IMAGE, content, context!! )
+
+                newImageTime = System.currentTimeMillis()
+                indexTime = currentIndex
+            }
+
             var file  = File(context!!.filesDir, localCollection[currentIndex].path)
             if(!file.exists()) {
                 //Just in case something goes wrong with the file
@@ -225,5 +246,7 @@ class MainPresenter {
     enum class CoverType {
         BLACK, WHITE
     }
+
+
 
 }

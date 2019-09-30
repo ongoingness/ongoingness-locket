@@ -5,10 +5,11 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [WatchMedia::class], version = 2)
+@Database(entities = [WatchMedia::class, Log::class], version = 4)
 public abstract class WatchMediaRoomDatabase : RoomDatabase() {
 
     abstract fun watchMediaDao(): WatchMediaDao
+    abstract fun logDao(): LogDao
 
     companion object  {
         @Volatile
@@ -19,7 +20,7 @@ public abstract class WatchMediaRoomDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                         context.applicationContext,
                         WatchMediaRoomDatabase::class.java,
-                        "WatchMedia_database").fallbackToDestructiveMigration().build();
+                        "WatchMedia_database").fallbackToDestructiveMigration().allowMainThreadQueries().build()
                 INSTANCE = instance
                 return instance
             }

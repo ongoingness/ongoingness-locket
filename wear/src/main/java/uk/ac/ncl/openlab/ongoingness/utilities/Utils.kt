@@ -1,10 +1,13 @@
 package uk.ac.ncl.openlab.ongoingness.utilities
 
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.ConnectivityManager
 import android.net.Network
+import android.os.BatteryManager
 import android.util.Log
 import java.io.*
 import java.net.NetworkInterface
@@ -117,6 +120,20 @@ fun getMacAddress(): String {
         println(ex.stackTrace)
     }
     return ""
+}
+
+fun getBatteryLevel(context: Context): Float? {
+    val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
+        context.registerReceiver(null, ifilter)
+    }
+
+    val batteryPct: Float? = batteryStatus?.let { intent ->
+        val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        level / scale.toFloat()
+    }
+
+    return batteryPct
 }
 
 
