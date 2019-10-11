@@ -44,8 +44,7 @@ class BatteryInfoReceiver {
                     Logger.log(LogType.CHARGER_CONNECTED, listOf(), context)
                     startCheckingBatteryValues()
 
-                    var n = Logger.sendLogs()
-                    Log.d("uiui", "$n")
+                    Logger.sendLogs()
 
                 } else if(intent.action == Intent.ACTION_POWER_DISCONNECTED) {
                     Log.d(TAG, " Disconnected")
@@ -157,17 +156,25 @@ class BatteryInfoReceiver {
 
         var circleSize = (battery * screenSize) / 2
 
-        var circlePaint = Paint().apply { color = Color.parseColor("#009FE3")}
+        var circlePaint = Paint().apply { /*color = Color.parseColor("#009FE3")*/}
         //circlePaint.shader = LinearGradient(0f, 0f, 0f, screenSize.toFloat(), Color.BLACK, Color.parseColor("#009FE3"), Shader.TileMode.MIRROR)
-        circlePaint.shader = RadialGradient(screenSize / 2F, screenSize / 2F, circleSize + circleSize / 2, Color.parseColor("#009FE3"), Color.BLACK, Shader.TileMode.MIRROR)
+        //circlePaint.shader = RadialGradient(screenSize / 2F, screenSize / 2F, circleSize + circleSize / 2, Color.parseColor("#009FE3"), Color.BLACK, Shader.TileMode.MIRROR)
+
+        //circlePaint.style = Paint.Style.STROKE
 
         canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize,  circlePaint)
+
+        var borderPaint = Paint().apply {color = Color.parseColor("#009FE3"); style = Paint.Style.STROKE; strokeWidth = 10f }
+        canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize, borderPaint)
+
+
 
         var alphaPaint = Paint()
         alphaPaint.alpha = 250
         alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
 
         canvasB.drawBitmap(mBackgroundBitmap, Matrix(), alphaPaint)
+
 
         var bitmap = overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
 

@@ -12,7 +12,8 @@ object Logger {
     private lateinit var repository: LogRepository
 
     fun start(context: Context) {
-        repository = LogRepository( WatchMediaRoomDatabase.getDatabase(context).logDao())
+        if (!(::repository.isInitialized))
+            repository = LogRepository( WatchMediaRoomDatabase.getDatabase(context).logDao())
     }
 
     fun log(type: LogType, content: List<String>, context: Context)  {

@@ -104,8 +104,8 @@ class API {
     private val client: OkHttpClient = OkHttpClient
             .Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(5 * 60, TimeUnit.SECONDS)
+            .readTimeout(5 * 60, TimeUnit.SECONDS)
             .connectionSpecs(
                     Arrays.asList(ConnectionSpec.MODERN_TLS,
                             ConnectionSpec.CLEARTEXT))

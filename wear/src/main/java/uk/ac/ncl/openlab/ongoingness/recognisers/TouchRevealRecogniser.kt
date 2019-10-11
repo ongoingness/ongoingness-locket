@@ -14,6 +14,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import java.util.*
+import kotlin.math.floor
 
 class TouchRevealRecogniser(private val context: Context) : Observable(), GestureDetector.OnGestureListener {
 
@@ -149,42 +150,30 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
     }
 
     private fun processGravity(event: RxSensorEvent) {
-        val y = event.values[1]
-        val z = event.values[2]
+        val y = floor(event.values[1]).toInt()
+        val z = floor(event.values[2]).toInt()
 
-        when {
-            z >= thresholdGravity -> updateOrientation(Orientation.UP)
-            z <= -thresholdGravity -> updateOrientation(Orientation.DOWN)
-            y >= thresholdGravity -> updateOrientation(Orientation.TOWARDS)
-            y <= -thresholdGravity -> updateOrientation(Orientation.AWAY)
-        }
+        if( y >= 2 &&  z > -9 && z < 9)
+            updateOrientation(Orientation.TOWARDS)
+        else
+            updateOrientation(Orientation.AWAY)
 
         gravityStateChecker()
     }
-
 
     private fun gravityStateChecker() {
 
         if (currentState == State.OFF && currentOrientation == Orientation.TOWARDS) {
             updateState(State.STANDBY)
             notifyEvent(Events.STARTED)
-        } else if (currentState == State.STANDBY && currentOrientation == Orientation.UP){
-            updateState(State.OFF)
-        }  else if (currentState == State.OFF && currentOrientation == Orientation.AWAY) {
-            stop()
-        } else if (currentState != State.OFF && (currentOrientation == Orientation.AWAY || currentOrientation == Orientation.DOWN )) {
+        } else if (currentState != State.OFF && currentOrientation == Orientation.AWAY ) {
             updateState(State.OFF)
             stop()
         }
 
-        /*else if (currentState == State.STANDBY && currentOrientation == Orientation.UP){
-            updateState(State.OFF)
-        } else if (currentState != State.OFF && (currentOrientation == Orientation.AWAY || currentOrientation == Orientation.DOWN )) {
-            updateState(State.OFF)
-            stop()
-        }*/
-
     }
+
+    private
 
     companion object {
         private const val standardGravity = SensorManager.STANDARD_GRAVITY

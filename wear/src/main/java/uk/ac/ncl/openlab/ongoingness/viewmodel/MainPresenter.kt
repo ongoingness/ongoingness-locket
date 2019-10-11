@@ -16,7 +16,7 @@ import java.io.File
  */
 class MainPresenter {
 
-    private var view: View? = null
+    var view: View? = null
     private var context: Context? = null
     private var mediaCollection: List<WatchMedia>? = null
     private var currentIndex = 0;
@@ -141,8 +141,7 @@ class MainPresenter {
                 watchMediaViewModel.delete(localCollection!![currentIndex], view!!.getContext())
                 goToNextImage()
             }
-            if(localCollection[currentIndex].mimetype.contains("video")||
-                    localCollection[currentIndex].mimetype.contains("gif"))
+            if(localCollection[currentIndex].mimetype.contains("gif"))
                 view?.updateBackground(file, View.MediaType.GIF)
             else
                 view?.updateBackground(file, View.MediaType.IMAGE)

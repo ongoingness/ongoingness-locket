@@ -1,18 +1,42 @@
 package uk.ac.ncl.openlab.ongoingness
 
+import android.accounts.Account
+import android.accounts.AccountManager
+import android.app.Service
 import android.content.*
 import android.graphics.*
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.os.SystemClock
+import android.provider.Settings
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
 import android.util.Log
 import android.view.SurfaceHolder
+import android.view.WindowInsets
 import android.view.WindowManager
+import androidx.core.app.ActivityCompat.startActivityForResult
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
-import uk.ac.ncl.openlab.ongoingness.utilities.BROADCAST_INTENT_NAME
-import uk.ac.ncl.openlab.ongoingness.utilities.BatteryInfoReceiver
+import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.views.MainActivity
+import java.lang.reflect.InvocationTargetException
+import kotlin.reflect.KClass
+
+
+// The authority for the sync adapter's content provider
+const val AUTHORITY = "uk.ac.ncl.openlab.ongoingness"
+// An account type, in the form of a domain name
+const val ACCOUNT_TYPE = "ongoingness.com"
+// The account name
+const val ACCOUNT = "ongoingnessaccount"
+
+// Sync interval constants
+const val SECONDS_PER_MINUTE = 60L
+const val SYNC_INTERVAL_IN_MINUTES = 60L
+const val SYNC_INTERVAL = 5L //SYNC_INTERVAL_IN_MINUTES * SECONDS_PER_MINUTE
 
 /**
  * Important Note: Because watch face apps do not have a default Activity in
@@ -39,20 +63,36 @@ class WatchFace : CanvasWatchFaceService() {
         private lateinit var  batteryInfoReceiver: BatteryInfoReceiver
         private lateinit var bitmapReceiver: BroadcastReceiver
 
+        private lateinit var mAccount: Account
+        private lateinit var mResolver: ContentResolver
+
         override fun onCreate(holder: SurfaceHolder) {
             super.onCreate(holder)
 
             setWatchFaceStyle(WatchFaceStyle.Builder(this@WatchFace)
-                    .setAcceptsTapEvents(false)
-
+                    .setAcceptsTapEvents(true)
                     .setHideStatusBar(true)
                     .setShowUnreadCountIndicator(false)
-
                     .setHideNotificationIndicator(true)
                     .build())
 
-            initializeBackground()
 
+            // Create the dummy account
+            mAccount = createSyncAccount()
+
+            mResolver = contentResolver
+            /*
+             * Turn on periodic syncing
+             */
+            ContentResolver.addPeriodicSync(
+                    mAccount,
+                    AUTHORITY,
+                    Bundle.EMPTY,
+                    SYNC_INTERVAL)
+
+            Logger.start(applicationContext)
+
+            initializeBackground()
 
             when(FLAVOR) {
                 "locket_touch" -> {
@@ -116,10 +156,8 @@ class WatchFace : CanvasWatchFaceService() {
             super.onAmbientModeChanged(inAmbientMode)
             this.mAmbient = inAmbientMode
 
-            if (!inAmbientMode) {
-                Log.d("WatchFace", "leaving ambient mode")
+            if (!inAmbientMode)
                 launchActivity()
-            }
         }
 
         override fun onInterruptionFilterChanged(interruptionFilter: Int) {
@@ -138,22 +176,9 @@ class WatchFace : CanvasWatchFaceService() {
          * used for implementing specific logic to handle the gesture.
          */
         override fun onTapCommand(tapType: Int, x: Int, y: Int, eventTime: Long) {
-            when (tapType) {
-                WatchFaceService.TAP_TYPE_TOUCH -> {
-                    // The user has started touching the screen.
-                    launchActivity()
-                }
-                WatchFaceService.TAP_TYPE_TOUCH_CANCEL -> {
-                    // The user has started a different gesture or otherwise cancelled the tap.
-                    launchActivity()
-                }
-                WatchFaceService.TAP_TYPE_TAP -> {
-                    // The user has completed the tap gesture.
-                    launchActivity()
-                }
-            }
-            invalidate()
+            launchActivity()
         }
+
 
         override fun onDraw(canvas: Canvas, bounds: Rect) {
             drawBackground(canvas)
@@ -218,6 +243,32 @@ class WatchFace : CanvasWatchFaceService() {
             val size = Point()
             display.getSize(size)
             return size.x
+        }
+
+        /**
+         * Create a new dummy account for the sync adapter
+         */
+        private fun createSyncAccount(): Account {
+            val accountManager = getSystemService(Context.ACCOUNT_SERVICE) as AccountManager
+            return Account(ACCOUNT, ACCOUNT_TYPE).also { newAccount ->
+                /*
+                 * Add the account and account type, no password or user data
+                 * If successful, return the Account object, otherwise report an error.
+                 */
+                if (accountManager.addAccountExplicitly(newAccount, null, null)) {
+                    /*
+                     * If you don't set android:syncable="true" in
+                     * in your <provider> element in the manifest,
+                     * then call context.setIsSyncable(account, AUTHORITY, 1)
+                     * here.
+                     */
+                } else {
+                    /*
+                     * The account exists or some other error occurred. Log this, report it,
+                     * or handle it internally.
+                     */
+                }
+            }
         }
 
     }

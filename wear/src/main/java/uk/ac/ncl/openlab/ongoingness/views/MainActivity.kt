@@ -64,9 +64,10 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     private lateinit var bitmapReceiver: BroadcastReceiver
 
     private lateinit var killRunnable: Runnable
+
     private val killHandler = Handler()
     private var startTime = System.currentTimeMillis()
-    private val timeCheckInterval = 1000L
+    private val timeCheckInterval = 30 * 1000L //30 seconds
     private val killDelta = 5 * 60 * 1000L //5 minutes
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -80,8 +81,9 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             if(System.currentTimeMillis() - startTime > killDelta) {
                 Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), applicationContext)
                 finish()
-            } else
+            } else {
                 killHandler.postDelayed(killRunnable, timeCheckInterval)
+            }
         }
 
         killRunnable!!.run()
@@ -136,7 +138,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         }
     }
 
-
     /**
      * Detach the presenter
      */
@@ -155,6 +156,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         }
 
         presenter!!.detachView()
+
     }
 
     /**
@@ -299,7 +301,12 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 }
 
                 TouchRevealRecogniser.Events.AWAKE -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
+
+                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
+
+                    //Stop Activity Kill Thread
+                    killHandler.removeCallbacks(killRunnable)
+
                     if(!gotData && hasConnection(applicationContext)) {
                         mImageView.setOnTouchListener(null)
                         gotData = true
@@ -314,12 +321,31 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                     Logger.log(LogType.WAKE_UP, listOf(), applicationContext)
                 }
                 TouchRevealRecogniser.Events.NEXT -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
+                    vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
                     presenter!!.goToNextImage()
 
                 }
                 TouchRevealRecogniser.Events.SLEEP -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
+
+
+                    var layoutParams : WindowManager.LayoutParams = this.window.attributes
+                    layoutParams.dimAmount = 0.75f
+                    layoutParams.screenBrightness = 0.1f
+
+                    window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+                    window.attributes = layoutParams
+
+                    windowManager.updateViewLayout(window.decorView, layoutParams);
+
+
+
+
+
+                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
+
+                    //Start Activity Kill Thread
+                    killRunnable.run()
+
                     presenter!!.hideContent(MainPresenter.CoverType.BLACK)
                     startTime = System.currentTimeMillis()
                     Logger.log(LogType.SLEEP, listOf(), applicationContext)
@@ -330,7 +356,9 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         isGoingToStop = true
                         killHandler.removeCallbacks(killRunnable)
                         Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), applicationContext)
+
                         finish()
+
                     }
                 }
             }
@@ -463,7 +491,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             val api = API()
 
             val watchMediaDao = WatchMediaRoomDatabase.getDatabase(this.applicationContext).watchMediaDao()
-            val repository = WatchMediaRepository(watchMediaDao);
+            val repository = WatchMediaRepository(watchMediaDao)
 
             val context = this.applicationContext
             val filesDir = this.applicationContext.filesDir
@@ -475,9 +503,13 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                     GlobalScope.launch {
                         var mediaList = repository.getAll().sortedWith(compareBy({it.collection}, {it.order}))
 
+
+
                         api.fetchMediaPayload (
 
                             callback = { response ->
+
+                                Log.d("sa", "nice")
 
                             var stringResponse = response!!.body()?.string()
                             val jsonResponse = JSONObject(stringResponse)
@@ -533,7 +565,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                         val file = File(filesDir, newMedia.path)
                                                         lateinit var outputStream: OutputStream
 
-                                                        try {
+                                                        //try {
                                                             outputStream = FileOutputStream(file)
                                                             if(newMedia.mimetype.contains("video") ||
                                                                     newMedia.mimetype.contains("gif")) {
@@ -549,9 +581,9 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                             outputStream.flush()
                                                             mediaFetch++
 
-                                                        } catch (e: IOException) {
-                                                            throw Exception("File Fetching - Something went wrong")
-                                                        } finally {
+                                                        //} catch (e: IOException) {
+                                                            //throw Exception("File Fetching - Something went wrong")
+                                                        //} finally {
                                                             outputStream.close()
                                                             inputStream?.close()
                                                             GlobalScope.launch {
@@ -565,10 +597,11 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                                     presenter!!.pullingData(false)
                                                                 }
                                                             }
-                                                        }
+                                                        //}
                                                     }
                                                     gotFile = true
                                                 } catch(e: Exception) {
+                                                    Log.d("FetchFile", "Fail")
                                                     gotFile = false
                                                 }
                                             }
@@ -596,6 +629,9 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                             }
                         },
                         failure = { e ->
+
+                            Log.d("sa", "fail $e")
+
                             isGettingData = false
                             mImageView.setOnTouchListener(touchListener)
                             presenter!!.pullingData(false)
@@ -709,6 +745,4 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     }
 
     private class MyAmbientCallback : AmbientModeSupport.AmbientCallback()
-
-
 }
