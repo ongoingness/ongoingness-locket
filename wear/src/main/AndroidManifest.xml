@@ -15,7 +15,7 @@
     <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS"/>
     <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS"/>
 
-    <uses-feature android:name="android.hardware." android:required="false" />
+    <!--uses-feature android:name="android.hardware." android:required="false" /-->
 
     <!--"-->
 
@@ -52,34 +52,6 @@
                 <action android:name="android.service.wallpaper.WallpaperService" />
                 <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
             </intent-filter>
-        </service>
-
-
-        <provider
-            android:name=".utilities.MediaProvider"
-            android:authorities="uk.ac.ncl.openlab.ongoingness"
-            android:exported="false"
-            android:syncable="true"/>
-
-        <service
-            android:name=".utilities.MediaSyncService"
-            android:exported="true"
-            android:process=":sync">
-            <intent-filter>
-                <action android:name="android.content.SyncAdapter"/>
-            </intent-filter>
-            <meta-data android:name="android.content.SyncAdapter"
-                android:resource="@xml/syncadapter" />
-        </service>
-
-        <service
-            android:name=".utilities.AuthenticatorService">
-            <intent-filter>
-                <action android:name="android.accounts.AccountAuthenticator"/>
-            </intent-filter>
-            <meta-data
-                android:name="android.accounts.AccountAuthenticator"
-                android:resource="@xml/authenticator" />
         </service>
 
         <meta-data

@@ -19,19 +19,15 @@ import android.view.SurfaceHolder
 import android.view.WindowInsets
 import android.view.WindowManager
 import androidx.core.app.ActivityCompat.startActivityForResult
+import androidx.work.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.utilities.*
+import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.views.MainActivity
 import java.lang.reflect.InvocationTargetException
+import java.time.Duration
 import kotlin.reflect.KClass
 
-
-// The authority for the sync adapter's content provider
-const val AUTHORITY = "uk.ac.ncl.openlab.ongoingness"
-// An account type, in the form of a domain name
-const val ACCOUNT_TYPE = "ongoingness.com"
-// The account name
-const val ACCOUNT = "ongoingnessaccount"
 
 // Sync interval constants
 const val SECONDS_PER_MINUTE = 60L
@@ -63,9 +59,6 @@ class WatchFace : CanvasWatchFaceService() {
         private lateinit var  batteryInfoReceiver: BatteryInfoReceiver
         private lateinit var bitmapReceiver: BroadcastReceiver
 
-        private lateinit var mAccount: Account
-        private lateinit var mResolver: ContentResolver
-
         override fun onCreate(holder: SurfaceHolder) {
             super.onCreate(holder)
 
@@ -77,20 +70,9 @@ class WatchFace : CanvasWatchFaceService() {
                     .build())
 
 
-            // Create the dummy account
-            mAccount = createSyncAccount()
-
-            mResolver = contentResolver
-            /*
-             * Turn on periodic syncing
-             */
-            ContentResolver.addPeriodicSync(
-                    mAccount,
-                    AUTHORITY,
-                    Bundle.EMPTY,
-                    SYNC_INTERVAL)
-
             Logger.start(applicationContext)
+
+            setWorkManager()
 
             initializeBackground()
 
@@ -245,32 +227,30 @@ class WatchFace : CanvasWatchFaceService() {
             return size.x
         }
 
-        /**
-         * Create a new dummy account for the sync adapter
-         */
-        private fun createSyncAccount(): Account {
-            val accountManager = getSystemService(Context.ACCOUNT_SERVICE) as AccountManager
-            return Account(ACCOUNT, ACCOUNT_TYPE).also { newAccount ->
-                /*
-                 * Add the account and account type, no password or user data
-                 * If successful, return the Account object, otherwise report an error.
-                 */
-                if (accountManager.addAccountExplicitly(newAccount, null, null)) {
-                    /*
-                     * If you don't set android:syncable="true" in
-                     * in your <provider> element in the manifest,
-                     * then call context.setIsSyncable(account, AUTHORITY, 1)
-                     * here.
-                     */
-                } else {
-                    /*
-                     * The account exists or some other error occurred. Log this, report it,
-                     * or handle it internally.
-                     */
-                }
-            }
-        }
 
+        private fun setWorkManager() {
+
+            WorkManager.getInstance(applicationContext).cancelAllWork()
+
+            addPullMediaWorkRequest(applicationContext)
+            addPushLogsWorkRequest(applicationContext)
+
+            /*
+            var constraints = Constraints.Builder()
+                    .setRequiresCharging(true)
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+
+
+            val pullMediaRequest = PeriodicWorkRequestBuilder<PullMediaWorker>(Duration.ofMinutes(15)).setConstraints(constraints).build()
+            WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("pullMedia", ExistingPeriodicWorkPolicy.REPLACE, pullMediaRequest)
+
+            val pushLogsRequest = PeriodicWorkRequestBuilder<PushLogsWorker>(Duration.ofMinutes(15)).setConstraints(constraints).build()
+            WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("pushLogs", ExistingPeriodicWorkPolicy.REPLACE, pushLogsRequest)
+            */
+
+
+        }
     }
 }
 

@@ -45,8 +45,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     private var touchRevealRecogniser: TouchRevealRecogniser? = null
     private var touchRevealRecogniserObserver: Observer?  = null
 
-    private var vibrator: Vibrator? = null
-
     private var rotationRecogniser: RotationRecogniser? = null
     private var rotationListener: RotationRecogniser.Listener? = null
 
@@ -290,9 +288,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         registerReceiver(bitmapReceiver, filter)
 
         //Thread to pull new media from the server
-        mediaPullRunnable = getPullMediaThread()
+        //mediaPullRunnable = getPullMediaThread()
 
-        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
         touchRevealRecogniser = TouchRevealRecogniser(this)
         touchRevealRecogniserObserver = Observer { _, arg ->
             when (arg) {
@@ -302,26 +299,24 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 TouchRevealRecogniser.Events.AWAKE -> {
 
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
-
                     //Stop Activity Kill Thread
                     killHandler.removeCallbacks(killRunnable)
-
+/*
                     if(!gotData && hasConnection(applicationContext)) {
                         mImageView.setOnTouchListener(null)
                         gotData = true
                         isGettingData = true
                         presenter!!.pullingData(true)
-                        mediaPullRunnable.run()
-                    } else {
+                        mediaPullRunnable.run()*/
+
+                    //} else {
                         presenter!!.restartIndex()
                         presenter!!.displayContent()
-                    }
+                    //}
 
                     Logger.log(LogType.WAKE_UP, listOf(), applicationContext)
                 }
                 TouchRevealRecogniser.Events.NEXT -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
                     presenter!!.goToNextImage()
 
                 }
@@ -336,12 +331,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                     window.attributes = layoutParams
 
                     windowManager.updateViewLayout(window.decorView, layoutParams);
-
-
-
-
-
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
 
                     //Start Activity Kill Thread
                     killRunnable.run()
@@ -383,8 +372,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         Glide.with(this).load(R.drawable.cover).into(image)
 
-        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator;
-
         revealRecogniser = RevealRecogniser(this)
 
         revealRecogniserObserver = Observer { _, arg ->
@@ -396,17 +383,14 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 }
                 RevealRecogniser.Events.AWAKE -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
                     presenter!!.displayContent()
 
                 }
                 RevealRecogniser.Events.SHORT_REVEAL -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE));
                     presenter!!.goToNextImage()
 
                 }
                 RevealRecogniser.Events.SLEEP -> {
-                    vibrator?.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE));
                     presenter!!.hideContent(MainPresenter.CoverType.BLACK)
 
                 }

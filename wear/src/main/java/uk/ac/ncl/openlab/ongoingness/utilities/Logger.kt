@@ -93,8 +93,7 @@ object Logger {
        return sb.toString()
     }
 
-    fun sendLogs(): String {
-
+    fun formatLogs(): String {
         val sb = StringBuilder()
         sb.append("[")
 
@@ -112,14 +111,24 @@ object Logger {
         }
         sb.append("]")
 
+        return sb.toString()
+    }
+
+    fun clearLogs() {
+        repository.deleteAll()
+    }
+
+    fun sendLogs(): String {
+
+        var logs = formatLogs()
 
         var api = API()
 
         GlobalScope.launch {
-            api.sendLogs(sb.toString(), callback = { response -> repository.deleteAll()})
+            api.sendLogs(logs, callback = { response -> repository.deleteAll()}, failure = {})
         }
 
-        return sb.toString()
+        return logs
     }
 }
 

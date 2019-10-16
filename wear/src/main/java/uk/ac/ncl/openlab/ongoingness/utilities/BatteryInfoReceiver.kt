@@ -44,7 +44,7 @@ class BatteryInfoReceiver {
                     Logger.log(LogType.CHARGER_CONNECTED, listOf(), context)
                     startCheckingBatteryValues()
 
-                    Logger.sendLogs()
+                    //Logger.sendLogs()
 
                 } else if(intent.action == Intent.ACTION_POWER_DISCONNECTED) {
                     Log.d(TAG, " Disconnected")

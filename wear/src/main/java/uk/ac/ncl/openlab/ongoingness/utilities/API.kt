@@ -103,12 +103,28 @@ class API {
     private var token: String? = null
     private val client: OkHttpClient = OkHttpClient
             .Builder()
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(5 * 60, TimeUnit.SECONDS)
-            .readTimeout(5 * 60, TimeUnit.SECONDS)
+            .connectTimeout(30, TimeUnit.MINUTES)
+            .writeTimeout(30, TimeUnit.MINUTES)
+            .readTimeout(30, TimeUnit.MINUTES)
             .connectionSpecs(
                     Arrays.asList(ConnectionSpec.MODERN_TLS,
                             ConnectionSpec.CLEARTEXT))
+            .addInterceptor { chain ->
+
+                var request = chain.request()
+
+                var response = chain.proceed(request)
+
+                var tryCount = 0
+
+                while(!response!!.isSuccessful && tryCount < 3) {
+                    Log.d("intercept", "Request is not successful - $tryCount")
+                    tryCount++
+                    response = chain.proceed(request)
+                }
+                response
+
+            }
             .build()
 
     init {
@@ -207,8 +223,6 @@ class API {
 
                 override fun onFailure(call: Call, e: IOException) {
 
-                    Log.d("are we here??", "??????????????????????")
-
                     e.printStackTrace()
                     failure(e)
                 }
@@ -289,7 +303,7 @@ class API {
      *
      * @param links Array<String>
      */
-    fun sendLogs(logs:String, callback: (ResponseBody?) -> Unit) {
+    fun sendLogs(logs:String, callback: (ResponseBody?) -> Unit, failure: (e: IOException) -> Unit) {
 
         generateToken( callback =  { token ->
             Log.d("API", token)
@@ -308,12 +322,16 @@ class API {
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call?, e: IOException?) {
                     Log.e("API", "Error here:"+e.toString())
+                    failure(e!!)
                 }
 
                 override fun onResponse(call: Call?, response: Response) {
                     callback(response.body())
                 }
             })
-        }, onFailureCallback = {})
+        }, onFailureCallback = {
+            failure(it)
+        })
     }
 }
+

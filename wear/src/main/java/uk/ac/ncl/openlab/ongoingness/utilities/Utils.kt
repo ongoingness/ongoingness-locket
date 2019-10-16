@@ -9,9 +9,12 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.os.BatteryManager
 import android.util.Log
+import androidx.work.*
+import com.google.android.gms.wearable.Wearable
 import java.io.*
 import java.net.NetworkInterface
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 
 const val minBandwidthKbps: Int = 320
@@ -136,7 +139,58 @@ fun getBatteryLevel(context: Context): Float? {
     return batteryPct
 }
 
+fun calculateNextDailyRequestTimeDiff(): Long {
 
+    val currentDate = Calendar.getInstance()
+    val dueDate = Calendar.getInstance()
+
+    dueDate.set(Calendar.HOUR_OF_DAY, 1)
+    dueDate.set(Calendar.MINUTE, 0)
+    dueDate.set(Calendar.SECOND, 0)
+
+    if(dueDate.before(currentDate)) {
+        dueDate.add(Calendar.HOUR_OF_DAY, 24)
+    }
+
+    return dueDate.timeInMillis - currentDate.timeInMillis
+
+}
+
+fun addPullMediaWorkRequest(context: Context) {
+
+    var constraints = Constraints.Builder()
+            .setRequiresCharging(true)
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+    var timeDiff = calculateNextDailyRequestTimeDiff()
+
+    val dailyWorkRequest = OneTimeWorkRequestBuilder<PullMediaWorker>()
+            .setInitialDelay(timeDiff, TimeUnit.MILLISECONDS)
+            .setConstraints(constraints)
+            .build()
+
+    WorkManager.getInstance(context).enqueue(dailyWorkRequest)
+
+}
+
+fun addPushLogsWorkRequest(context: Context) {
+
+    var constraints = Constraints.Builder()
+            .setRequiresCharging(true)
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+    var timeDiff = calculateNextDailyRequestTimeDiff()
+
+    val dailyWorkRequest = OneTimeWorkRequestBuilder<PushLogsWorker>()
+            .setInitialDelay(timeDiff, TimeUnit.MILLISECONDS)
+            .setConstraints(constraints)
+            .build()
+
+    WorkManager.getInstance(context).enqueue(dailyWorkRequest)
+
+}
 
 const val PREFS = "uk.ac.ncl.openlab.ongoingness.utilities.PREFS"
 const val PREFS_CONFIGURED = "uk.ac.ncl.openlab.ongoingness.utilities.PREFS_CONFIGURED"
@@ -148,3 +202,4 @@ fun isConfigured(context: Context): Boolean{
 fun setConfigured(context: Context, configured:Boolean){
     context.getSharedPreferences(PREFS, 0).edit().putBoolean(PREFS_CONFIGURED,configured).apply()
 }
+

@@ -60,6 +60,16 @@ android {
         exclude 'META-INF/atomicfu.kotlin_module'
     }
 
+    //!!
+    compileOptions {
+        sourceCompatibility = 1.8
+        targetCompatibility = 1.8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
 
 }
 
@@ -119,6 +129,9 @@ dependencies {
     // Coroutines
     api "org.jetbrains.kotlinx:kotlinx-coroutines-core:$rootProject.coroutines"
     api "org.jetbrains.kotlinx:kotlinx-coroutines-android:$rootProject.coroutines"
+
+    //WorkManager
+    implementation "androidx.work:work-runtime-ktx:2.2.0"
 
 }
 
