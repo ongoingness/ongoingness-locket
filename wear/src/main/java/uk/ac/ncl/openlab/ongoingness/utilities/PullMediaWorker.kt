@@ -35,11 +35,11 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
 
         when (BuildConfig.FLAVOR) {
             "locket_touch" -> {
-                if(pullMediaLocket(repository, api, filesDir)) {
+                return if(pullMediaLocket(repository, api, filesDir)) {
                     addPullMediaWorkRequest(context)
-                    return Result.success()
+                    Result.success()
                 } else
-                    return Result.failure()
+                    Result.failure()
             }
 
             "refind" -> {
@@ -79,7 +79,8 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                                 var newMedia = WatchMedia(media.getString("_id"),
                                         media.getString("path"),
                                         media.getString("locket"),
-                                        media.getString("mimetype"), i)
+                                        media.getString("mimetype"),
+                                        WatchMedia.longToDate(media.getLong("datetime")), i) //FIXME check the name of the datetime object in the json structure.
 
                                 if (mediaList.contains(newMedia)) {
                                     toBeRemoved.remove(newMedia)
@@ -195,12 +196,15 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                 var payload: JSONArray = jsonResponse.getJSONArray("payload")
                 if (payload.length() > 0) {
 
+                    val datetime = 0L
+                    val date = WatchMedia.longToDate(datetime)
                     //Set present Image
                     var presentImage: JSONObject = payload.getJSONObject(0)
                     var newWatchMedia = WatchMedia(presentImage.getString("_id"),
                             presentImage.getString("path"),
                             presentImage.getString("locket"),
-                            presentImage.getString("mimetype"), 0)
+                            presentImage.getString("mimetype"),
+                            WatchMedia.longToDate(presentImage.getLong("datetime")),0) //fixme check the name from the api json response
 
                     api.fetchBitmap(newWatchMedia._id) { body ->
                         val inputStream = body?.byteStream()
@@ -229,7 +233,8 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                             pastImages.add(WatchMedia(pastImage.getString("id"),
                                     pastImage.getString("path"),
                                     "past",
-                                    pastImage.getString("mimetype"), i))
+                                    pastImage.getString("mimetype"),
+                                    WatchMedia.longToDate(pastImage.getLong("datetime")), i)) //fixme check the name from the api json response
                         } catch (e: java.lang.Exception) {
                             e.printStackTrace()
                         }

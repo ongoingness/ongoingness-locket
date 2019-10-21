@@ -3,6 +3,7 @@ package uk.ac.ncl.openlab.ongoingness.utilities
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.sql.Date
 
 @Entity(tableName = "watch_media")
 data class WatchMedia(
@@ -10,6 +11,7 @@ data class WatchMedia(
         @ColumnInfo(name = "path")            val path: String,
         @ColumnInfo(name = "collection")      val collection: String,
         @ColumnInfo(name = "mimetype")        val mimetype: String,
+        @ColumnInfo(name = "datetime")        val datetime: Date?,
         @ColumnInfo(name = "order")           val order: Int) {
 
 
@@ -23,5 +25,14 @@ data class WatchMedia(
                 this.mimetype == other.mimetype)
     }
 
+    companion object {
+        fun longToDate(long:Long?):Date?{
+            return if(long != null){
+                Date(long)
+            }else{
+                null
+            }
+        }
+    }
 }
 

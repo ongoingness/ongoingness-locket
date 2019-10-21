@@ -143,7 +143,7 @@ class API {
             return
         }
         val mac: String = getMacAddress() // Get mac address
-        Log.d("MAC Address", "$mac")
+        Log.d("MAC Address", mac)
         val formBody = FormBody.Builder()
                 .add("mac", mac)
                 .build()

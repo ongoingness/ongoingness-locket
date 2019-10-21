@@ -34,7 +34,7 @@ fun deleteFile(context: Context, filename: String) {
 }
 
 fun persistBitmap(bitmap: Bitmap, filename:String, context: Context){
-    val imageFile = File(context.filesDir, "$filename")
+    val imageFile = File(context.filesDir, filename)
     Log.d(TAG,"try to store image ${imageFile.absolutePath}")
 
     lateinit var stream: OutputStream

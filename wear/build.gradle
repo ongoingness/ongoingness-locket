@@ -76,18 +76,8 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'com.google.android.support:wearable:2.4.0'
+    implementation "com.google.android.support:wearable:$rootProject.wearVersion"
     implementation 'com.google.android.gms:play-services-wearable:16.0.1'
-
-    /*
-    Migration to android x
-
-    implementation 'com.android.support:percent:28.0.0'
-    implementation 'com.android.support:support-v4:28.0.0'
-    implementation 'com.android.support:recyclerview-v7:28.0.0'
-    implementation 'com.android.support:palette-v7:28.0.0'
-    implementation 'com.android.support:wear:28.0.0'
-    */
 
     implementation 'androidx.percentlayout:percentlayout:1.0.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
@@ -96,7 +86,7 @@ dependencies {
     implementation 'androidx.wear:wear:1.0.0'
 
 
-    compileOnly 'com.google.android.wearable:wearable:2.4.0'
+    compileOnly     "com.google.android.wearable:wearable:$rootProject.wearVersion"
     implementation 'com.squareup.okhttp3:okhttp:3.12.0'
 
 
@@ -110,7 +100,7 @@ dependencies {
     implementation "com.squareup.retrofit2:adapter-rxjava2:2.5.0"
     implementation "com.squareup.retrofit2:converter-gson:2.5.0"
     //compile 'com.android.support:support-annotations:28.0.0'
-    compile 'androidx.annotation:annotation:1.0.0'
+    compileOnly 'androidx.annotation:annotation:1.1.0'
 
     // Room components
     implementation "androidx.room:room-runtime:$rootProject.roomVersion"

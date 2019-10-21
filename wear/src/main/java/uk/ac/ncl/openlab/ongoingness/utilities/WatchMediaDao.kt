@@ -5,12 +5,13 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import java.sql.Date
 
 @Dao
 interface WatchMediaDao {
 
     @Query("SELECT * from watch_media ORDER BY `order` ASC")
-    fun getAllMedia(): LiveData<List<WatchMedia>>;
+    fun getAllMedia(): LiveData<List<WatchMedia>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(media: WatchMedia)
@@ -26,4 +27,7 @@ interface WatchMediaDao {
 
     @Query("SELECT * from watch_media")
     fun getAll(): List<WatchMedia>
+
+    @Query("SELECT * FROM watch_media WHERE strftime('%j',datetime) IS strftime('%j',:date)") // '%j' should compare only the day of the year and ignore the year.
+    fun getSignificant(date: Date):List<WatchMedia>
 }

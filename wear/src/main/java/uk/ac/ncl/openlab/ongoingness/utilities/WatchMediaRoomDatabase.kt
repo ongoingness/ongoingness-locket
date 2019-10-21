@@ -5,8 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [WatchMedia::class, Log::class], version = 4)
-public abstract class WatchMediaRoomDatabase : RoomDatabase() {
+@Database(entities = [WatchMedia::class, Log::class], version = 5)
+abstract class WatchMediaRoomDatabase : RoomDatabase() {
 
     abstract fun watchMediaDao(): WatchMediaDao
     abstract fun logDao(): LogDao
