@@ -80,7 +80,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                                         media.getString("path"),
                                         media.getString("locket"),
                                         media.getString("mimetype"),
-                                        WatchMedia.longToDate(media.getLong("datetime")), i) //FIXME check the name of the datetime object in the json structure.
+                                        WatchMedia.longsToDate(media.getJSONArray("times")), i) //FIXME check the name of the datetime object in the json structure.
 
                                 if (mediaList.contains(newMedia)) {
                                     toBeRemoved.remove(newMedia)
@@ -196,15 +196,14 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                 var payload: JSONArray = jsonResponse.getJSONArray("payload")
                 if (payload.length() > 0) {
 
-                    val datetime = 0L
-                    val date = WatchMedia.longToDate(datetime)
+
                     //Set present Image
                     var presentImage: JSONObject = payload.getJSONObject(0)
                     var newWatchMedia = WatchMedia(presentImage.getString("_id"),
                             presentImage.getString("path"),
                             presentImage.getString("locket"),
                             presentImage.getString("mimetype"),
-                            WatchMedia.longToDate(presentImage.getLong("datetime")),0) //fixme check the name from the api json response
+                            WatchMedia.longsToDate(presentImage.getJSONArray("times")),0) //fixme check the name from the api json response
 
                     api.fetchBitmap(newWatchMedia._id) { body ->
                         val inputStream = body?.byteStream()
@@ -234,7 +233,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                                     pastImage.getString("path"),
                                     "past",
                                     pastImage.getString("mimetype"),
-                                    WatchMedia.longToDate(pastImage.getLong("datetime")), i)) //fixme check the name from the api json response
+                                    WatchMedia.longsToDate(pastImage.getJSONArray("times")), i)) //fixme check the name from the api json response
                         } catch (e: java.lang.Exception) {
                             e.printStackTrace()
                         }

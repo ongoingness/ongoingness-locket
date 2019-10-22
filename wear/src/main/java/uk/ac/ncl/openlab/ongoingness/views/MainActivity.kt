@@ -356,9 +356,9 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         touchRevealRecogniser?.addObserver(touchRevealRecogniserObserver)
 
-        gesture = GestureDetector(MainActivity@this, touchRevealRecogniser)
-        touchListener = View.OnTouchListener(){
-            v,events -> gesture.onTouchEvent(events)
+        gesture = GestureDetector(this, touchRevealRecogniser)
+        touchListener = View.OnTouchListener {
+            _, events -> gesture.onTouchEvent(events)
         }
         mImageView = findViewById(R.id.image)
         mImageView.setOnTouchListener(touchListener)
@@ -519,21 +519,22 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                 if (payload.length() > 0) {
 
                                     for(i in 0 until payload.length()) {
-                                        var media:JSONObject = payload.getJSONObject(i)
-                                        var newMedia = WatchMedia(media.getString("_id"),
+                                        val media:JSONObject = payload.getJSONObject(i)
+                                        val newMedia = WatchMedia(media.getString("_id"),
                                                 media.getString("path"),
                                                 media.getString("locket"),
-                                                media.getString("mimetype"), i)
+                                                media.getString("mimetype"),
+                                                WatchMedia.longsToDate(media.getJSONArray("times")), i)
 
                                         if(mediaList.contains(newMedia)) {
                                             toBeRemoved.remove(newMedia)
                                             mediaFetch++
 
                                             if(mediaFetch == payload.length()) {
-                                                for(media in toBeRemoved) {
+                                                for(mediaItem in toBeRemoved) {
                                                     GlobalScope.launch {
-                                                        repository.delete(media._id)
-                                                        deleteFile(context, media.path)
+                                                        repository.delete(mediaItem._id)
+                                                        deleteFile(context, mediaItem.path)
                                                     }
                                                 }
                                                 mImageView.setOnTouchListener(touchListener)
@@ -573,9 +574,9 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                             GlobalScope.launch {
                                                                 repository.insert(newMedia)
                                                                 if(mediaFetch == payload.length()) {
-                                                                    for(media in toBeRemoved) {
-                                                                        repository.delete(media._id)
-                                                                        deleteFile(context, media.path)
+                                                                    for(mediaItem in toBeRemoved) {
+                                                                        repository.delete(mediaItem._id)
+                                                                        deleteFile(context, mediaItem.path)
                                                                     }
                                                                     mImageView.setOnTouchListener(touchListener)
                                                                     presenter!!.pullingData(false)
@@ -599,16 +600,16 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                 repository.delete(media._id)
                                                 deleteFile(context, media.path)
                                             }
-                                            mImageView.setOnTouchListener(touchListener)
                                             presenter!!.pullingData(false)
                                             presenter!!.hideContent(MainPresenter.CoverType.BLACK)
                                         }
 
                                     } else {
-                                        mImageView.setOnTouchListener(touchListener)
                                         presenter!!.pullingData(false)
                                         presenter!!.hideContent(MainPresenter.CoverType.BLACK)
                                     }
+
+                                    mImageView.setOnTouchListener(touchListener)
                                 }
                             }
                         },
@@ -625,8 +626,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 "refind" -> {
                     GlobalScope.launch {
-                        var mediaList = repository.getAll().sortedBy { it.order }
-                        var currentImageID: String
+                        val mediaList = repository.getAll().sortedBy { it.order }
+                        val currentImageID: String
                         currentImageID = if (mediaList.isNullOrEmpty()) {
                             "test"
                         } else {
@@ -634,7 +635,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         }
                         api.fetchInferredMedia(currentImageID) { response ->
 
-                            var stringResponse = response!!.body()?.string()
+                            val stringResponse = response!!.body()?.string()
 
                             if (stringResponse == "[]") {
                                 isGettingData = false
@@ -649,15 +650,16 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                 repository.deleteAll()
                                 val jsonResponse = JSONObject(stringResponse)
 
-                                var payload: JSONArray = jsonResponse.getJSONArray("payload")
+                                val payload: JSONArray = jsonResponse.getJSONArray("payload")
                                 if (payload.length() > 0) {
 
                                     //Set present Image
-                                    var presentImage: JSONObject = payload.getJSONObject(0)
-                                    var newWatchMedia = WatchMedia(presentImage.getString("_id"),
+                                    val presentImage: JSONObject = payload.getJSONObject(0)
+                                    val newWatchMedia = WatchMedia(presentImage.getString("_id"),
                                             presentImage.getString("path"),
                                             presentImage.getString("locket"),
-                                            presentImage.getString("mimetype"), 0)
+                                            presentImage.getString("mimetype"),
+                                            null,0)
 
                                     api.fetchBitmap(newWatchMedia._id) { body ->
                                         val inputStream = body?.byteStream()
@@ -682,11 +684,12 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                     val pastImages = mutableListOf<WatchMedia>()
                                     for (i in 1..5) {
                                         try {
-                                            var pastImage: JSONObject = payload.getJSONObject(i)
+                                            val pastImage: JSONObject = payload.getJSONObject(i)
                                             pastImages.add(WatchMedia(pastImage.getString("id"),
                                                     pastImage.getString("path"),
                                                     "past",
-                                                    pastImage.getString("mimetype"), i))
+                                                    pastImage.getString("mimetype"),
+                                                    null, i))
                                         } catch (e: java.lang.Exception) {
                                            e.printStackTrace()
                                         }

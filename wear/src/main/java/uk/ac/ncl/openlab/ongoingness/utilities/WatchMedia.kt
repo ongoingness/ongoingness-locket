@@ -3,6 +3,7 @@ package uk.ac.ncl.openlab.ongoingness.utilities
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import org.json.JSONArray
 import java.sql.Date
 
 @Entity(tableName = "watch_media")
@@ -29,6 +30,14 @@ data class WatchMedia(
         fun longToDate(long:Long?):Date?{
             return if(long != null){
                 Date(long)
+            }else{
+                null
+            }
+        }
+
+        fun longsToDate(longs:JSONArray?):Date?{
+            return if(longs != null && longs.length() > 0){
+                Date(longs[0] as Long)
             }else{
                 null
             }
