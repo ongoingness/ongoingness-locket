@@ -5,11 +5,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [WatchMedia::class, Log::class], version = 5)
+@Database(entities = [WatchMedia::class, Log::class, MediaDate::class], version = 6)
 abstract class WatchMediaRoomDatabase : RoomDatabase() {
 
     abstract fun watchMediaDao(): WatchMediaDao
     abstract fun logDao(): LogDao
+    abstract fun mediaDateDao(): MediaDateDao
 
     companion object  {
         @Volatile

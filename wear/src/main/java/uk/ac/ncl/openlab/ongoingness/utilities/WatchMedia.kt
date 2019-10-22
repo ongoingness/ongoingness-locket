@@ -12,7 +12,6 @@ data class WatchMedia(
         @ColumnInfo(name = "path")            val path: String,
         @ColumnInfo(name = "collection")      val collection: String,
         @ColumnInfo(name = "mimetype")        val mimetype: String,
-        @ColumnInfo(name = "datetime")        val datetime: Date?,
         @ColumnInfo(name = "order")           val order: Int) {
 
 
@@ -26,22 +25,6 @@ data class WatchMedia(
                 this.mimetype == other.mimetype)
     }
 
-    companion object {
-        fun longToDate(long:Long?):Date?{
-            return if(long != null){
-                Date(long)
-            }else{
-                null
-            }
-        }
 
-        fun longsToDate(longs:JSONArray?):Date?{
-            return if(longs != null && longs.length() > 0){
-                Date(longs[0] as Long)
-            }else{
-                null
-            }
-        }
-    }
 }
 

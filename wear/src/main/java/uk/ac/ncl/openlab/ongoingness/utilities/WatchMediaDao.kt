@@ -28,6 +28,10 @@ interface WatchMediaDao {
     @Query("SELECT * from watch_media")
     fun getAll(): List<WatchMedia>
 
-    @Query("SELECT * FROM watch_media WHERE strftime('%j',datetime) IS strftime('%j',:date)") // '%j' should compare only the day of the year and ignore the year.
-    fun getSignificant(date: Date):List<WatchMedia>
+
+    @Query("SELECT * FROM watch_media JOIN media_date ON media_date.mediaId = watch_media._id WHERE strftime('%j-%Y',date) IS strftime('%j-%Y',:date)")
+    fun getForDate(date: Date):List<WatchMedia>
+
+    @Query("SELECT * FROM watch_media JOIN media_date ON media_date.mediaId = watch_media._id WHERE strftime('%j',date) IS strftime('%j',:date)")
+    fun getForDayOfYear(date: Date):List<WatchMedia>
 }

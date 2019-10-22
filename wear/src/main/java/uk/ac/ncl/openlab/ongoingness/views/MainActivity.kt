@@ -172,9 +172,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
     /**
      * Update the background of the watch face.
-     *
-     * @param bitmap The bitmap to set the background to.
-     * @return Unit
      */
     override fun updateBackground(file: File, mediaType: MainPresenter.View.MediaType) {
         runOnUiThread {
@@ -524,7 +521,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                 media.getString("path"),
                                                 media.getString("locket"),
                                                 media.getString("mimetype"),
-                                                WatchMedia.longsToDate(media.getJSONArray("times")), i)
+                                                i)
 
                                         if(mediaList.contains(newMedia)) {
                                             toBeRemoved.remove(newMedia)
@@ -659,7 +656,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                             presentImage.getString("path"),
                                             presentImage.getString("locket"),
                                             presentImage.getString("mimetype"),
-                                            null,0)
+                                            0)
 
                                     api.fetchBitmap(newWatchMedia._id) { body ->
                                         val inputStream = body?.byteStream()
@@ -689,7 +686,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                                                     pastImage.getString("path"),
                                                     "past",
                                                     pastImage.getString("mimetype"),
-                                                    null, i))
+                                                     i))
                                         } catch (e: java.lang.Exception) {
                                            e.printStackTrace()
                                         }

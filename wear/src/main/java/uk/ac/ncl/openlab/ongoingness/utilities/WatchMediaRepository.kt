@@ -36,6 +36,6 @@ class WatchMediaRepository(private val watchMediaDao: WatchMediaDao) {
 
     @WorkerThread
     fun getSignificant(date: Date):List<WatchMedia>{
-        return watchMediaDao.getSignificant(date)
+        return watchMediaDao.getForDayOfYear(date)
     }
 }

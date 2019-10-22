@@ -29,13 +29,16 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
         val api = API()
 
         val watchMediaDao = WatchMediaRoomDatabase.getDatabase(context).watchMediaDao()
-        val repository = WatchMediaRepository(watchMediaDao)
+        val watchMediaRepository = WatchMediaRepository(watchMediaDao)
+
+        val mediaDateDao = WatchMediaRoomDatabase.getDatabase(context).mediaDateDao()
+        val mediaDateRepository = MediaDateRepository(mediaDateDao)
 
         val filesDir = context.filesDir
 
         when (BuildConfig.FLAVOR) {
             "locket_touch" -> {
-                return if(pullMediaLocket(repository, api, filesDir)) {
+                return if(pullMediaLocket(watchMediaRepository, mediaDateRepository, api, filesDir)) {
                     addPullMediaWorkRequest(context)
                     Result.success()
                 } else
@@ -43,20 +46,20 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
             }
 
             "refind" -> {
-                return if(pullMediaRefind(context, repository, api, filesDir)) Result.success() else Result.failure()
+                return if(pullMediaRefind(context, watchMediaRepository, api, filesDir)) Result.success() else Result.failure()
             }
         }
 
         return Result.failure()
     }
 
-    private fun pullMediaLocket(repository: WatchMediaRepository, api: API, filesDir: File): Boolean {
+    private fun pullMediaLocket(watchMediaRepository: WatchMediaRepository, mediaDateRepository: MediaDateRepository, api: API, filesDir: File): Boolean {
 
        return runBlocking {
 
             var result = suspendCoroutine<Boolean> { cont ->
 
-                var mediaList = repository.getAll().sortedWith(compareBy({ it.collection }, { it.order }))
+                var mediaList = watchMediaRepository.getAll().sortedWith(compareBy({ it.collection }, { it.order }))
                 val callback = { response: Response? ->
 
                     var stringResponse = response!!.body()?.string()
@@ -75,12 +78,16 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                         if (payload.length() > 0) {
 
                             for (i in 0 until payload.length()) {
-                                var media: JSONObject = payload.getJSONObject(i)
-                                var newMedia = WatchMedia(media.getString("_id"),
+                                val media: JSONObject = payload.getJSONObject(i)
+                                val newMedia = WatchMedia(media.getString("_id"),
                                         media.getString("path"),
                                         media.getString("locket"),
                                         media.getString("mimetype"),
-                                        WatchMedia.longsToDate(media.getJSONArray("times")), i) //FIXME check the name of the datetime object in the json structure.
+                                        i)
+
+                                val times = media.getJSONArray("times")
+
+
 
                                 if (mediaList.contains(newMedia)) {
                                     toBeRemoved.remove(newMedia)
@@ -89,7 +96,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                                     if (mediaFetch == payload.length()) {
                                         for (media in toBeRemoved) {
                                             GlobalScope.launch {
-                                                repository.delete(media._id)
+                                                watchMediaRepository.delete(media._id)
                                                 deleteFile(context, media.path)
                                             }
                                         }
@@ -127,10 +134,11 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                                         runBlocking {
 
                                             val job = GlobalScope.launch {
-                                                repository.insert(newMedia)
+                                                watchMediaRepository.insert(newMedia)
+                                                addMediaDates(mediaDateRepository,newMedia._id,times)
                                                 if (mediaFetch == payload.length()) {
                                                     for (media in toBeRemoved) {
-                                                        repository.delete(media._id)
+                                                        watchMediaRepository.delete(media._id)
                                                         deleteFile(context, media.path)
                                                     }
                                                     cont.resume(true)
@@ -145,7 +153,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                             if (toBeRemoved.isNotEmpty()) {
                                 GlobalScope.launch {
                                     for (media in toBeRemoved) {
-                                        repository.delete(media._id)
+                                        watchMediaRepository.delete(media._id)
                                         deleteFile(context, media.path)
                                     }
                                     cont.resume(true)
@@ -203,7 +211,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                             presentImage.getString("path"),
                             presentImage.getString("locket"),
                             presentImage.getString("mimetype"),
-                            WatchMedia.longsToDate(presentImage.getJSONArray("times")),0) //fixme check the name from the api json response
+                            0) //fixme check the name from the api json response
 
                     api.fetchBitmap(newWatchMedia._id) { body ->
                         val inputStream = body?.byteStream()
@@ -233,7 +241,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                                     pastImage.getString("path"),
                                     "past",
                                     pastImage.getString("mimetype"),
-                                    WatchMedia.longsToDate(pastImage.getJSONArray("times")), i)) //fixme check the name from the api json response
+                                    i)) //fixme check the name from the api json response
                         } catch (e: java.lang.Exception) {
                             e.printStackTrace()
                         }
@@ -268,5 +276,14 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
         }
 
         return result
+    }
+
+
+    suspend fun addMediaDates(repository: MediaDateRepository, mediaId:String,times:JSONArray){
+        for (j in 0 until times.length()){
+            val item = times[j] as Long?
+            val newMediaDate = MediaDate(MediaDate.longToDate(item!!),mediaId)
+            repository.insert(newMediaDate)
+        }
     }
 }
