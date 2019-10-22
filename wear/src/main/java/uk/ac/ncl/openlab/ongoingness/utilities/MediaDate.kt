@@ -4,7 +4,9 @@ import androidx.room.*
 import org.json.JSONArray
 import java.sql.Date
 
-@Entity(tableName = "media_date", foreignKeys = [ForeignKey(entity = WatchMedia::class,
+@Entity(tableName = "media_date",
+        indices = [Index(value = ["mediaId"], unique = false)],
+        foreignKeys = [ForeignKey(entity = WatchMedia::class,
         parentColumns = ["_id"],
         childColumns = ["mediaId"],
         onDelete = ForeignKey.CASCADE)])
