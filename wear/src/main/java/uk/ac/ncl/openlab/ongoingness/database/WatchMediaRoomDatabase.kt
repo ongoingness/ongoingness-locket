@@ -1,9 +1,16 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.database
 
 import android.content.Context
 import androidx.room.*
+import uk.ac.ncl.openlab.ongoingness.database.daos.LogDao
+import uk.ac.ncl.openlab.ongoingness.database.daos.MediaDateDao
+import uk.ac.ncl.openlab.ongoingness.database.daos.WatchMediaDao
+import uk.ac.ncl.openlab.ongoingness.database.schemas.Log
+import uk.ac.ncl.openlab.ongoingness.database.schemas.MediaDate
+import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
+import uk.ac.ncl.openlab.ongoingness.utilities.Converters
 
-@Database(entities = [WatchMedia::class, Log::class, MediaDate::class], version = 6)
+@Database(entities = [WatchMedia::class, Log::class, MediaDate::class], version = 7)
 @TypeConverters(Converters::class)
 abstract class WatchMediaRoomDatabase : RoomDatabase() {
 
@@ -16,7 +23,8 @@ abstract class WatchMediaRoomDatabase : RoomDatabase() {
         private  var INSTANCE: WatchMediaRoomDatabase? = null
 
         fun getDatabase(context: Context): WatchMediaRoomDatabase {
-            return INSTANCE ?: synchronized(this) {
+            return INSTANCE
+                    ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                         context.applicationContext,
                         WatchMediaRoomDatabase::class.java,

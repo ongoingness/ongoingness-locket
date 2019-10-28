@@ -1,10 +1,11 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.database.daos
 
 import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import uk.ac.ncl.openlab.ongoingness.database.schemas.MediaDate
 import java.sql.Date
 
 

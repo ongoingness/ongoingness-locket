@@ -1,7 +1,6 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.database.schemas
 
 import androidx.room.*
-import org.json.JSONArray
 import java.sql.Date
 
 @Entity(tableName = "media_date",

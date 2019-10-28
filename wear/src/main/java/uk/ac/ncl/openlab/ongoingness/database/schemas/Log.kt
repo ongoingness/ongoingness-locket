@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.database.schemas
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

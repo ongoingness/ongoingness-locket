@@ -10,12 +10,12 @@ import android.net.Network
 import android.os.BatteryManager
 import android.util.Log
 import androidx.work.*
-import com.google.android.gms.wearable.Wearable
+import uk.ac.ncl.openlab.ongoingness.workers.PullMediaWorker
+import uk.ac.ncl.openlab.ongoingness.workers.PushLogsWorker
 import java.io.*
 import java.net.NetworkInterface
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.collections.ArrayList
 
 const val minBandwidthKbps: Int = 320
 const val TAG: String = "Utils"

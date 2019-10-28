@@ -15,22 +15,20 @@ import androidx.fragment.app.FragmentActivity
 import androidx.wear.ambient.AmbientModeSupport
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
+import uk.ac.ncl.openlab.ongoingness.utilities.LogType
+import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.recognisers.RevealRecogniser
 import uk.ac.ncl.openlab.ongoingness.recognisers.RotationRecogniser
 import uk.ac.ncl.openlab.ongoingness.recognisers.TouchRevealRecogniser
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.viewmodel.MainPresenter
+import uk.ac.ncl.openlab.ongoingness.workers.PullMediaWorker
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.io.OutputStream
 import java.util.Observer
+
+const val PULL_CONTENT_ON_WAKE = false
 
 class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, MainPresenter.View {
 
@@ -68,6 +66,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     private val timeCheckInterval = 30 * 1000L //30 seconds
     private val killDelta = 5 * 60 * 1000L //5 minutes
 
+    private var chargingState = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -84,7 +84,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             }
         }
 
-        killRunnable!!.run()
+        killRunnable.run()
 
         presenter = MainPresenter()
         presenter!!.attachView(this)
@@ -258,7 +258,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         //Check if is charging
         if(intent.hasExtra("background")) {
-            var bitmap = BitmapFactory.decodeByteArray(
+            val bitmap = BitmapFactory.decodeByteArray(
                     intent.getByteArrayExtra("background"), 0,
                     intent.getByteArrayExtra("background").size)
             presenter!!.updateCoverBitmap(bitmap)
@@ -272,20 +272,20 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 Log.d("NewBitMap", "$intent")
 
                 if(intent.hasExtra("background")) {
-                    var bitmap = BitmapFactory.decodeByteArray(
+                    val bitmap = BitmapFactory.decodeByteArray(
                             intent.getByteArrayExtra("background"),0,
                             intent.getByteArrayExtra("background").size)
-
                     presenter!!.updateCoverBitmap(bitmap)
-
                 }
+
+                if(intent.hasExtra("chargingState")) {
+                    chargingState = intent.getBooleanExtra("chargingState", false)
+                }
+
             }
         }
         val filter = IntentFilter("BATTERY_INFO").apply {}
         registerReceiver(bitmapReceiver, filter)
-
-        //Thread to pull new media from the server
-        //mediaPullRunnable = getPullMediaThread()
 
         touchRevealRecogniser = TouchRevealRecogniser(this)
         touchRevealRecogniserObserver = Observer { _, arg ->
@@ -296,22 +296,30 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 TouchRevealRecogniser.Events.AWAKE -> {
 
-                    //Stop Activity Kill Thread
-                    killHandler.removeCallbacks(killRunnable)
-/*
-                    if(!gotData && hasConnection(applicationContext)) {
-                        mImageView.setOnTouchListener(null)
-                        gotData = true
-                        isGettingData = true
-                        presenter!!.pullingData(true)
-                        mediaPullRunnable.run()*/
+                    if(!chargingState) {
 
-                    //} else {
-                        presenter!!.restartIndex()
-                        presenter!!.displayContent()
-                    //}
+                        //Stop Activity Kill Thread
+                        killHandler.removeCallbacks(killRunnable)
 
-                    Logger.log(LogType.WAKE_UP, listOf(), applicationContext)
+                        if (PULL_CONTENT_ON_WAKE && !gotData && hasConnection(applicationContext)) {
+
+                            mImageView.setOnTouchListener(null)
+                            gotData = true
+                            isGettingData = true
+                            presenter!!.pullingData(true)
+
+                            PullMediaWorker.pullMediaLocket(this.applicationContext)
+
+                            mImageView.setOnTouchListener(touchListener)
+                            presenter!!.pullingData(false)
+
+                        } else {
+                            presenter!!.restartIndex()
+                            presenter!!.displayContent()
+                        }
+
+                        Logger.log(LogType.WAKE_UP, listOf(), applicationContext)
+                    }
                 }
                 TouchRevealRecogniser.Events.NEXT -> {
                     presenter!!.goToNextImage()
@@ -416,7 +424,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         Glide.with(this).load(R.drawable.refind_cover).into(image)
 
-        mediaPullRunnable = getPullMediaThread()
+        //mediaPullRunnable = getPullMediaThread()
 
         rotationRecogniser = RotationRecogniser(this)
         rotationListener = object : RotationRecogniser.Listener {
@@ -461,271 +469,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         }
 
-    }
-
-
-    /**
-     * Creates the thread to pull new media from the server
-     */
-    private fun getPullMediaThread(): kotlinx.coroutines.Runnable {
-        return kotlinx.coroutines.Runnable {
-            val api = API()
-
-            val watchMediaDao = WatchMediaRoomDatabase.getDatabase(this.applicationContext).watchMediaDao()
-            val repository = WatchMediaRepository(watchMediaDao)
-
-            val context = this.applicationContext
-            val filesDir = this.applicationContext.filesDir
-
-
-            when(FLAVOR) {
-                "locket_touch" -> {
-
-                    GlobalScope.launch {
-                        var mediaList = repository.getAll().sortedWith(compareBy({it.collection}, {it.order}))
-
-
-
-                        api.fetchMediaPayload (
-
-                            callback = { response ->
-
-                                Log.d("sa", "nice")
-
-                            var stringResponse = response!!.body()?.string()
-                            val jsonResponse = JSONObject(stringResponse)
-
-                            Log.d("sa", stringResponse +  jsonResponse.getString("code"))
-
-                            var code = jsonResponse.getString("code")
-
-                            if (code.startsWith('5')) {
-                                isGettingData = false
-                                mImageView.setOnTouchListener(touchListener)
-                                presenter!!.pullingData(false)
-                                if(mediaList.isEmpty())
-                                    presenter!!.hideContent(MainPresenter.CoverType.BLACK)
-                            } else if (code.startsWith('2')) {
-
-                                var payload: JSONArray = jsonResponse.getJSONArray("payload")
-
-                                var toBeRemoved = mediaList.toTypedArray().copyOf().toMutableList()
-
-                                var mediaFetch = 0
-
-                                if (payload.length() > 0) {
-
-                                    for(i in 0 until payload.length()) {
-                                        val media:JSONObject = payload.getJSONObject(i)
-                                        val newMedia = WatchMedia(media.getString("_id"),
-                                                media.getString("path"),
-                                                media.getString("locket"),
-                                                media.getString("mimetype"),
-                                                i)
-
-                                        if(mediaList.contains(newMedia)) {
-                                            toBeRemoved.remove(newMedia)
-                                            mediaFetch++
-
-                                            if(mediaFetch == payload.length()) {
-                                                for(mediaItem in toBeRemoved) {
-                                                    GlobalScope.launch {
-                                                        repository.delete(mediaItem._id)
-                                                        deleteFile(context, mediaItem.path)
-                                                    }
-                                                }
-                                                mImageView.setOnTouchListener(touchListener)
-                                                presenter!!.pullingData(false)
-                                            }
-                                        } else {
-                                            var gotFile = false
-                                            while(!gotFile) {
-                                                try {
-                                                    api.fetchBitmap(newMedia._id) { body ->
-
-                                                        val inputStream = body?.byteStream()
-                                                        val file = File(filesDir, newMedia.path)
-                                                        lateinit var outputStream: OutputStream
-
-                                                        //try {
-                                                            outputStream = FileOutputStream(file)
-                                                            if(newMedia.mimetype.contains("video") ||
-                                                                    newMedia.mimetype.contains("gif")) {
-                                                                inputStream.use { input ->
-                                                                    outputStream.use { fileOut ->
-                                                                        input!!.copyTo(fileOut)
-                                                                    }
-                                                                }
-                                                            } else {
-                                                                val image = BitmapFactory.decodeStream(inputStream)
-                                                                image.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                                            }
-                                                            outputStream.flush()
-                                                            mediaFetch++
-
-                                                        //} catch (e: IOException) {
-                                                            //throw Exception("File Fetching - Something went wrong")
-                                                        //} finally {
-                                                            outputStream.close()
-                                                            inputStream?.close()
-                                                            GlobalScope.launch {
-                                                                repository.insert(newMedia)
-                                                                if(mediaFetch == payload.length()) {
-                                                                    for(mediaItem in toBeRemoved) {
-                                                                        repository.delete(mediaItem._id)
-                                                                        deleteFile(context, mediaItem.path)
-                                                                    }
-                                                                    mImageView.setOnTouchListener(touchListener)
-                                                                    presenter!!.pullingData(false)
-                                                                }
-                                                            }
-                                                        //}
-                                                    }
-                                                    gotFile = true
-                                                } catch(e: Exception) {
-                                                    Log.d("FetchFile", "Fail")
-                                                    gotFile = false
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    if(toBeRemoved.isNotEmpty()) {
-                                        GlobalScope.launch {
-
-                                            for(media in toBeRemoved) {
-                                                repository.delete(media._id)
-                                                deleteFile(context, media.path)
-                                            }
-                                            presenter!!.pullingData(false)
-                                            presenter!!.hideContent(MainPresenter.CoverType.BLACK)
-                                        }
-
-                                    } else {
-                                        presenter!!.pullingData(false)
-                                        presenter!!.hideContent(MainPresenter.CoverType.BLACK)
-                                    }
-
-                                    mImageView.setOnTouchListener(touchListener)
-                                }
-                            }
-                        },
-                        failure = { e ->
-
-                            Log.d("sa", "fail $e")
-
-                            isGettingData = false
-                            mImageView.setOnTouchListener(touchListener)
-                            presenter!!.pullingData(false)
-                        })
-                    }
-                }
-
-                "refind" -> {
-                    GlobalScope.launch {
-                        val mediaList = repository.getAll().sortedBy { it.order }
-                        val currentImageID: String
-                        currentImageID = if (mediaList.isNullOrEmpty()) {
-                            "test"
-                        } else {
-                            mediaList[0]._id
-                        }
-                        api.fetchInferredMedia(currentImageID) { response ->
-
-                            val stringResponse = response!!.body()?.string()
-
-                            if (stringResponse == "[]") {
-                                isGettingData = false
-                                rotationRecogniser?.start(rotationListener!!)
-                                presenter!!.pullingData(false)
-                            } else {
-
-                                for (mediaToRemove in mediaList) {
-                                    deleteFile(context, mediaToRemove.path)
-                                }
-
-                                repository.deleteAll()
-                                val jsonResponse = JSONObject(stringResponse)
-
-                                val payload: JSONArray = jsonResponse.getJSONArray("payload")
-                                if (payload.length() > 0) {
-
-                                    //Set present Image
-                                    val presentImage: JSONObject = payload.getJSONObject(0)
-                                    val newWatchMedia = WatchMedia(presentImage.getString("_id"),
-                                            presentImage.getString("path"),
-                                            presentImage.getString("locket"),
-                                            presentImage.getString("mimetype"),
-                                            0)
-
-                                    api.fetchBitmap(newWatchMedia._id) { body ->
-                                        val inputStream = body?.byteStream()
-                                        val image = BitmapFactory.decodeStream(inputStream)
-                                        val file = File(filesDir, newWatchMedia.path)
-                                        lateinit var stream: OutputStream
-                                        try {
-                                            stream = FileOutputStream(file)
-                                            image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                            stream.flush()
-                                        } catch (e: IOException) { // Catch the exception
-                                            e.printStackTrace()
-                                        } finally {
-                                            stream.close()
-                                            inputStream?.close()
-                                            GlobalScope.launch {
-                                                repository.insert(newWatchMedia)
-                                            }
-                                        }
-                                    }
-
-                                    val pastImages = mutableListOf<WatchMedia>()
-                                    for (i in 1..5) {
-                                        try {
-                                            val pastImage: JSONObject = payload.getJSONObject(i)
-                                            pastImages.add(WatchMedia(pastImage.getString("id"),
-                                                    pastImage.getString("path"),
-                                                    "past",
-                                                    pastImage.getString("mimetype"),
-                                                     i))
-                                        } catch (e: java.lang.Exception) {
-                                           e.printStackTrace()
-                                        }
-                                    }
-
-                                    var imageCounter = 0
-                                    for (media: WatchMedia in pastImages) {
-                                        api.fetchBitmap(media._id) { body ->
-                                            val inputStream = body?.byteStream()
-                                            val image = BitmapFactory.decodeStream(inputStream)
-                                            val file = File(filesDir, media.path)
-                                            lateinit var stream: OutputStream
-                                            try {
-                                                stream = FileOutputStream(file)
-                                                image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                                stream.flush()
-                                            } catch (e: IOException) { // Catch the exception
-                                                e.printStackTrace()
-                                            } finally {
-                                                inputStream?.close()
-                                                imageCounter += 1
-                                                stream.close()
-                                                GlobalScope.launch {
-                                                    repository.insert(media)
-                                                    if (imageCounter == pastImages.size) {
-                                                        rotationRecogniser?.start(rotationListener!!)
-                                                        presenter!!.pullingData(false)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private class MyAmbientCallback : AmbientModeSupport.AmbientCallback()

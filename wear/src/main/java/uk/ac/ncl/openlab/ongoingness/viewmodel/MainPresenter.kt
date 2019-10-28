@@ -8,6 +8,10 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
+import uk.ac.ncl.openlab.ongoingness.utilities.LogType
+import uk.ac.ncl.openlab.ongoingness.utilities.Logger
+import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
+import uk.ac.ncl.openlab.ongoingness.database.WatchMediaViewModel
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import java.io.File
 
@@ -37,9 +41,21 @@ class MainPresenter {
     fun setWatchMediaRepository(activity: FragmentActivity) {
 
         watchMediaViewModel = ViewModelProviders.of(activity).get(WatchMediaViewModel::class.java)
-
         watchMediaViewModel.allWatchMedia.observe(activity, Observer { watchMedia ->
-            mediaCollection = watchMedia.sortedWith(compareBy({it.collection}, {it.order}))
+
+            when(FLAVOR) {
+                "refind" -> {
+                    mediaCollection = watchMedia.sortedWith(compareBy({it.collection}, {it.order}))
+                }
+
+                "locket_touch" -> {
+                    mediaCollection = watchMedia.sortedWith(compareBy({it.collection}, {it.createdAt}))
+                }
+
+                "locket_touch_s" -> {
+                    mediaCollection = watchMedia.sortedWith(compareBy({it.collection}, {it.createdAt}))
+                }
+            }
             if(displayContent)
                 displayNewMediaFromCollection(mediaCollection)
         })
@@ -133,6 +149,7 @@ class MainPresenter {
 
                 newImageTime = System.currentTimeMillis()
                 indexTime = currentIndex
+
             }
 
             var file  = File(context!!.filesDir, localCollection[currentIndex].path)
@@ -176,6 +193,10 @@ class MainPresenter {
         this.view = view
 
         when(FLAVOR){
+            "locket_touch_s" -> {
+                coverBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover), view!!.getScreenSize(), view!!.getScreenSize(), false)
+                coverWhiteBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover_white), view!!.getScreenSize(), view!!.getScreenSize(), false)
+            }
             "locket_touch" -> {
                 coverBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover), view!!.getScreenSize(), view!!.getScreenSize(), false)
                 coverWhiteBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover_white), view!!.getScreenSize(), view!!.getScreenSize(), false)

@@ -1,11 +1,10 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.database.daos
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-
-import uk.ac.ncl.openlab.ongoingness.utilities.Log
+import uk.ac.ncl.openlab.ongoingness.database.schemas.Log
 
 @Dao
 interface LogDao {

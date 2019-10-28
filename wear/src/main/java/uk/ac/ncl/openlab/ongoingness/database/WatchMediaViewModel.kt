@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.database
 
 import android.app.Application
 import android.content.Context
@@ -7,6 +7,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import uk.ac.ncl.openlab.ongoingness.database.repositories.LogRepository
+import uk.ac.ncl.openlab.ongoingness.database.repositories.WatchMediaRepository
+import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
+import uk.ac.ncl.openlab.ongoingness.utilities.deleteFile
 
 class WatchMediaViewModel(application: Application) : AndroidViewModel(application) {
 

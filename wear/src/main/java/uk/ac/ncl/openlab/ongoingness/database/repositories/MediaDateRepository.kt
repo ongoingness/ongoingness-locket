@@ -1,7 +1,9 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.database.repositories
 
 import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
+import uk.ac.ncl.openlab.ongoingness.database.daos.MediaDateDao
+import uk.ac.ncl.openlab.ongoingness.database.schemas.MediaDate
 import java.sql.Date
 
 class MediaDateRepository(private val mediaDateDao: MediaDateDao) {
@@ -14,7 +16,7 @@ class MediaDateRepository(private val mediaDateDao: MediaDateDao) {
     }
 
     @WorkerThread
-    fun get(id:String):MediaDate?{
+    fun get(id:String): MediaDate?{
         return mediaDateDao.getMediaDate(id)
     }
 

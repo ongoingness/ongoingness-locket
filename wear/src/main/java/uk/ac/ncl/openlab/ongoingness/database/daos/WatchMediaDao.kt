@@ -1,10 +1,11 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.database.daos
 
 import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
 import java.sql.Date
 
 @Dao
@@ -27,7 +28,6 @@ interface WatchMediaDao {
 
     @Query("SELECT * from watch_media")
     fun getAll(): List<WatchMedia>
-
 
     @Query("SELECT * FROM watch_media JOIN media_date ON media_date.mediaId = watch_media._id WHERE strftime('%j-%Y',date) IS strftime('%j-%Y',:date)")
     fun getForDate(date: Date):List<WatchMedia>

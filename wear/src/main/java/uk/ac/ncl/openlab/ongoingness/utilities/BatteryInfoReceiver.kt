@@ -9,6 +9,7 @@ import android.os.BatteryManager
 import android.util.Log
 import uk.ac.ncl.openlab.ongoingness.R
 import java.io.ByteArrayOutputStream
+import kotlin.math.abs
 
 const val BROADCAST_INTENT_NAME: String = "BATTERY_INFO"
 
@@ -43,15 +44,12 @@ class BatteryInfoReceiver {
                     Log.d(TAG, " Connected")
                     Logger.log(LogType.CHARGER_CONNECTED, listOf(), context)
                     startCheckingBatteryValues()
-
-                    //Logger.sendLogs()
-
                 } else if(intent.action == Intent.ACTION_POWER_DISCONNECTED) {
                     Log.d(TAG, " Disconnected")
                     Logger.log(LogType.CHARGER_DISCONNECTED, listOf(), context)
                     if(checkingBatteryReceiverOn)
                         stopCheckingBatteryValues()
-                    sendBackgroundBroadcast(getDefaultCover())
+                    sendBackgroundBroadcast(getDefaultCover(), false)
                 }
 
             }
@@ -69,8 +67,8 @@ class BatteryInfoReceiver {
 
                 Log.d(TAG, "Battery $batteryPct")
 
-                if(batteryPct != null && Math.abs(batteryPct - lastBatteryValue) > CHARGE_DELTA) {
-                    sendBackgroundBroadcast(getChargingBackground(batteryPct))
+                if(batteryPct != null && abs(batteryPct - lastBatteryValue) > CHARGE_DELTA) {
+                    sendBackgroundBroadcast(getChargingBackground(batteryPct), true)
                     lastBatteryValue = batteryPct
                 }
             }
@@ -97,12 +95,11 @@ class BatteryInfoReceiver {
             stopCheckingBatteryValues()
     }
 
-    private fun sendBackgroundBroadcast(bitmap: ByteArray) {
+    private fun sendBackgroundBroadcast(bitmap: ByteArray, chargingState: Boolean) {
         var broadcastIntent = Intent(BROADCAST_INTENT_NAME)
         broadcastIntent.putExtra("background", bitmap)
+        broadcastIntent.putExtra("chargingState", chargingState)
         context.sendBroadcast(broadcastIntent)
-
-
 
         Log.d(TAG, "Broadcast sent $n")
         n++
@@ -126,11 +123,9 @@ class BatteryInfoReceiver {
     }
 
     private fun startCheckingBatteryValues() {
-
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED).apply {}
         context.registerReceiver(batteryReceiver, filter)
         checkingBatteryReceiverOn = true
-
     }
 
     private fun stopCheckingBatteryValues() {

@@ -1,19 +1,19 @@
 package uk.ac.ncl.openlab.ongoingness.utilities
 
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.os.BatteryManager
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import uk.ac.ncl.openlab.ongoingness.database.schemas.Log
+import uk.ac.ncl.openlab.ongoingness.database.repositories.LogRepository
+import uk.ac.ncl.openlab.ongoingness.database.WatchMediaRoomDatabase
 
 object Logger {
 
     private lateinit var repository: LogRepository
 
     fun start(context: Context) {
-        if (!(::repository.isInitialized))
-            repository = LogRepository( WatchMediaRoomDatabase.getDatabase(context).logDao())
+        if (!(Logger::repository.isInitialized))
+            repository = LogRepository(WatchMediaRoomDatabase.getDatabase(context).logDao())
     }
 
     fun log(type: LogType, content: List<String>, context: Context)  {

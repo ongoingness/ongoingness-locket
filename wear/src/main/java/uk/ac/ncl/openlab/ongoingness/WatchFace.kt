@@ -1,32 +1,18 @@
 package uk.ac.ncl.openlab.ongoingness
 
-import android.accounts.Account
-import android.accounts.AccountManager
-import android.app.Service
 import android.content.*
 import android.graphics.*
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
-import android.os.SystemClock
-import android.provider.Settings
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
-import android.util.Log
 import android.view.SurfaceHolder
-import android.view.WindowInsets
 import android.view.WindowManager
-import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.work.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.views.MainActivity
-import java.lang.reflect.InvocationTargetException
-import java.time.Duration
-import kotlin.reflect.KClass
 
 
 // Sync interval constants
@@ -234,21 +220,6 @@ class WatchFace : CanvasWatchFaceService() {
 
             addPullMediaWorkRequest(applicationContext)
             addPushLogsWorkRequest(applicationContext)
-
-            /*
-            var constraints = Constraints.Builder()
-                    .setRequiresCharging(true)
-                    .setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-
-
-            val pullMediaRequest = PeriodicWorkRequestBuilder<PullMediaWorker>(Duration.ofMinutes(15)).setConstraints(constraints).build()
-            WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("pullMedia", ExistingPeriodicWorkPolicy.REPLACE, pullMediaRequest)
-
-            val pushLogsRequest = PeriodicWorkRequestBuilder<PushLogsWorker>(Duration.ofMinutes(15)).setConstraints(constraints).build()
-            WorkManager.getInstance(applicationContext).enqueueUniquePeriodicWork("pushLogs", ExistingPeriodicWorkPolicy.REPLACE, pushLogsRequest)
-            */
-
 
         }
     }

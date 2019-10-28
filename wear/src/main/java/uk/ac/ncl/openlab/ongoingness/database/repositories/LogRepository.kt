@@ -1,7 +1,8 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.database.repositories
 
 import androidx.annotation.WorkerThread
-import androidx.lifecycle.LiveData
+import uk.ac.ncl.openlab.ongoingness.database.daos.LogDao
+import uk.ac.ncl.openlab.ongoingness.database.schemas.Log
 
 class LogRepository(private val logDao: LogDao) {
 

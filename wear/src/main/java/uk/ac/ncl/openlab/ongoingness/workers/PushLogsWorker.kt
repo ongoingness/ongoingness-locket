@@ -1,22 +1,14 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.workers
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import android.util.Log
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.Response
-import org.json.JSONArray
-import org.json.JSONObject
-import uk.ac.ncl.openlab.ongoingness.BuildConfig
-import java.io.File
-import java.io.FileOutputStream
+import uk.ac.ncl.openlab.ongoingness.utilities.API
+import uk.ac.ncl.openlab.ongoingness.utilities.Logger
+import uk.ac.ncl.openlab.ongoingness.utilities.addPushLogsWorkRequest
 import java.io.IOException
-import java.io.OutputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -30,7 +22,7 @@ class PushLogsWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, param
 
         return runBlocking {
 
-            var result = suspendCoroutine<Result> { cont ->
+            val result = suspendCoroutine<Result> { cont ->
 
                 val callback = { response: Response? ->
                     Logger.clearLogs()
