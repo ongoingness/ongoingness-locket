@@ -34,4 +34,7 @@ interface WatchMediaDao {
 
     @Query("SELECT * FROM watch_media JOIN media_date ON media_date.mediaId = watch_media._id WHERE strftime('%j',date) IS strftime('%j',:date)")
     fun getForDayOfYear(date: Date):List<WatchMedia>
+
+    @Query("SELECT * FROM watch_media LEFT OUTER JOIN media_date ON media_date.mediaId = watch_media._id")
+    fun getMediaWithNoDates(): List<WatchMedia>
 }

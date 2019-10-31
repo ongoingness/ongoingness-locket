@@ -14,6 +14,7 @@ import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
 import uk.ac.ncl.openlab.ongoingness.database.WatchMediaViewModel
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import java.io.File
+import java.sql.Date
 
 /**
  * Connects the activity view to the media in the local database, allowing it to be displayed on screen.
@@ -41,26 +42,29 @@ class MainPresenter {
     fun setWatchMediaRepository(activity: FragmentActivity) {
 
         watchMediaViewModel = ViewModelProviders.of(activity).get(WatchMediaViewModel::class.java)
-        watchMediaViewModel.allWatchMedia.observe(activity, Observer { watchMedia ->
 
-            when(FLAVOR) {
-                "refind" -> {
-                    mediaCollection = watchMedia.sortedWith(compareBy({it.collection}, {it.order}))
-                }
 
-                "locket_touch" -> {
-                    mediaCollection = watchMedia.sortedWith(compareBy({it.collection}, {it.createdAt}))
-                }
-
-                "locket_touch_s" -> {
-                    mediaCollection = watchMedia.sortedWith(compareBy({it.collection}, {it.createdAt}))
-                }
+        when(FLAVOR) {
+            "refind" -> {
+                mediaCollection = watchMediaViewModel.allWatchMedia().sortedWith(compareBy({it.collection}, {it.order}))
             }
-            if(displayContent)
-                displayNewMediaFromCollection(mediaCollection)
-        })
 
+            "locket_touch" -> {
+                mediaCollection = watchMediaViewModel.allWatchMedia().sortedWith(compareBy({it.collection}, {it.createdAt}))
+            }
+
+            "locket_touch_s" -> {
+                var arraylist:ArrayList<WatchMedia> =  ArrayList()
+                arraylist.addAll(watchMediaViewModel.getWatchMediaForDate(Date(System.currentTimeMillis())).sortedWith(compareBy {it.createdAt}))
+                arraylist.addAll(watchMediaViewModel.getWatchMediaWithNoDate().sortedWith(compareBy {it.createdAt}))
+                mediaCollection =  arraylist
+            }
+        }
+        if(displayContent)
+            displayNewMediaFromCollection(mediaCollection)
     }
+
+
 
     /**
      * Restarts the index of to be displayed

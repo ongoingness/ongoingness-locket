@@ -37,7 +37,12 @@ class WatchMediaRepository(private val watchMediaDao: WatchMediaDao) {
 
 
     @WorkerThread
-    fun getSignificant(date: Date):List<WatchMedia>{
+    fun getMediaWithDate(date: Date):List<WatchMedia>{
         return watchMediaDao.getForDayOfYear(date)
+    }
+
+    @WorkerThread
+    fun getMediaWithNoDates():List<WatchMedia>{
+        return watchMediaDao.getMediaWithNoDates()
     }
 }
