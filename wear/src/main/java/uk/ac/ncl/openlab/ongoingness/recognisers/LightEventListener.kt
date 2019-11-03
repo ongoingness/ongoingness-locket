@@ -6,7 +6,7 @@ import android.hardware.SensorEventListener
 import android.util.Log
 import uk.ac.ncl.openlab.ongoingness.viewmodel.MainPresenter
 
-class LightEventListener(val view: MainPresenter.View): SensorEventListener {
+class LightEventListener(private val view: MainPresenter.View): SensorEventListener {
     private val closedThreshold: Float = 80.0f
     private var isClosed: Boolean = true
     private var lastRead: Long = 0
@@ -60,6 +60,5 @@ class LightEventListener(val view: MainPresenter.View): SensorEventListener {
     }
 
     override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
-        //
     }
 }

@@ -18,10 +18,10 @@ object Logger {
 
     fun log(type: LogType, content: List<String>, context: Context)  {
 
-        var mutableContentList = content.toMutableList()
+        val mutableContentList = content.toMutableList()
         mutableContentList.add("battery:${getBatteryLevel(context)}")
 
-        var currentTime = System.currentTimeMillis().toString()
+        val currentTime = System.currentTimeMillis().toString()
         var message = ""
 
 
@@ -79,11 +79,11 @@ object Logger {
         sb.append("{")
 
         for(elem in list) {
-            var splitted = elem.split(":")
-            if(splitted.size == 3)
-                sb.append("\"${splitted[0]}\": \"${splitted[1]}:${splitted[2]}\"")
+            val splits = elem.split(":")
+            if(splits.size == 3)
+                sb.append("\"${splits[0]}\": \"${splits[1]}:${splits[2]}\"")
             else
-                sb.append("\"${splitted[0]}\": \"${splitted[1]}\"")
+                sb.append("\"${splits[0]}\": \"${splits[1]}\"")
             if(list.last() != elem)
                 sb.append(", ")
         }
@@ -93,7 +93,7 @@ object Logger {
        return sb.toString()
     }
 
-    fun formatLogs(): String {
+    private fun formatLogs(): String {
         val sb = StringBuilder()
         sb.append("[")
 
@@ -119,13 +119,11 @@ object Logger {
     }
 
     fun sendLogs(): String {
-
-        var logs = formatLogs()
-
-        var api = API()
+        val logs = formatLogs()
+        val api = API()
 
         GlobalScope.launch {
-            api.sendLogs(logs, callback = { response -> repository.deleteAll()}, failure = {})
+            api.sendLogs(logs, callback = { repository.deleteAll()}, failure = {})
         }
 
         return logs

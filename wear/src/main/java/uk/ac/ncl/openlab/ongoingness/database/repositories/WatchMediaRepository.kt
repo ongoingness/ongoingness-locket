@@ -1,14 +1,11 @@
 package uk.ac.ncl.openlab.ongoingness.database.repositories
 
 import androidx.annotation.WorkerThread
-import androidx.lifecycle.LiveData
 import uk.ac.ncl.openlab.ongoingness.database.daos.WatchMediaDao
 import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
 import java.sql.Date
 
 class WatchMediaRepository(private val watchMediaDao: WatchMediaDao) {
-
-    val allWatchMedia: LiveData<List<WatchMedia>> = watchMediaDao.getAllMedia()
 
     @WorkerThread
     suspend fun insert(watchMedia: WatchMedia) {

@@ -253,6 +253,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
      *  Setup the Locket that has as input the watch position and the touch screen
      */
     private fun setLocketTouch() {
+        
 
         Glide.with(this).load(R.drawable.cover).into(image)
 
@@ -435,7 +436,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                     isGettingData = true
                     rotationRecogniser?.stop()
                     presenter!!.pullingData(true)
-                    mediaPullRunnable.run()
+                    PullMediaWorker.pullMediaRefind(this@MainActivity)
                 } else {
                     presenter!!.displayContent()
                 }

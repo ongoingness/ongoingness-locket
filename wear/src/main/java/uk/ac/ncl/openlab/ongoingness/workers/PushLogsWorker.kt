@@ -24,13 +24,13 @@ class PushLogsWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, param
 
             val result = suspendCoroutine<Result> { cont ->
 
-                val callback = { response: Response? ->
+                val callback = { _: Response? ->
                     Logger.clearLogs()
                     addPushLogsWorkRequest(applicationContext)
                     cont.resume(Result.success())
                 }
 
-                val failure = { e: IOException ->
+                val failure = { _: IOException ->
                     cont.resume(Result.failure())
                 }
                 api.fetchMediaPayload(callback, failure)

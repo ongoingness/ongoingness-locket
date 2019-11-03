@@ -3,6 +3,7 @@ package uk.ac.ncl.openlab.ongoingness.viewmodel
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
@@ -143,8 +144,9 @@ class MainPresenter {
                 newImageTime = System.currentTimeMillis()
                 indexTime = currentIndex
             } else {
-                var timePassed = System.currentTimeMillis() - newImageTime!!
-                var content = listOf("imageID:${localCollection[currentIndex]._id}", "displayedTime:$timePassed")
+                val timePassed = System.currentTimeMillis() - newImageTime!!
+                Log.d("KYLE",localCollection.toString()) //fixme - remove
+                val content = listOf("imageID:${localCollection[currentIndex]._id}", "displayedTime:$timePassed")
 
                 if((indexTime == localCollection.size && currentIndex == 0) || currentIndex > indexTime!!)
                     Logger.log(LogType.NEXT_IMAGE, content, context!! )
@@ -241,6 +243,7 @@ class MainPresenter {
     fun displayCode() {
         val mac = getMacAddress()
         val txt = "Device Code:\n$mac"
+        Log.d("MAC",mac)
         view?.displayText(txt)
     }
 

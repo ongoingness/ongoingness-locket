@@ -189,7 +189,7 @@ class RevealRecogniserOld(private val context: Context): Observable() {
 
         var average = 0.0;
         for(sample in lightLevels) {
-            average += sample;
+            average += sample
         }
         average /= lightLevels.size
 
@@ -206,7 +206,7 @@ class RevealRecogniserOld(private val context: Context): Observable() {
 
         val deltaRel = delta / (max-min)
 
-        val maxInt = max.roundToInt();
+        val maxInt = max.roundToInt()
 
         var variance: Int = average.toInt()-previousAverage.toInt()
 
@@ -355,7 +355,6 @@ class RevealRecogniserOld(private val context: Context): Observable() {
     companion object {
         private const val standardGravity = SensorManager.STANDARD_GRAVITY
         const val thresholdGravity = standardGravity / 1.3
-        const val LIGHT_DELTA_THRESHOLD = 0.35F
         const val TAG = "RevealRecogniserOld"
     }
 

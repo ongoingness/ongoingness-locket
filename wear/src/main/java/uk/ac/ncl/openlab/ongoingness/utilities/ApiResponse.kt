@@ -1,9 +1,5 @@
 package uk.ac.ncl.openlab.ongoingness.utilities
 
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-
 data class GenericResponse(
         val code: Int,
         val errors: Boolean,

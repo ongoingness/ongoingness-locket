@@ -22,9 +22,9 @@ import uk.ac.ncl.openlab.ongoingness.utilities.CircularArray
  * Created by Kyle Montague on 10/11/2018.
  */
 open class RotationRecogniser(val context: Context) {
-    private val TAG = "RR"
-    var listener: Listener? = null
-    var disposables: ArrayList<Disposable> = arrayListOf()
+    private val tag = "RR"
+    private var listener: Listener? = null
+    private var disposables = arrayListOf<Disposable>()
     private var states = ObservableList<State>()
 
     enum class State {
@@ -36,27 +36,27 @@ open class RotationRecogniser(val context: Context) {
         PICKED_UP,
     }
 
-    var enterState = State.UNKNOWN
-    var previousState = State.UNKNOWN
-    var lastChanged: Long = System.currentTimeMillis()
+    private var enterState = State.UNKNOWN
+    private var previousState = State.UNKNOWN
+    private var lastChanged: Long = System.currentTimeMillis()
 
-    var timeoutHandler = Handler()
-    var timeoutRunnable: Runnable? = null
+    private var timeoutHandler = Handler()
+    private var timeoutRunnable: Runnable? = null
 
     private var timeoutDuration = 1000L * 30 * 1 //one minute timeout
     private val timeoutInterval = 5000L
 
-    private var isPickUp = false;
-    private var onStandby = false;
+    private var isPickUp = false
+    private var onStandby = false
 
     init {
         timeoutRunnable = Runnable {
 
             if ((System.currentTimeMillis() - lastChanged) >= timeoutDuration) {
-                Log.d(TAG, "onstanby")
+                Log.d(tag, "onstanby")
                 isPickUp = false
                 onStandby = true
-                timeoutHandler.removeCallbacks(timeoutRunnable);
+                timeoutHandler.removeCallbacks(timeoutRunnable)
                 listener?.onStandby()
             } else {
                 timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval) //check again in 5seconds
@@ -66,8 +66,8 @@ open class RotationRecogniser(val context: Context) {
     }
 
     fun start(listener: Listener) {
-        Log.d(TAG, "start")
-        Log.d(TAG, "$listener")
+        Log.d(tag, "start")
+        Log.d(tag, "$listener")
 
         this.listener = listener
         lastChanged = System.currentTimeMillis()
@@ -111,8 +111,8 @@ open class RotationRecogniser(val context: Context) {
     }
 
 
-    val standardGravity = SensorManager.STANDARD_GRAVITY
-    val thresholdGraqvity = standardGravity / 1.3
+    private val standardGravity = SensorManager.STANDARD_GRAVITY
+    private val thresholdGravity = standardGravity / 1.3
 
     private fun process(event: RxSensorEvent) {
         processState(event)
@@ -132,10 +132,10 @@ open class RotationRecogniser(val context: Context) {
         var currentState = previousState
 
         when {
-            z >= thresholdGraqvity -> currentState = State.UP
-            z <= -thresholdGraqvity -> currentState = State.DOWN
-            y >= thresholdGraqvity -> currentState = State.TOWARDS
-            y <= -thresholdGraqvity -> currentState = State.AWAY
+            z >= thresholdGravity -> currentState = State.UP
+            z <= -thresholdGravity -> currentState = State.DOWN
+            y >= thresholdGravity -> currentState = State.TOWARDS
+            y <= -thresholdGravity -> currentState = State.AWAY
 
             !isPickUp && y >= 1.0 -> currentState = State.PICKED_UP
         }
@@ -150,16 +150,17 @@ open class RotationRecogniser(val context: Context) {
         Log.d("State", "$currentState")
 
         if(currentState == State.PICKED_UP) {
-            Log.d(TAG, "OnPickUp")
+            Log.d(tag, "OnPickUp")
             onPickUp()
         } else if (currentState == State.DOWN) {
             //entering
             enterState = previousState
-            Log.d(TAG, "prev: $previousState current: $enterState")
+            Log.d(tag, "prev: $previousState current: $enterState")
             //change image
             when (enterState) {
                 State.TOWARDS -> goBack()
                 State.AWAY -> goForward()
+                else -> Log.d(tag,"Changed State to Unknown")
             }
 
         } else if (previousState == State.DOWN) {
@@ -169,6 +170,7 @@ open class RotationRecogniser(val context: Context) {
                 when (enterState) {
                     State.TOWARDS -> goForward()
                     State.AWAY -> goBack()
+                    else -> Log.d(tag,"Changed State to Unknown")
                 }
             }
         }
@@ -183,7 +185,7 @@ open class RotationRecogniser(val context: Context) {
             timeoutRunnable = Runnable {
 
                 if ((System.currentTimeMillis() - lastChanged) >= timeoutDuration) {
-                    Log.d(TAG, "onstanby")
+                    Log.d(tag, "onstanby")
                     isPickUp = false
                     onStandby = true
                     listener?.onStandby()
@@ -197,17 +199,17 @@ open class RotationRecogniser(val context: Context) {
     }
 
     private fun goForward() {
-        Log.d(TAG, "goforward")
+        Log.d(tag, "goforward")
         listener?.onRotateUp()
     }
 
     private fun goBack() {
-        Log.d(TAG, "goback")
+        Log.d(tag, "goback")
         listener?.onRotateDown()
     }
 
     private fun onPickUp() {
-        Log.d(TAG, "onpickup")
+        Log.d(tag, "onpickup")
         isPickUp = true
         listener?.onPickUp()
 
@@ -217,8 +219,8 @@ open class RotationRecogniser(val context: Context) {
 
     class ObservableList<T> {
 
-        protected val list: MutableList<T>
-        protected val onAdd: PublishSubject<T>
+        val list: MutableList<T>
+        private val onAdd: PublishSubject<T>
         val observable: Observable<T>
             get() = onAdd
 

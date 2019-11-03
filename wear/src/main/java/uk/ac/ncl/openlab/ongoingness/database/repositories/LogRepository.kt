@@ -8,7 +8,7 @@ class LogRepository(private val logDao: LogDao) {
 
     @WorkerThread
     suspend fun insert(log: Log) {
-        logDao.insert(log);
+        logDao.insert(log)
     }
 
     @WorkerThread

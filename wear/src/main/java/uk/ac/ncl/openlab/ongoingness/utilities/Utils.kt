@@ -1,5 +1,6 @@
 package uk.ac.ncl.openlab.ongoingness.utilities
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -16,6 +17,7 @@ import java.io.*
 import java.net.NetworkInterface
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
 const val minBandwidthKbps: Int = 320
 const val TAG: String = "Utils"
@@ -30,7 +32,7 @@ fun clearMediaFolder(context: Context) {
 }
 
 fun deleteFile(context: Context, filename: String) {
-    File(context.filesDir, filename)?.delete()
+    File(context.filesDir, filename).delete()
 }
 
 fun persistBitmap(bitmap: Bitmap, filename:String, context: Context){
@@ -108,7 +110,7 @@ fun getMacAddress(): String {
     try {
         val all: List<NetworkInterface> = Collections.list(NetworkInterface.getNetworkInterfaces())
         for (nif: NetworkInterface in all) {
-            if (nif.name.toLowerCase() != "wlan0") continue
+            if (nif.name.toLowerCase(Locale.getDefault()) != "wlan0") continue
 
             val macBytes: ByteArray = nif.hardwareAddress ?: return ""
 
@@ -126,17 +128,15 @@ fun getMacAddress(): String {
 }
 
 fun getBatteryLevel(context: Context): Float? {
-    val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
-        context.registerReceiver(null, ifilter)
+    val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { filter ->
+        context.registerReceiver(null, filter)
     }
 
-    val batteryPct: Float? = batteryStatus?.let { intent ->
+    return batteryStatus?.let { intent ->
         val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
         val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
         level / scale.toFloat()
     }
-
-    return batteryPct
 }
 
 fun calculateNextDailyRequestTimeDiff(): Long {
@@ -158,12 +158,12 @@ fun calculateNextDailyRequestTimeDiff(): Long {
 
 fun addPullMediaWorkRequest(context: Context) {
 
-    var constraints = Constraints.Builder()
+    val constraints = Constraints.Builder()
             .setRequiresCharging(true)
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-    var timeDiff = calculateNextDailyRequestTimeDiff()
+    val timeDiff = calculateNextDailyRequestTimeDiff()
 
     val dailyWorkRequest = OneTimeWorkRequestBuilder<PullMediaWorker>()
             .setInitialDelay(timeDiff, TimeUnit.MILLISECONDS)
@@ -176,12 +176,12 @@ fun addPullMediaWorkRequest(context: Context) {
 
 fun addPushLogsWorkRequest(context: Context) {
 
-    var constraints = Constraints.Builder()
+    val constraints = Constraints.Builder()
             .setRequiresCharging(true)
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-    var timeDiff = calculateNextDailyRequestTimeDiff()
+    val timeDiff = calculateNextDailyRequestTimeDiff()
 
     val dailyWorkRequest = OneTimeWorkRequestBuilder<PushLogsWorker>()
             .setInitialDelay(timeDiff, TimeUnit.MILLISECONDS)
@@ -190,16 +190,5 @@ fun addPushLogsWorkRequest(context: Context) {
 
     WorkManager.getInstance(context).enqueue(dailyWorkRequest)
 
-}
-
-const val PREFS = "uk.ac.ncl.openlab.ongoingness.utilities.PREFS"
-const val PREFS_CONFIGURED = "uk.ac.ncl.openlab.ongoingness.utilities.PREFS_CONFIGURED"
-
-fun isConfigured(context: Context): Boolean{
-    return context.getSharedPreferences(PREFS, 0).getBoolean(PREFS_CONFIGURED,false)
-}
-
-fun setConfigured(context: Context, configured:Boolean){
-    context.getSharedPreferences(PREFS, 0).edit().putBoolean(PREFS_CONFIGURED,configured).apply()
 }
 

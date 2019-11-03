@@ -107,7 +107,7 @@ class API {
             .writeTimeout(30, TimeUnit.MINUTES)
             .readTimeout(30, TimeUnit.MINUTES)
             .connectionSpecs(
-                    Arrays.asList(ConnectionSpec.MODERN_TLS,
+                    listOf(ConnectionSpec.MODERN_TLS,
                             ConnectionSpec.CLEARTEXT))
             .addInterceptor { chain ->
 
@@ -117,7 +117,7 @@ class API {
 
                 var tryCount = 0
 
-                while(!response!!.isSuccessful && tryCount < 3) {
+                while(!response.isSuccessful && tryCount < 3) {
                     Log.d("intercept", "Request is not successful - $tryCount")
                     tryCount++
                     response = chain.proceed(request)

@@ -19,9 +19,9 @@ class RevealRecogniser(private val context: Context) : Observable() {
 
     enum class State{
         STANDBY,
-        AWAKECOVER,
+        AWAKE_COVER,
         AWAKE,
-        PRECOVERED,
+        PRE_COVERED,
         COVERED,
         ACTIVE,
         OFF,
@@ -137,7 +137,7 @@ class RevealRecogniser(private val context: Context) : Observable() {
     }
 
     private fun enabled():Boolean{
-        return arrayListOf(State.ACTIVE,State.STANDBY,State.COVERED,State.AWAKE,State.PRECOVERED, State.AWAKECOVER).contains(currentState)
+        return arrayListOf(State.ACTIVE,State.STANDBY,State.COVERED,State.AWAKE,State.PRE_COVERED, State.AWAKE_COVER).contains(currentState)
     }
 
     private fun updateState(state: State){
@@ -172,7 +172,7 @@ class RevealRecogniser(private val context: Context) : Observable() {
                 lastSampleTime = System.currentTimeMillis()
                 lastSample = event
 
-                if (buffer!!.size == bufferSize)
+                if (buffer.size == bufferSize)
                     buffer.removeFirst()
                 buffer.addLast(Pair(event.timestamp, event.values[0]))
 
@@ -201,7 +201,7 @@ class RevealRecogniser(private val context: Context) : Observable() {
             lightChange = LightChange.NONE
         */
 
-       var lightChanged: Boolean = false
+       var lightChanged = false
 
         if(currentLightLevel != LightLevel.HIGH && lightChange == LightChange.INCREASE) {
             currentLightLevel = LightLevel.HIGH
@@ -238,22 +238,22 @@ class RevealRecogniser(private val context: Context) : Observable() {
                 if(currentLightLevel == LightLevel.LOW && lightChanged) {
                     Log.d("Standby", "Light decrease" )
                     lastCoverSampleTime = event.timestamp
-                    updateState(State.AWAKECOVER)
+                    updateState(State.AWAKE_COVER)
                 }
 
             }
 
-            State.PRECOVERED -> {
+            State.PRE_COVERED -> {
                 Log.d("Precovered", "enter" )
                 if(currentLightLevel == LightLevel.LOW && lightChanged && wokeUpAndShown) {
-                    Log.d("PRECOVERED", "Light decrease" )
+                    Log.d("PRE_COVERED", "Light decrease" )
                     lastCoverSampleTime = event.timestamp
                     updateState(State.COVERED)
                 }
 
             }
 
-            State.AWAKECOVER -> {
+            State.AWAKE_COVER -> {
 
                 if(currentLightLevel == LightLevel.HIGH && lightChanged) {
                     updateState(State.STANDBY)
@@ -266,27 +266,22 @@ class RevealRecogniser(private val context: Context) : Observable() {
 
             State.COVERED -> {
 
-                when(previousPreviousState) {
+                if(previousPreviousState == State.ACTIVE){
 
-                    State.ACTIVE -> {
-
-                        if(currentLightLevel == LightLevel.HIGH && lightChanged) {
-                            updateState(State.ACTIVE)
+                    if(currentLightLevel == LightLevel.HIGH && lightChanged) {
+                        updateState(State.ACTIVE)
+                        shortRevealHappened = false
+                    } else if (currentLightLevel== LightLevel.LOW && !lightChanged) {
+                        if (event.timestamp - lastCoverSampleTime > 5000000000 && shortRevealHappened) {
+                            notifyEvent(Events.SLEEP)
+                            updateState(State.STANDBY)
                             shortRevealHappened = false
-                        } else if (currentLightLevel== LightLevel.LOW && !lightChanged) {
-                            if (event.timestamp - lastCoverSampleTime > 5000000000 && shortRevealHappened) {
-                                notifyEvent(Events.SLEEP)
-                                updateState(State.STANDBY)
-                                shortRevealHappened = false
-                                wokeUpAndShown = false
-                            } else if (event.timestamp - lastCoverSampleTime > 100000000 && !shortRevealHappened) {
-                                notifyEvent(Events.SHORT_REVEAL)
-                                shortRevealHappened = true
-                            }
+                            wokeUpAndShown = false
+                        } else if (event.timestamp - lastCoverSampleTime > 100000000 && !shortRevealHappened) {
+                            notifyEvent(Events.SHORT_REVEAL)
+                            shortRevealHappened = true
                         }
-
                     }
-
                 }
             }
 
@@ -299,13 +294,14 @@ class RevealRecogniser(private val context: Context) : Observable() {
 
             }
 
+            else -> {Log.d(TAG,"UNKNOWN  STATE")}
         }
     }
 
     private fun getLightChange(value: Float): LightChange {
 
         var minWindowTop: Float = min + min / 2
-        var maxWindowBottom: Float = max - max / 2
+        val maxWindowBottom: Float = max - max / 2
 
 
         if(minWindowTop < 20) {
@@ -363,9 +359,9 @@ class RevealRecogniser(private val context: Context) : Observable() {
             updateState(State.STANDBY)
             notifyEvent(Events.STARTED)
         } else if(currentState == State.ACTIVE && currentOrientation == Orientation.UP) {
-            updateState(State.PRECOVERED)
+            updateState(State.PRE_COVERED)
             notifyEvent(Events.HIDE)
-        } else if(currentState == State.PRECOVERED && currentOrientation == Orientation.TOWARDS) {
+        } else if(currentState == State.PRE_COVERED && currentOrientation == Orientation.TOWARDS) {
             updateState(State.ACTIVE)
             notifyEvent(Events.SHOW)
         } else if(currentState == State.ACTIVE && currentOrientation == Orientation.TOWARDS) {
@@ -386,7 +382,6 @@ class RevealRecogniser(private val context: Context) : Observable() {
     companion object {
         private const val standardGravity = SensorManager.STANDARD_GRAVITY
         const val thresholdGravity = standardGravity / 1.3
-        const val LIGHT_DELTA_THRESHOLD = 0.35F
         const val TAG = "RevealRecogniserOld"
     }
 

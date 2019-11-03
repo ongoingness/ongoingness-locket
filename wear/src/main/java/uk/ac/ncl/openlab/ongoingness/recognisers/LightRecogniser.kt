@@ -6,14 +6,10 @@ import android.hardware.SensorManager
 import android.util.Log
 import com.gvillani.rxsensors.RxSensor
 import com.gvillani.rxsensors.RxSensorEvent
-import com.gvillani.rxsensors.RxSensorFilter
-import com.gvillani.rxsensors.RxSensorTransformer
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
-import java.io.File
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class LightRecogniser(private val context: Context): Observable() {
 
@@ -31,6 +27,8 @@ class LightRecogniser(private val context: Context): Observable() {
     private var lastCoverSampleTime: Long = System.currentTimeMillis()
 
     private var state: String = "None"
+
+    private val bufferCount = 3
 
     fun start() {
 
@@ -55,20 +53,20 @@ class LightRecogniser(private val context: Context): Observable() {
         if(event.timestamp-lastSampleTime > 10000000) {
 
 
-            if (buffer!!.size == bufferSize)
+            if (buffer.size == bufferSize)
                 buffer.removeFirst()
             buffer.addLast(Pair(event.timestamp, event.values[0]))
 
 
-            var newState: String = getNearestState(event.values[0])
+            val newState: String = getNearestState(event.values[0])
 
-            var stateChanged: Boolean = newState != state
+            val stateChanged: Boolean = newState != state
 
             if(stateChanged)
                 Log.d("testing", "$state    ->    $newState")
 
 
-            if( !stateChanged && state == "Closed" && lastAreCover(3)) {
+            if( !stateChanged && state == "Closed" && lastAreCover(bufferCount)) {
 
                 if (event.timestamp - lastCoverSampleTime > 5000000000 /*5 seconds*/) {
                     Log.d("TAF", "Long_COVER---------------------------------")
@@ -95,8 +93,8 @@ class LightRecogniser(private val context: Context): Observable() {
 
     private fun getNearestState(value: Float): String {
 
-        var minWindowTop: Float = min + min / 2
-        var maxWindowBottom: Float = max - max / 2
+        val minWindowTop: Float = min + min / 2
+        val maxWindowBottom: Float = max - max / 2
 
         //Log.d("TAG", "minWindowTop: $minWindowTop   maxWindowBottom: $maxWindowBottom")
 

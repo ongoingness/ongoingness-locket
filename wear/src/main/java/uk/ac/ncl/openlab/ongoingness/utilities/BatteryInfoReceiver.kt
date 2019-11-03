@@ -13,39 +13,34 @@ import kotlin.math.abs
 
 const val BROADCAST_INTENT_NAME: String = "BATTERY_INFO"
 
-class BatteryInfoReceiver {
+class BatteryInfoReceiver(private var context: Context, private var screenSize: Int) {
 
     private var chargeReceiver: BroadcastReceiver
     private var batteryReceiver: BroadcastReceiver
-    private var context: Context
-    private var screenSize: Int
 
     private var lastBatteryValue: Float = 0f
     private var checkingChargeReceiverOn = false
     private var checkingBatteryReceiverOn: Boolean = false
 
-    private val CHARGE_DELTA: Float = 0.01f
+    private val chargeDelta: Float = 0.01f
     
-    private val TAG = "BatteryInfoReceiver"
+    private val tag = "BatteryInfoReceiver"
     var currentBitmapByteArray: ByteArray
 
     private var n = 0
 
-    constructor(context: Context, screenSize: Int) {
-        this.context = context
-        this.screenSize = screenSize
+    init {
         this.currentBitmapByteArray = getDefaultCover()
-
         this.chargeReceiver = object:BroadcastReceiver() {
 
             override fun onReceive(context: Context, intent: Intent) {
 
                 if(intent.action == Intent.ACTION_POWER_CONNECTED) {
-                    Log.d(TAG, " Connected")
+                    Log.d(tag, " Connected")
                     Logger.log(LogType.CHARGER_CONNECTED, listOf(), context)
                     startCheckingBatteryValues()
                 } else if(intent.action == Intent.ACTION_POWER_DISCONNECTED) {
-                    Log.d(TAG, " Disconnected")
+                    Log.d(tag, " Disconnected")
                     Logger.log(LogType.CHARGER_DISCONNECTED, listOf(), context)
                     if(checkingBatteryReceiverOn)
                         stopCheckingBatteryValues()
@@ -54,31 +49,29 @@ class BatteryInfoReceiver {
 
             }
         }
-
         this.batteryReceiver = object:BroadcastReceiver() {
 
             override fun onReceive(context: Context, intent: Intent) {
 
-                val batteryPct: Float? = intent?.let { intent ->
-                    val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-                    val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+                val batteryPct: Float? = intent.let { i ->
+                    val level: Int = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                    val scale: Int = i.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
                     level / scale.toFloat()
                 }
 
-                Log.d(TAG, "Battery $batteryPct")
+                Log.d(tag, "Battery $batteryPct")
 
-                if(batteryPct != null && abs(batteryPct - lastBatteryValue) > CHARGE_DELTA) {
+                if(batteryPct != null && abs(batteryPct - lastBatteryValue) > chargeDelta) {
                     sendBackgroundBroadcast(getChargingBackground(batteryPct), true)
                     lastBatteryValue = batteryPct
                 }
             }
         }
-
     }
 
     private fun getDefaultCover(): ByteArray {
-        var bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.cover), screenSize, screenSize, false)
-        var bs = ByteArrayOutputStream()
+        val bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.cover), screenSize, screenSize, false)
+        val bs = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 50, bs)
         currentBitmapByteArray = bs.toByteArray()
         return currentBitmapByteArray
@@ -96,12 +89,12 @@ class BatteryInfoReceiver {
     }
 
     private fun sendBackgroundBroadcast(bitmap: ByteArray, chargingState: Boolean) {
-        var broadcastIntent = Intent(BROADCAST_INTENT_NAME)
+        val broadcastIntent = Intent(BROADCAST_INTENT_NAME)
         broadcastIntent.putExtra("background", bitmap)
         broadcastIntent.putExtra("chargingState", chargingState)
         context.sendBroadcast(broadcastIntent)
 
-        Log.d(TAG, "Broadcast sent $n")
+        Log.d(tag, "Broadcast sent $n")
         n++
 
     }
@@ -137,21 +130,21 @@ class BatteryInfoReceiver {
     private fun getChargingBackground(battery: Float): ByteArray {
 
         //First layer
-        var transparent = Bitmap.createBitmap(screenSize, screenSize,Bitmap.Config.ARGB_8888)
-        var canvasT = Canvas(transparent)
+        val transparent = Bitmap.createBitmap(screenSize, screenSize,Bitmap.Config.ARGB_8888)
+        val canvasT = Canvas(transparent)
         canvasT.drawColor(Color.BLACK)
 
         //Second Layer
-        var mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.flower_pattern_white), screenSize, screenSize, false)
+        val mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.flower_pattern_white), screenSize, screenSize, false)
 
         //Third Layer
-        var blue = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
+        val blue = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
 
-        var canvasB = Canvas(blue)
+        val canvasB = Canvas(blue)
 
-        var circleSize = (battery * screenSize) / 2
+        val circleSize = (battery * screenSize) / 2
 
-        var circlePaint = Paint().apply { /*color = Color.parseColor("#009FE3")*/}
+        val circlePaint = Paint().apply { /*color = Color.parseColor("#009FE3")*/}
         //circlePaint.shader = LinearGradient(0f, 0f, 0f, screenSize.toFloat(), Color.BLACK, Color.parseColor("#009FE3"), Shader.TileMode.MIRROR)
         //circlePaint.shader = RadialGradient(screenSize / 2F, screenSize / 2F, circleSize + circleSize / 2, Color.parseColor("#009FE3"), Color.BLACK, Shader.TileMode.MIRROR)
 
@@ -159,22 +152,22 @@ class BatteryInfoReceiver {
 
         canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize,  circlePaint)
 
-        var borderPaint = Paint().apply {color = Color.parseColor("#009FE3"); style = Paint.Style.STROKE; strokeWidth = 10f }
+        val borderPaint = Paint().apply {color = Color.parseColor("#009FE3"); style = Paint.Style.STROKE; strokeWidth = 10f }
         canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize, borderPaint)
 
 
 
-        var alphaPaint = Paint()
+        val alphaPaint = Paint()
         alphaPaint.alpha = 250
         alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
 
         canvasB.drawBitmap(mBackgroundBitmap, Matrix(), alphaPaint)
 
 
-        var bitmap = overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
+        val bitmap = overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
 
-        var bs = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 50, bs);
+        val bs = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 50, bs)
 
         currentBitmapByteArray = bs.toByteArray()
 
@@ -184,13 +177,13 @@ class BatteryInfoReceiver {
 
     private fun overlayBitmaps(b1: Bitmap, b2: Bitmap, b3: Bitmap, screenSize: Int): Bitmap {
 
-        var bmOverlay: Bitmap  = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
-        var canvas = Canvas(bmOverlay)
+        val bmOverlay: Bitmap  = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmOverlay)
 
-        var secondLayerAlphaPaint = Paint()
+        val secondLayerAlphaPaint = Paint()
         secondLayerAlphaPaint.alpha = 80
 
-        var alphaPaint = Paint()
+        val alphaPaint = Paint()
         alphaPaint.alpha = 250
         alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
 

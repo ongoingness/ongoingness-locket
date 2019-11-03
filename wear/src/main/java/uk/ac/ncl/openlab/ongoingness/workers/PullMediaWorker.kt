@@ -1,5 +1,6 @@
 package uk.ac.ncl.openlab.ongoingness.workers
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -11,6 +12,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.Response
 import org.json.JSONArray
+import org.json.JSONException
 import org.json.JSONObject
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.database.*
@@ -30,6 +32,7 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlin.math.log
 
 class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
 
@@ -39,11 +42,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
 
         when (FLAVOR) {
             "locket_touch" -> {
-                return if(pullMediaLocket(context)) {
-                    addPullMediaWorkRequest(context)
-                    Result.success()
-                } else
-                    Result.failure()
+                return if(pullMediaLocket(context)) Result.success() else Result.failure()
             }
 
             "refind" -> {
@@ -56,11 +55,12 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
 
     companion object {
 
+        @SuppressLint("SimpleDateFormat")
         fun pullMediaLocket(context: Context): Boolean {
 
             return runBlocking {
 
-                var result = suspendCoroutine<Boolean> { cont ->
+                val result = suspendCoroutine<Boolean> { cont ->
 
                     val api = API()
 
@@ -70,20 +70,20 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                     val mediaDateDao = WatchMediaRoomDatabase.getDatabase(context).mediaDateDao()
                     val mediaDateRepository = MediaDateRepository(mediaDateDao)
 
-                    var mediaList = watchMediaRepository.getAll().sortedWith(compareBy({ it.collection }, { it.order }))
+                    val mediaList = watchMediaRepository.getAll().sortedWith(compareBy({ it.collection }, { it.order }))
 
                     val callback = { response: Response? ->
 
-                        var stringResponse = response!!.body()?.string()
+                        val stringResponse = response!!.body()?.string()
                         val jsonResponse = JSONObject(stringResponse)
 
-                        var code = jsonResponse.getString("code")
+                        val code = jsonResponse.getString("code")
 
                         if (code.startsWith('2')) {
 
-                            var payload: JSONArray = jsonResponse.getJSONArray("payload")
+                            val payload: JSONArray = jsonResponse.getJSONArray("payload")
 
-                            var toBeRemoved = mediaList.toTypedArray().copyOf().toMutableList()
+                            val toBeRemoved = mediaList.toTypedArray().copyOf().toMutableList()
 
                             var mediaFetch = 0
 
@@ -148,9 +148,9 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                                                     watchMediaRepository.insert(newMedia)
                                                     addMediaDates(mediaDateRepository, newMedia._id, times)
                                                     if (mediaFetch == payload.length()) {
-                                                        for (media in toBeRemoved) {
-                                                            watchMediaRepository.delete(media._id)
-                                                            deleteFile(context, media.path)
+                                                        for (m in toBeRemoved) {
+                                                            watchMediaRepository.delete(m._id)
+                                                            deleteFile(context, m.path)
                                                         }
                                                         cont.resume(true)
                                                     }
@@ -188,7 +188,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
 
         //TODO
         // Probably not working
-        private fun pullMediaRefind(context: Context): Boolean {
+        fun pullMediaRefind(context: Context): Boolean {
 
             val api = API()
 
@@ -197,8 +197,8 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
 
             var result = false
 
-            var mediaList = repository.getAll().sortedBy { it.order }
-            var currentImageID: String
+            val mediaList = repository.getAll().sortedBy { it.order }
+            val currentImageID: String
             currentImageID = if (mediaList.isNullOrEmpty()) {
                 "test"
             } else {
@@ -206,7 +206,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
             }
             api.fetchInferredMedia(currentImageID) { response ->
 
-                var stringResponse = response!!.body()?.string()
+                val stringResponse = response!!.body()?.string()
 
                 if (stringResponse != "[]") {
 
@@ -217,49 +217,66 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
 
                     val jsonResponse = JSONObject(stringResponse)
 
-                    var payload: JSONArray = jsonResponse.getJSONArray("payload")
+                    val payload: JSONArray = jsonResponse.getJSONArray("payload")
                     if (payload.length() > 0) {
 
 
                         //Set present Image
-                        var presentImage: JSONObject = payload.getJSONObject(0)
-                        var newWatchMedia = WatchMedia(presentImage.getString("_id"),
-                                presentImage.getString("path"),
-                                presentImage.getString("locket"),
-                                presentImage.getString("mimetype"),
-                                0,
-                                Date(DateFormat.getInstance().parse(presentImage.getString("createAt")).time)) //fixme check the name from the api json response
+                        val presentImage: JSONObject = payload.getJSONObject(0)
 
-                        api.fetchBitmap(newWatchMedia._id) { body ->
-                            val inputStream = body?.byteStream()
-                            val image = BitmapFactory.decodeStream(inputStream)
-                            val file = File(context.filesDir, newWatchMedia.path)
-                            lateinit var stream: OutputStream
-                            try {
-                                stream = FileOutputStream(file)
-                                image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                stream.flush()
-                            } catch (e: IOException) { // Catch the exception
-                                e.printStackTrace()
-                            } finally {
-                                stream.close()
-                                inputStream?.close()
-                                GlobalScope.launch {
-                                    repository.insert(newWatchMedia)
+
+                        var id = "test"
+                        var collection = "present"
+                        var  date = Date(System.currentTimeMillis())
+                        try{
+                            id = presentImage.getString("id")
+                            collection = presentImage.getString("locket")
+                            date = Date(DateFormat.getInstance().parse(presentImage.getString("createdAt")).time)
+                        }catch (e:JSONException){
+                            Log.e("TEST",e.toString())
+                        }
+
+                        val  newWatchMedia = WatchMedia(id,
+                                    presentImage.getString("path"),
+                                    collection,
+                                    presentImage.getString("mimetype"),
+                                    0,
+                                    date) //fixme check the name from the api json response
+
+
+
+
+                            api.fetchBitmap(newWatchMedia._id) { body ->
+                                val inputStream = body?.byteStream()
+                                val image = BitmapFactory.decodeStream(inputStream)
+                                val file = File(context.filesDir, newWatchMedia.path)
+                                lateinit var stream: OutputStream
+                                try {
+                                    stream = FileOutputStream(file)
+                                    image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
+                                    stream.flush()
+                                } catch (e: IOException) { // Catch the exception
+                                    e.printStackTrace()
+                                } finally {
+                                    stream.close()
+                                    inputStream?.close()
+                                    GlobalScope.launch {
+                                        repository.insert(newWatchMedia)
+                                    }
                                 }
                             }
-                        }
+
 
                         val pastImages = mutableListOf<WatchMedia>()
                         for (i in 1..5) {
                             try {
-                                var pastImage: JSONObject = payload.getJSONObject(i)
+                                val pastImage: JSONObject = payload.getJSONObject(i)
                                 pastImages.add(WatchMedia(pastImage.getString("id"),
                                         pastImage.getString("path"),
                                         "past",
                                         pastImage.getString("mimetype"),
                                         i,
-                                        Date(DateFormat.getInstance().parse(pastImage.getString("createAt")).time))) //fixme check the name from the api json response
+                                        Date(DateFormat.getInstance().parse(pastImage.getString("createdAt")).time))) //fixme check the name from the api json response
                             } catch (e: java.lang.Exception) {
                                 e.printStackTrace()
                             }

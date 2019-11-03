@@ -14,12 +14,6 @@ import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.views.MainActivity
 
-
-// Sync interval constants
-const val SECONDS_PER_MINUTE = 60L
-const val SYNC_INTERVAL_IN_MINUTES = 60L
-const val SYNC_INTERVAL = 5L //SYNC_INTERVAL_IN_MINUTES * SECONDS_PER_MINUTE
-
 /**
  * Important Note: Because watch face apps do not have a default Activity in
  * their project, you will need to set your Configurations to
@@ -73,7 +67,7 @@ class WatchFace : CanvasWatchFaceService() {
                         override fun onReceive(context: Context, intent: Intent) {
 
                             if (intent.hasExtra("background")) {
-                                var bitmap = BitmapFactory.decodeByteArray(
+                                val bitmap = BitmapFactory.decodeByteArray(
                                         intent.getByteArrayExtra("background"), 0,
                                         intent.getByteArrayExtra("background").size)
 

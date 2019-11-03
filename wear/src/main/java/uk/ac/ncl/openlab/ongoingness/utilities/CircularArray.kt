@@ -66,12 +66,6 @@ class CircularArray<T> : Iterable<T>, Cloneable {
                 else -> arr[index]
             } as T
 
-    /**
-     * This array as a list.
-     */
-    @Suppress("UNCHECKED_CAST")
-    fun toList(): List<T> = iterator().asSequence().toList()
-
     public override fun clone(): CircularArray<T> = CircularArray(this)
 
     override fun iterator(): Iterator<T> = object : Iterator<T> {

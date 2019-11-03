@@ -42,8 +42,10 @@ android {
         }
         locket_touch {
             dimension = 'version'
-            applicationIdSuffix = '.locket_touch'
-            versionNameSuffix = '-locket_touch'
+            applicationIdSuffix = '.anew_touch'
+            versionNameSuffix = '-anew_touch'
+            resValue "string", "app_name", "Anew"
+
         }
         locket_touch_s {
             dimension = 'version'
