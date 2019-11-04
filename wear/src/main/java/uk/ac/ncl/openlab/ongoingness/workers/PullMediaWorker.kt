@@ -225,27 +225,13 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                         val presentImage: JSONObject = payload.getJSONObject(0)
 
 
-                        var id = "test"
-                        var collection = "present"
-                        var  date = Date(System.currentTimeMillis())
-                        try{
-                            id = presentImage.getString("id")
-                            collection = presentImage.getString("locket")
-                            date = Date(DateFormat.getInstance().parse(presentImage.getString("createdAt")).time)
-                        }catch (e:JSONException){
-                            Log.e("TEST",e.toString())
-                        }
-
-                        val  newWatchMedia = WatchMedia(id,
+                        val  newWatchMedia = WatchMedia(presentImage.getString("_id"),
                                     presentImage.getString("path"),
-                                    collection,
+                                    presentImage.getString("locket"),
                                     presentImage.getString("mimetype"),
                                     0,
-                                    date) //fixme check the name from the api json response
-
-
-
-
+                                    Date(System.currentTimeMillis())) //fixme check the name from the api json response
+                        
                             api.fetchBitmap(newWatchMedia._id) { body ->
                                 val inputStream = body?.byteStream()
                                 val image = BitmapFactory.decodeStream(inputStream)
@@ -276,7 +262,7 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                                         "past",
                                         pastImage.getString("mimetype"),
                                         i,
-                                        Date(DateFormat.getInstance().parse(pastImage.getString("createdAt")).time))) //fixme check the name from the api json response
+                                        Date(System.currentTimeMillis()))) //fixme check the name from the api json response
                             } catch (e: java.lang.Exception) {
                                 e.printStackTrace()
                             }
