@@ -47,10 +47,10 @@ class MainPresenter {
 
         when(FLAVOR) {
             "refind" -> {
-                mediaCollection = watchMediaViewModel.allWatchMedia().sortedWith(compareBy({it.collection}, {it.order}))
+                mediaCollection = watchMediaViewModel.allWatchMedia().sortedWith(compareBy({it.collection}, {it.order})).reversed()
             }
 
-            "locket_touch" -> {
+            "locket_touch", "locket_touch_inverted" -> {
                 mediaCollection = watchMediaViewModel.allWatchMedia().sortedWith(compareBy({it.collection}, {it.createdAt}))
             }
 
@@ -89,7 +89,12 @@ class MainPresenter {
      * @param state either is fetching data from the server or not
      */
     fun pullingData(state: Boolean) {
-        if (state) hideContent(CoverType.WHITE) else displayContent()
+        if (state)
+            hideContent(CoverType.WHITE)
+        else {
+            restartIndex()
+            displayContent()
+        }
     }
 
     /**
@@ -203,7 +208,7 @@ class MainPresenter {
                 coverBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover), view!!.getScreenSize(), view!!.getScreenSize(), false)
                 coverWhiteBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover_white), view!!.getScreenSize(), view!!.getScreenSize(), false)
             }
-            "locket_touch" -> {
+            "locket_touch", "locket_touch_inverted" -> {
                 coverBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover), view!!.getScreenSize(), view!!.getScreenSize(), false)
                 coverWhiteBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(view!!.getContext().resources, R.drawable.cover_white), view!!.getScreenSize(), view!!.getScreenSize(), false)
             }

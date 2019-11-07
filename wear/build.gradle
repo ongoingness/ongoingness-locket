@@ -47,6 +47,12 @@ android {
             resValue "string", "app_name", "Anew"
 
         }
+        locket_touch_inverted {
+            dimension = 'version'
+            applicationIdSuffix = '.anew_touch_inv'
+            versionNameSuffix = '-anew_touch_inv'
+            resValue "string", "app_name", "Anew Inverted"
+        }
         locket_touch_s {
             dimension = 'version'
             applicationIdSuffix = '.locket_touch_s'

@@ -57,7 +57,7 @@ class WatchFace : CanvasWatchFaceService() {
             initializeBackground()
 
             when(FLAVOR) {
-                "locket_touch" -> {
+                "locket_touch", "locket_touch_inverted" -> {
                     batteryInfoReceiver = BatteryInfoReceiver(applicationContext, getScreenSize())
                     batteryInfoReceiver.start()
 
@@ -87,7 +87,7 @@ class WatchFace : CanvasWatchFaceService() {
         override fun onDestroy() {
             super.onDestroy()
             when(FLAVOR) {
-                "locket_touch" -> {
+                "locket_touch", "locket_touch_inverted" -> {
                     batteryInfoReceiver.stop()
                     unregisterReceiver(bitmapReceiver)
                 }
@@ -166,7 +166,7 @@ class WatchFace : CanvasWatchFaceService() {
 
             when(FLAVOR){
                 "locket" ->{ coverID = R.drawable.cover }
-                "locket_touch" ->{ coverID = R.drawable.cover }
+                "locket_touch", "locket_touch_inverted" ->{ coverID = R.drawable.cover }
                 "refind" -> { coverID = R.drawable.refind_cover }
             }
 
@@ -187,7 +187,7 @@ class WatchFace : CanvasWatchFaceService() {
             intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
             when(FLAVOR) {
-                "locket_touch" -> {
+                "locket_touch", "locket_touch_inverted" -> {
                     intent.putExtra("background", batteryInfoReceiver.currentBitmapByteArray)
                     intent.putExtra("broadcastName", BROADCAST_INTENT_NAME)
                 }

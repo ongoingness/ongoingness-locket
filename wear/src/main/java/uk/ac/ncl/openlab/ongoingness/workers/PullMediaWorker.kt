@@ -41,8 +41,12 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
     override fun doWork(): Result {
 
         when (FLAVOR) {
-            "locket_touch" -> {
-                return if(pullMediaLocket(context)) Result.success() else Result.failure()
+            "locket_touch", "locket_touch_inverted" -> {
+                return if(pullMediaLocket(context)) {
+                    addPullMediaWorkRequest(context)
+                    Result.success()
+                } else
+                    Result.failure()
             }
 
             "refind" -> {
@@ -152,7 +156,11 @@ class PullMediaWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, para
                                                             watchMediaRepository.delete(m._id)
                                                             deleteFile(context, m.path)
                                                         }
-                                                        cont.resume(true)
+                                                        try {
+                                                            cont.resume(true)
+                                                        } catch (e : Exception) {
+                                                            Log.d("PullMedia", "$e")
+                                                        }
                                                     }
                                                 }
                                                 job.join()

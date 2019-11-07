@@ -13,6 +13,7 @@ import com.gvillani.rxsensors.RxSensorTransformer
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import java.util.*
 import kotlin.math.floor
 
@@ -145,6 +146,9 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
     }
 
     private fun notifyEvent(event: Events) {
+
+        Log.d("ss", "$event")
+
         setChanged()
         notifyObservers(event)
     }
@@ -153,7 +157,16 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
         val y = floor(event.values[1]).toInt()
         val z = floor(event.values[2]).toInt()
 
-        if( y >= 2 &&  z > -9 && z < 9)
+
+        var yEvaluation = false
+        when(FLAVOR) {
+            "locket_touch" -> yEvaluation = y >= 2
+            "locket_touch_inverted" -> yEvaluation = y <= -2
+        }
+
+        Log.d("gravity", "$y $z")
+
+        if (yEvaluation && z > -9 && z < 9)
             updateOrientation(Orientation.TOWARDS)
         else
             updateOrientation(Orientation.AWAY)
