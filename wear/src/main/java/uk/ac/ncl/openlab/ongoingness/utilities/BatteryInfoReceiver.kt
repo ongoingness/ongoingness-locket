@@ -23,6 +23,7 @@ class BatteryInfoReceiver(private var context: Context, private var screenSize: 
     private var checkingBatteryReceiverOn: Boolean = false
 
     private val chargeDelta: Float = 0.01f
+    var charging = false
     
     private val tag = "BatteryInfoReceiver"
     var currentBitmapByteArray: ByteArray
@@ -44,7 +45,7 @@ class BatteryInfoReceiver(private var context: Context, private var screenSize: 
                     Logger.log(LogType.CHARGER_DISCONNECTED, listOf(), context)
                     if(checkingBatteryReceiverOn)
                         stopCheckingBatteryValues()
-                    sendBackgroundBroadcast(getDefaultCover(), false)
+                    sendBackgroundBroadcast(getDefaultCover(), charging)
                 }
 
             }
@@ -62,7 +63,7 @@ class BatteryInfoReceiver(private var context: Context, private var screenSize: 
                 Log.d(tag, "Battery $batteryPct")
 
                 if(batteryPct != null && abs(batteryPct - lastBatteryValue) > chargeDelta) {
-                    sendBackgroundBroadcast(getChargingBackground(batteryPct), true)
+                    sendBackgroundBroadcast(getChargingBackground(batteryPct), charging)
                     lastBatteryValue = batteryPct
                 }
             }
@@ -94,6 +95,8 @@ class BatteryInfoReceiver(private var context: Context, private var screenSize: 
         broadcastIntent.putExtra("chargingState", chargingState)
         context.sendBroadcast(broadcastIntent)
 
+        Log.d("broadcast", "${broadcastIntent.extras}")
+
         Log.d(tag, "Broadcast sent $n")
         n++
 
@@ -107,7 +110,6 @@ class BatteryInfoReceiver(private var context: Context, private var screenSize: 
         }
         context.registerReceiver(chargeReceiver, filter)
         checkingChargeReceiverOn = true
-
     }
 
     private fun stopCheckingChargeState() {
@@ -119,12 +121,14 @@ class BatteryInfoReceiver(private var context: Context, private var screenSize: 
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED).apply {}
         context.registerReceiver(batteryReceiver, filter)
         checkingBatteryReceiverOn = true
+        charging = true
     }
 
     private fun stopCheckingBatteryValues() {
         context.unregisterReceiver(batteryReceiver)
         checkingBatteryReceiverOn = false
         lastBatteryValue = 0f
+        charging = false
     }
 
     private fun getChargingBackground(battery: Float): ByteArray {

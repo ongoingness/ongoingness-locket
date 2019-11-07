@@ -190,6 +190,7 @@ class WatchFace : CanvasWatchFaceService() {
                 "locket_touch", "locket_touch_inverted" -> {
                     intent.putExtra("background", batteryInfoReceiver.currentBitmapByteArray)
                     intent.putExtra("broadcastName", BROADCAST_INTENT_NAME)
+                    intent.putExtra("chargingState", batteryInfoReceiver.charging)
                 }
             }
 

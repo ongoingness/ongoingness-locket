@@ -120,7 +120,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
         notifyEvent(Events.STOPPED)
     }
 
-    private fun updateState(state: State){
+    fun updateState(state: State){
         synchronized(currentState) {
             if (state == currentState)
                 return //no change, so no need to notify of change
@@ -140,12 +140,11 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
             previousOrientation = currentOrientation
             currentOrientation = orientation
 
-
             Log.d(TAG, "Orientation Update: $currentOrientation")
         }
     }
 
-    private fun notifyEvent(event: Events) {
+    fun notifyEvent(event: Events) {
 
         Log.d("ss", "$event")
 
@@ -157,19 +156,25 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
         val y = floor(event.values[1]).toInt()
         val z = floor(event.values[2]).toInt()
 
+        Log.d("acc", "Y:$y Z:$z")
 
-        var yEvaluation = false
         when(FLAVOR) {
-            "locket_touch" -> yEvaluation = y >= 2
-            "locket_touch_inverted" -> yEvaluation = y <= -2
+            "locket_touch" -> {
+                if (y >= 2 && z > -9 && z < 9)
+                    updateOrientation(Orientation.TOWARDS)
+                else if (y > -2  && y < 2 && z > -9 && z < 9)
+                    updateOrientation(Orientation.AWAY)
+            }
+
+            "locket_touch_inverted" -> {
+                if (y <= -2 && z > -9 && z < 9)
+                    updateOrientation(Orientation.TOWARDS)
+                else if (y > 5 && z <= 8 )//y < 2 && y > -2 && z > -9 && z < 9)
+                    updateOrientation(Orientation.AWAY)
+            }
         }
 
-        Log.d("gravity", "$y $z")
 
-        if (yEvaluation && z > -9 && z < 9)
-            updateOrientation(Orientation.TOWARDS)
-        else
-            updateOrientation(Orientation.AWAY)
 
         gravityStateChecker()
     }
@@ -179,7 +184,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
         if (currentState == State.OFF && currentOrientation == Orientation.TOWARDS) {
             updateState(State.STANDBY)
             notifyEvent(Events.STARTED)
-        } else if (currentState != State.OFF && currentOrientation == Orientation.AWAY ) {
+        } else if (currentState != State.OFF && currentOrientation == Orientation.AWAY) {
             updateState(State.OFF)
             stop()
         }

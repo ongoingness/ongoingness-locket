@@ -32,7 +32,7 @@ import uk.ac.ncl.openlab.ongoingness.workers.PullMediaWorker
 import java.io.File
 import java.util.Observer
 
-const val PULL_CONTENT_ON_WAKE = true
+const val PULL_CONTENT_ON_WAKE = false
 
 class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, MainPresenter.View {
 
@@ -68,7 +68,10 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     private val timeCheckInterval = 30 * 1000L //30 seconds
     private val killDelta = 5 * 60 * 1000L //5 minutes
 
+    //TODO Very Messy
     private var chargingState = false
+    private var awakeState = false
+    //
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -258,8 +261,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         when(FLAVOR) { "locket_touch_inverted" -> requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT }
 
-        Log.d("eww", "hey")
-
         Glide.with(this).load(R.drawable.cover).into(image)
 
         //Check if is charging
@@ -270,12 +271,18 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             presenter!!.updateCoverBitmap(bitmap)
         }
 
+        if(intent.hasExtra("chargingState")) {
+            chargingState = intent.getBooleanExtra("chargingState", false)
+            if(awakeState && touchRevealRecogniser != null)
+                touchRevealRecogniser?.updateState(TouchRevealRecogniser.State.STANDBY)
+        }
+
         //Charging background receiver
         bitmapReceiver = object: BroadcastReceiver() {
 
             override fun onReceive(context: Context, intent: Intent) {
 
-                Log.d("NewBitMap", "$intent")
+                Log.d("NewBitMap", "${intent.extras}")
 
                 if(intent.hasExtra("background")) {
                     val bitmap = BitmapFactory.decodeByteArray(
@@ -286,8 +293,11 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 if(intent.hasExtra("chargingState")) {
                     chargingState = intent.getBooleanExtra("chargingState", false)
+                    if(awakeState && touchRevealRecogniser != null) {
+                        touchRevealRecogniser?.updateState(TouchRevealRecogniser.State.STANDBY)
+                        touchRevealRecogniser?.notifyEvent(TouchRevealRecogniser.Events.SLEEP)
+                    }
                 }
-
             }
         }
         val filter = IntentFilter("BATTERY_INFO").apply {}
@@ -296,42 +306,61 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         touchRevealRecogniser = TouchRevealRecogniser(this)
         touchRevealRecogniserObserver = Observer { _, arg ->
             when (arg) {
-                TouchRevealRecogniser.Events.STARTED -> {}
+                TouchRevealRecogniser.Events.STARTED -> {
+
+
+
+
+                }
 
                 TouchRevealRecogniser.Events.AWAKE -> {
 
-                    //Stop Activity Kill Thread
-                    killHandler.removeCallbacks(killRunnable)
+                    if(chargingState) {
+                        //TODO
+                        touchRevealRecogniser?.updateState(TouchRevealRecogniser.State.STANDBY)
+                        touchRevealRecogniser?.notifyEvent(TouchRevealRecogniser.Events.SLEEP)
 
-                    if (PULL_CONTENT_ON_WAKE && !gotData && hasConnection(applicationContext)) {
+                    }
+                    else {
+                        awakeState = true
 
-                        gotData = true
-                        isGettingData = true
-                        presenter!!.pullingData(true)
+                        //Stop Activity Kill Thread
+                        killHandler.removeCallbacks(killRunnable)
 
-                        val postExecuteCallback: ( result: Boolean ) -> Unit = {
-                            isGettingData = false
-                            presenter!!.setWatchMediaRepository(this@MainActivity)
-                            presenter!!.pullingData(false)
+                        if (PULL_CONTENT_ON_WAKE && !gotData && hasConnection(applicationContext)) {
+
+                            gotData = true
+                            isGettingData = true
+                            presenter!!.pullingData(true)
+
+                            val postExecuteCallback: (result: Boolean) -> Unit = {
+                                isGettingData = false
+                                presenter!!.setWatchMediaRepository(this@MainActivity)
+                                presenter!!.pullingData(false)
+                            }
+
+                            PullMediaAsyncTask(postExecuteCallback = postExecuteCallback).execute(this.applicationContext)
+
+                        } else {
+                            presenter!!.restartIndex()
+                            presenter!!.displayContent()
                         }
 
-                        PullMediaAsyncTask(postExecuteCallback=postExecuteCallback).execute(this.applicationContext)
-
-                    } else {
-                        presenter!!.restartIndex()
-                        presenter!!.displayContent()
+                        Logger.log(LogType.WAKE_UP, listOf(), applicationContext)
                     }
-
-                    Logger.log(LogType.WAKE_UP, listOf(), applicationContext)
 
                 }
                 TouchRevealRecogniser.Events.NEXT -> {
                     if(!isGettingData)
                         presenter!!.goToNextImage()
                 }
+
                 TouchRevealRecogniser.Events.SLEEP -> {
 
                     if(!isGettingData) {
+
+                        awakeState = false
+
                         var layoutParams: WindowManager.LayoutParams = this.window.attributes
                         layoutParams.dimAmount = 0.75f
                         layoutParams.screenBrightness = 0.1f
@@ -339,7 +368,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
                         window.attributes = layoutParams
 
-                        windowManager.updateViewLayout(window.decorView, layoutParams);
+                        windowManager.updateViewLayout(window.decorView, layoutParams)
 
                         //Start Activity Kill Thread
                         killRunnable.run()
@@ -347,19 +376,21 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         presenter!!.hideContent(MainPresenter.CoverType.BLACK)
                         startTime = System.currentTimeMillis()
                         Logger.log(LogType.SLEEP, listOf(), applicationContext)
+
                     }
 
                 }
+
                 TouchRevealRecogniser.Events.STOPPED -> {
                     if(!isGoingToStop) {
                         isGoingToStop = true
                         killHandler.removeCallbacks(killRunnable)
                         Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), applicationContext)
-
                         finish()
 
                     }
                 }
+
             }
             setBrightness(maxBrightness)
         }
