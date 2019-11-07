@@ -97,7 +97,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
     private var previousState: State = State.UNKNOWN
 
     private var disposables: ArrayList<Disposable> = arrayListOf()
-    private var currentOrientation = Orientation.UNKNOWN
+    var currentOrientation = Orientation.UNKNOWN
     private var previousOrientation = Orientation.UNKNOWN
 
     fun start(){
@@ -155,8 +155,6 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
     private fun processGravity(event: RxSensorEvent) {
         val y = floor(event.values[1]).toInt()
         val z = floor(event.values[2]).toInt()
-
-        Log.d("acc", "Y:$y Z:$z")
 
         when(FLAVOR) {
             "locket_touch" -> {

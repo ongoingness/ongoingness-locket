@@ -309,8 +309,19 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                 TouchRevealRecogniser.Events.STARTED -> {
 
 
+                    when(FLAVOR) {
+                        "locket_inverted" -> {
 
+                            if (touchRevealRecogniser!!.currentOrientation == TouchRevealRecogniser.Orientation.TOWARDS) {
+                                presenter!!.setWatchMediaRepository(this@MainActivity)
+                                presenter!!.restartIndex()
+                                presenter!!.displayContent()
+                                touchRevealRecogniser?.updateState(TouchRevealRecogniser.State.ACTIVE)
+                                touchRevealRecogniser?.notifyEvent(TouchRevealRecogniser.Events.AWAKE)
+                            }
 
+                        }
+                    }
                 }
 
                 TouchRevealRecogniser.Events.AWAKE -> {
