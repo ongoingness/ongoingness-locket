@@ -310,7 +310,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
 
                     when(FLAVOR) {
-                        "locket_inverted" -> {
+                        "locket_touch_inverted" -> {
 
                             if (touchRevealRecogniser!!.currentOrientation == TouchRevealRecogniser.Orientation.TOWARDS) {
                                 presenter!!.setWatchMediaRepository(this@MainActivity)
