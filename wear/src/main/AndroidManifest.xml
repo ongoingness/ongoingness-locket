@@ -64,7 +64,7 @@
         <!--android:theme="@style/Theme.Transparent"-->
 
         <activity
-            android:name=".views.TestActivity"
+            android:name=".views.MainActivity"
             android:label="@string/title_activity_main"
             android:launchMode = "singleTask"
             >
@@ -78,16 +78,11 @@
 
 
         <activity
-            android:name=".views.MainActivity"
+            android:name=".old.MainActivity"
             android:label="@string/title_activity_main"
             android:launchMode = "singleTask"
             >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <!--category android:name="android.intent.category.HOME" />
-                <category android:name="android.intent.category.DEFAULT"/-->
-            </intent-filter>
         </activity>
+
     </application>
 </manifest>

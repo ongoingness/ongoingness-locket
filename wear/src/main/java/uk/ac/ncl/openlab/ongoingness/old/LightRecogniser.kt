@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.recognisers
+package uk.ac.ncl.openlab.ongoingness.old
 
 import android.content.Context
 import android.hardware.Sensor

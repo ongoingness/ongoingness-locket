@@ -1,10 +1,9 @@
-package uk.ac.ncl.openlab.ongoingness.recognisers
+package uk.ac.ncl.openlab.ongoingness.old
 
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.util.Log
-import uk.ac.ncl.openlab.ongoingness.viewmodel.MainPresenter
 
 class LightEventListener(private val view: MainPresenter.View): SensorEventListener {
     private val closedThreshold: Float = 80.0f

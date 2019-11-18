@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.viewmodel
+package uk.ac.ncl.openlab.ongoingness.controllers
 
 enum class ControllerState{
     STANDBY,

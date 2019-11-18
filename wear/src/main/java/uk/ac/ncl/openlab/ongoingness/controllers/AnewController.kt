@@ -1,17 +1,18 @@
-package uk.ac.ncl.openlab.ongoingness.viewmodel
+package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
-import android.util.Log
+import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
-import uk.ac.ncl.openlab.ongoingness.utilities.CoverType
+import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
+import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
 
-const val INVERTED_PULL_CONTENT_ON_WAKE = true
+const val PULL_CONTENT_ON_WAKE = true
 
-class InvertedAnewController(context: Context,
+class AnewController(context: Context,
                      recogniser: AbstractRecogniser,
                      presenter: Presenter,
                      contentCollection: AbstractContentCollection,
@@ -33,7 +34,6 @@ class InvertedAnewController(context: Context,
     }
 
     var gotData = false
-    var start = true
 
     override fun setStatingState() {
 
@@ -63,15 +63,7 @@ class InvertedAnewController(context: Context,
 
         when(getCurrentState()) {
 
-            ControllerState.STANDBY -> {
-
-                if(start) {
-                    awakeUpProcedures()
-                    start = false
-                } else {
-                    updateState(ControllerState.READY)
-                }
-            }
+            ControllerState.STANDBY -> updateState(ControllerState.READY)
             else -> {}
         }
 

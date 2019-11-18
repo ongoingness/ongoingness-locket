@@ -16,7 +16,7 @@ on the web interface. The activity will then start the `SensorListeners` after a
 has been downloaded.
 
 ### SensorListeners
-These are found in `RotationRecogniser.kt` and `LightEventListener`. The
+These are found in `RotationRecogniserOld.kt` and `LightEventListener`. The
 `RotationRecogniser` is used to detect a period of inactivity, which will then put the
 device into standby. The `LightEventListener` will continually poll the ambient light
 sensor. When the light reaches below a certain threshold the locket will be closed,

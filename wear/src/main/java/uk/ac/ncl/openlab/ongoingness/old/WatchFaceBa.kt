@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness
+package uk.ac.ncl.openlab.ongoingness.old
 
 import android.content.*
 import android.graphics.*
@@ -10,9 +10,10 @@ import android.view.SurfaceHolder
 import android.view.WindowManager
 import androidx.work.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
+import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
-import uk.ac.ncl.openlab.ongoingness.views.TestActivity
+import uk.ac.ncl.openlab.ongoingness.views.MainActivity
 
 /**
  * Important Note: Because watch face apps do not have a default Activity in
@@ -179,9 +180,12 @@ class WatchFaceBa : CanvasWatchFaceService() {
             var coverID: Int? = null
 
             when(FLAVOR){
-                "locket" ->{ coverID = R.drawable.cover }
-                "locket_touch", "locket_touch_inverted" ->{ coverID = R.drawable.cover }
-                "refind" -> { coverID = R.drawable.refind_cover }
+                "locket" ->{ coverID = R.drawable.cover
+                }
+                "locket_touch", "locket_touch_inverted" ->{ coverID = R.drawable.cover
+                }
+                "refind" -> { coverID = R.drawable.refind_cover
+                }
             }
 
             val bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, coverID!! ), getScreenSize(), getScreenSize(), false)
@@ -196,7 +200,7 @@ class WatchFaceBa : CanvasWatchFaceService() {
         }
 
         private fun launchActivity() {
-            val intent = Intent(applicationContext, TestActivity::class.java)
+            val intent = Intent(applicationContext, MainActivity::class.java)
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
 

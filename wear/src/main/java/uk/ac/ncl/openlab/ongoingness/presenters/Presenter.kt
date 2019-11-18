@@ -1,9 +1,11 @@
-package uk.ac.ncl.openlab.ongoingness.viewmodel
+package uk.ac.ncl.openlab.ongoingness.presenters
 
 import android.content.Context
 import android.graphics.*
 import android.util.Log
 import uk.ac.ncl.openlab.ongoingness.R
+import uk.ac.ncl.openlab.ongoingness.collections.ContentPiece
+import uk.ac.ncl.openlab.ongoingness.collections.ContentType
 
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import java.io.File

@@ -1,11 +1,9 @@
-package uk.ac.ncl.openlab.ongoingness.viewmodel
+package uk.ac.ncl.openlab.ongoingness.collections
 
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProviders
 import uk.ac.ncl.openlab.ongoingness.database.WatchMediaViewModel
 import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
-import uk.ac.ncl.openlab.ongoingness.utilities.ContentPiece
-import uk.ac.ncl.openlab.ongoingness.utilities.ContentType
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import java.io.File

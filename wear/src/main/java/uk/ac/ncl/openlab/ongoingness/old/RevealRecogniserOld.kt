@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.recognisers
+package uk.ac.ncl.openlab.ongoingness.old
 
 import android.content.Context
 import android.hardware.Sensor
@@ -16,7 +16,6 @@ import kotlinx.coroutines.*
 import uk.ac.ncl.openlab.ongoingness.utilities.CircularArray
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 class RevealRecogniserOld(private val context: Context): Observable() {
@@ -169,7 +168,7 @@ class RevealRecogniserOld(private val context: Context): Observable() {
     }
 
     private fun enabled():Boolean{
-        return arrayListOf(State.ACTIVE,State.STANDBY,State.COVERED,State.AWAKE).contains(currentState)
+        return arrayListOf(State.ACTIVE, State.STANDBY, State.COVERED, State.AWAKE).contains(currentState)
     }
     private fun processLight(event: RxSensorEvent) {
 

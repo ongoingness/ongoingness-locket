@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.recognisers
+package uk.ac.ncl.openlab.ongoingness.old
 
 import android.content.Context
 import android.hardware.Sensor
@@ -137,7 +137,7 @@ class RevealRecogniser(private val context: Context) : Observable() {
     }
 
     private fun enabled():Boolean{
-        return arrayListOf(State.ACTIVE,State.STANDBY,State.COVERED,State.AWAKE,State.PRE_COVERED, State.AWAKE_COVER).contains(currentState)
+        return arrayListOf(State.ACTIVE, State.STANDBY, State.COVERED, State.AWAKE, State.PRE_COVERED, State.AWAKE_COVER).contains(currentState)
     }
 
     private fun updateState(state: State){

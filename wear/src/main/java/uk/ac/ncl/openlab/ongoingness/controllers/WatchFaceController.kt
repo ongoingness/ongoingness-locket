@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.viewmodel
+package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -7,9 +7,10 @@ import android.content.IntentFilter
 import android.util.Log
 import uk.ac.ncl.openlab.ongoingness.utilities.BROADCAST_INTENT_NAME
 import uk.ac.ncl.openlab.ongoingness.utilities.BatteryEvent
-import uk.ac.ncl.openlab.ongoingness.utilities.CoverType
+import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
 import uk.ac.ncl.openlab.ongoingness.utilities.SystemBatteryInfoReceiver
-import uk.ac.ncl.openlab.ongoingness.views.TestActivity
+import uk.ac.ncl.openlab.ongoingness.presenters.WatchFacePresenter
+import uk.ac.ncl.openlab.ongoingness.views.MainActivity
 
 class WatchFaceController(var context: Context, var batteryChecking: Boolean, var presenter: WatchFacePresenter) {
 
@@ -123,7 +124,7 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
 
 
     private fun startActivity(startedtWithTap: Boolean) {
-        val intent = Intent(context, TestActivity::class.java)
+        val intent = Intent(context, MainActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
 

@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.viewmodel
+package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -6,12 +6,13 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Handler
 import android.util.Log
+import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
 import uk.ac.ncl.openlab.ongoingness.recognisers.RecogniserEvent
 import uk.ac.ncl.openlab.ongoingness.utilities.BatteryEvent
-import uk.ac.ncl.openlab.ongoingness.utilities.CoverType
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
+import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import java.util.Observer
 
 abstract class AbstractController(
@@ -38,7 +39,6 @@ abstract class AbstractController(
             RecogniserEvent.LONG_PRESS -> onLongPressEvent()
             RecogniserEvent.ROTATE_UP -> onRotateUp()
             RecogniserEvent.ROTATE_DOWN -> onRotateDown()
-            RecogniserEvent.PICK_UP -> onPickUp()
 
         }
 
@@ -174,8 +174,6 @@ abstract class AbstractController(
     abstract fun onChargerConnectedEvent(battery: Float)
     abstract fun onChargerDisconnectedEvent()
     abstract fun onBatteryChangedEvent(battery: Float)
-
     abstract fun onRotateUp()
     abstract fun onRotateDown()
-    abstract fun onPickUp()
 }

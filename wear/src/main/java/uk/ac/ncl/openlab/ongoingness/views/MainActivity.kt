@@ -1,109 +1,133 @@
 package uk.ac.ncl.openlab.ongoingness.views
 
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.graphics.*
 import android.os.*
-import android.util.Log
-import android.view.GestureDetector
 import android.view.View
 import android.view.WindowManager
-import android.widget.ImageView
 import androidx.fragment.app.FragmentActivity
 import androidx.wear.ambient.AmbientModeSupport
 import com.bumptech.glide.Glide
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
+import uk.ac.ncl.openlab.ongoingness.collections.AnewContentCollection
+import uk.ac.ncl.openlab.ongoingness.collections.ContentType
+import uk.ac.ncl.openlab.ongoingness.collections.RefindContentCollection
+import uk.ac.ncl.openlab.ongoingness.controllers.AbstractController
+import uk.ac.ncl.openlab.ongoingness.controllers.AnewController
+import uk.ac.ncl.openlab.ongoingness.controllers.InvertedAnewController
+import uk.ac.ncl.openlab.ongoingness.controllers.RefindController
+import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
+import uk.ac.ncl.openlab.ongoingness.recognisers.*
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
-import uk.ac.ncl.openlab.ongoingness.recognisers.RevealRecogniser
-import uk.ac.ncl.openlab.ongoingness.recognisers.RotationRecogniser
-import uk.ac.ncl.openlab.ongoingness.recognisers.TouchRevealRecogniser
-import uk.ac.ncl.openlab.ongoingness.utilities.*
-import uk.ac.ncl.openlab.ongoingness.viewmodel.MainPresenter
-import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
-import uk.ac.ncl.openlab.ongoingness.workers.PullMediaWorker
 import java.io.File
-import java.util.Observer
 
-const val PULL_CONTENT_ON_WAKE = false
+class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, Presenter.View {
 
-class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, MainPresenter.View {
-
-    private var presenter: MainPresenter?  = null
-    private var isReady: Boolean = false
     private val maxBrightness: Float = 1.0f
     private val minBrightness: Float = 0.01f
 
-    private var revealRecogniser:RevealRecogniser? = null
-    private var revealRecogniserObserver: Observer? = null
-
-    private var touchRevealRecogniser: TouchRevealRecogniser? = null
-    private var touchRevealRecogniserObserver: Observer?  = null
-
-    private var rotationRecogniser: RotationRecogniser? = null
-    private var rotationListener: RotationRecogniser.Listener? = null
-
-    var isGoingToStop: Boolean = false
-
-    private var isGettingData = false
-    private var gotData = false
-
-    lateinit var mImageView: ImageView
-    lateinit var gesture : GestureDetector
-    lateinit var touchListener: View.OnTouchListener
-
-    private lateinit var bitmapReceiver: BroadcastReceiver
-
-    private lateinit var killRunnable: Runnable
-
-    private val killHandler = Handler()
-    private var startTime = System.currentTimeMillis()
-    private val timeCheckInterval = 30 * 1000L //30 seconds
-    private val killDelta = 5 * 60 * 1000L //5 minutes
-
-    //TODO Very Messy
-    private var chargingState = false
-    private var awakeState = false
-    //
+    private lateinit var controller: AbstractController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        Logger.start(applicationContext)
-        Logger.log(LogType.ACTIVITY_STARTED, listOf(), applicationContext!!)
-
-        killRunnable = Runnable {
-            if(System.currentTimeMillis() - startTime > killDelta) {
-                Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), applicationContext)
-                finish()
-            } else {
-                killHandler.postDelayed(killRunnable, timeCheckInterval)
-            }
-        }
-
-        killRunnable.run()
-
-        presenter = MainPresenter()
-        presenter!!.attachView(this)
-        presenter!!.setContext(applicationContext)
-        presenter!!.setWatchMediaRepository(this)
-
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+        Logger.start(applicationContext)
+        Logger.log(LogType.ACTIVITY_STARTED, listOf(), applicationContext!!)
+
+        var startedWithTap = false
+        var faceState = "UNKNOWN"
+        var battery = 0f
+
+
+        if(intent.hasExtra("startedWithTap"))
+            startedWithTap = intent.getBooleanExtra("startedWithTap", false)
+
+        if(intent.hasExtra("state"))
+            faceState = intent.getStringExtra("state")
+
+
+        if(intent.hasExtra("battery"))
+            battery = intent.getFloatExtra("battery", 0f)
+
         when(FLAVOR){
-            "locket_touch", "locket_touch_inverted" -> setLocketTouch()
-            "locket" -> setLocket()
-            "refind" -> setRefind()
+            "locket_touch" -> {
+
+                val presenter = Presenter(applicationContext,
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover), getScreenSize(), getScreenSize(), false),
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover_white), getScreenSize(), getScreenSize(), false))
+                presenter.attachView(this@MainActivity)
+
+                val recogniser = TouchRevealRecogniser(applicationContext, this@MainActivity)
+
+                val contentCollection = AnewContentCollection(this@MainActivity)
+
+                controller = AnewController(context = applicationContext,
+                        presenter = presenter,
+                        recogniser = recogniser,
+                        contentCollection = contentCollection,
+                        startedWitTap = startedWithTap,
+                        faceState = faceState,
+                        battery = battery)
+
+                controller.setup()
+
+            }
+
+            "locket_touch_inverted" -> {
+
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+
+                val presenter = Presenter(applicationContext,
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover), getScreenSize(), getScreenSize(), false),
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover_white), getScreenSize(), getScreenSize(), false))
+                presenter.attachView(this@MainActivity)
+
+                val recogniser = InvertedTouchRevealRecogniser(applicationContext, this@MainActivity)
+
+                val contentCollection = AnewContentCollection(this@MainActivity)
+
+                controller = InvertedAnewController(context = applicationContext,
+                        presenter = presenter,
+                        recogniser = recogniser,
+                        contentCollection = contentCollection,
+                        startedWitTap = startedWithTap,
+                        faceState = faceState,
+                        battery = battery)
+
+                controller.setup()
+
+            }
+
+            "refind" -> {
+
+                val presenter = Presenter(applicationContext,
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover), getScreenSize(), getScreenSize(), false),
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover_white), getScreenSize(), getScreenSize(), false))
+                presenter.attachView(this@MainActivity)
+
+                val recogniser = RotationRecogniser(applicationContext)
+
+                val contentCollection = RefindContentCollection(this@MainActivity)
+
+                controller = RefindController(context = applicationContext,
+                        presenter = presenter,
+                        recogniser = recogniser,
+                        contentCollection = contentCollection)
+
+                controller.setup()
+
+            }
         }
+
+
+
 
     }
 
@@ -113,11 +137,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
      */
     override fun onResume() {
         super.onResume()
-        when(FLAVOR){
-            "locket" -> { revealRecogniser?.start() }
-            "locket_touch", "locket_touch_inverted" -> { touchRevealRecogniser?.start() }
-            "refind" -> { rotationRecogniser?.start(rotationListener!!) }
-        }
+        controller.start()
     }
 
     /**
@@ -126,19 +146,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
      */
     override fun onPause() {
         super.onPause()
-        if (isGoingToStop) {
-            when (FLAVOR) {
-                "locket" -> {
-                    revealRecogniser?.stop()
-                }
-                "locket_touch","locket_touch_inverted" -> {
-                   touchRevealRecogniser?.stop()
-                }
-                "refind" -> {
-                    rotationRecogniser?.stop()
-                }
-            }
-        }
+
     }
 
     /**
@@ -146,19 +154,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
      */
     override fun onDestroy() {
         super.onDestroy()
+        controller.stop()
 
-        when (FLAVOR) {
-            "locket" -> {
-                revealRecogniser?.deleteObserver(revealRecogniserObserver)
-            }
-            "locket_touch", "locket_touch_inverted" -> {
-                touchRevealRecogniser?.deleteObserver(touchRevealRecogniserObserver)
-                unregisterReceiver(bitmapReceiver)
-            }
-            "refind" -> {}
-        }
-
-        presenter!!.detachView()
 
     }
 
@@ -178,14 +175,13 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     /**
      * Update the background of the watch face.
      */
-    override fun updateBackground(file: File, mediaType: MainPresenter.View.MediaType) {
+    override fun updateBackground(file: File, contentType: ContentType) {
         runOnUiThread {
             macAddress.visibility = View.INVISIBLE
-            when(mediaType) {
-                MainPresenter.View.MediaType.IMAGE ->
+            when(contentType) {
+               ContentType.IMAGE ->
                     Glide.with(this).load(file).into(image)
-
-                MainPresenter.View.MediaType.GIF ->
+                ContentType.GIF ->
                     Glide.with(this).asGif().load(file).into(image)
             }
         }
@@ -203,26 +199,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     }
 
     /**
-     * Get the ready flag for the activity.
-     * This is used to start the lightSensorListener.
-     *
-     * @return Boolean
-     */
-    override fun getReady(): Boolean {
-        return this.isReady
-    }
-
-    /**
-     * Get the ready flag for the activity.
-     * This is used to start the lightSensorListener.
-     *
-     * @param ready Boolean
-     */
-    override fun setReady(ready: Boolean) {
-        this.isReady = ready
-    }
-
-    /**
      * Display text on the device
      */
     override fun displayText(addr: String) {
@@ -230,10 +206,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             macAddress.visibility = View.VISIBLE
             macAddress.text = addr
         }
-    }
-
-    override fun getContext(): Context {
-        return this.applicationContext
     }
 
     override fun getAmbientCallback(): AmbientModeSupport.AmbientCallback {
@@ -254,271 +226,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         window.attributes = params
     }
 
-    /**
-     *  Setup the Locket that has as input the watch position and the touch screen
-     */
-    private fun setLocketTouch() {
-
-        when(FLAVOR) { "locket_touch_inverted" -> requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT }
-
-        Glide.with(this).load(R.drawable.cover).into(image)
-
-        //Check if is charging
-        if(intent.hasExtra("background")) {
-            val bitmap = BitmapFactory.decodeByteArray(
-                    intent.getByteArrayExtra("background"), 0,
-                    intent.getByteArrayExtra("background").size)
-            presenter!!.updateCoverBitmap(bitmap)
-        }
-
-        if(intent.hasExtra("chargingState")) {
-            chargingState = intent.getBooleanExtra("chargingState", false)
-            if(awakeState && touchRevealRecogniser != null)
-                touchRevealRecogniser?.updateState(TouchRevealRecogniser.State.STANDBY)
-        }
-
-        //Charging background receiver
-        bitmapReceiver = object: BroadcastReceiver() {
-
-            override fun onReceive(context: Context, intent: Intent) {
-
-                Log.d("NewBitMap", "${intent.extras}")
-
-                if(intent.hasExtra("background")) {
-                    val bitmap = BitmapFactory.decodeByteArray(
-                            intent.getByteArrayExtra("background"),0,
-                            intent.getByteArrayExtra("background").size)
-                    presenter!!.updateCoverBitmap(bitmap)
-                }
-
-                if(intent.hasExtra("chargingState")) {
-                    chargingState = intent.getBooleanExtra("chargingState", false)
-                    if(awakeState && touchRevealRecogniser != null) {
-                        touchRevealRecogniser?.updateState(TouchRevealRecogniser.State.STANDBY)
-                        touchRevealRecogniser?.notifyEvent(TouchRevealRecogniser.Events.SLEEP)
-                    }
-                }
-            }
-        }
-        val filter = IntentFilter("BATTERY_INFO").apply {}
-        registerReceiver(bitmapReceiver, filter)
-
-        touchRevealRecogniser = TouchRevealRecogniser(this)
-        touchRevealRecogniserObserver = Observer { _, arg ->
-            when (arg) {
-                TouchRevealRecogniser.Events.STARTED -> {
-
-
-                    when(FLAVOR) {
-                        "locket_touch_inverted" -> {
-
-                            if (touchRevealRecogniser!!.currentOrientation == TouchRevealRecogniser.Orientation.TOWARDS) {
-                                presenter!!.setWatchMediaRepository(this@MainActivity)
-                                presenter!!.restartIndex()
-                                presenter!!.displayContent()
-                                touchRevealRecogniser?.updateState(TouchRevealRecogniser.State.ACTIVE)
-                                touchRevealRecogniser?.notifyEvent(TouchRevealRecogniser.Events.AWAKE)
-                            }
-
-                        }
-                    }
-                }
-
-                TouchRevealRecogniser.Events.AWAKE -> {
-
-                    if(chargingState) {
-                        //TODO
-                        touchRevealRecogniser?.updateState(TouchRevealRecogniser.State.STANDBY)
-                        touchRevealRecogniser?.notifyEvent(TouchRevealRecogniser.Events.SLEEP)
-
-                    }
-                    else {
-                        awakeState = true
-
-                        //Stop Activity Kill Thread
-                        killHandler.removeCallbacks(killRunnable)
-
-                        if (PULL_CONTENT_ON_WAKE && !gotData && hasConnection(applicationContext)) {
-
-                            gotData = true
-                            isGettingData = true
-                            presenter!!.pullingData(true)
-
-                            val postExecuteCallback: (result: Boolean) -> Unit = {
-                                isGettingData = false
-                                presenter!!.setWatchMediaRepository(this@MainActivity)
-                                presenter!!.pullingData(false)
-                            }
-
-                            PullMediaAsyncTask(postExecuteCallback = postExecuteCallback).execute(this.applicationContext)
-
-                        } else {
-                            presenter!!.restartIndex()
-                            presenter!!.displayContent()
-                        }
-
-                        Logger.log(LogType.WAKE_UP, listOf(), applicationContext)
-                    }
-
-                }
-                TouchRevealRecogniser.Events.NEXT -> {
-                    if(!isGettingData)
-                        presenter!!.goToNextImage()
-                }
-
-                TouchRevealRecogniser.Events.SLEEP -> {
-
-                    if(!isGettingData) {
-
-                        awakeState = false
-
-                        var layoutParams: WindowManager.LayoutParams = this.window.attributes
-                        layoutParams.dimAmount = 0.75f
-                        layoutParams.screenBrightness = 0.1f
-
-                        window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-                        window.attributes = layoutParams
-
-                        windowManager.updateViewLayout(window.decorView, layoutParams)
-
-                        //Start Activity Kill Thread
-                        killRunnable.run()
-
-                        presenter!!.hideContent(MainPresenter.CoverType.BLACK)
-                        startTime = System.currentTimeMillis()
-                        Logger.log(LogType.SLEEP, listOf(), applicationContext)
-
-                    }
-
-                }
-
-                TouchRevealRecogniser.Events.STOPPED -> {
-                    if(!isGoingToStop) {
-                        isGoingToStop = true
-                        killHandler.removeCallbacks(killRunnable)
-                        Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), applicationContext)
-                        finish()
-
-                    }
-                }
-
-            }
-            setBrightness(maxBrightness)
-        }
-
-        touchRevealRecogniser?.addObserver(touchRevealRecogniserObserver)
-
-        gesture = GestureDetector(this, touchRevealRecogniser)
-        touchListener = View.OnTouchListener {
-            _, events -> gesture.onTouchEvent(events)
-        }
-        mImageView = findViewById(R.id.image)
-        mImageView.setOnTouchListener(touchListener)
-
-    }
-
-    /**
-     *  Setup the Locket that has as input the watch position and the light sensor
-     */
-    private fun setLocket() {
-
-        Glide.with(this).load(R.drawable.cover).into(image)
-
-        revealRecogniser = RevealRecogniser(this)
-
-        revealRecogniserObserver = Observer { _, arg ->
-            when (arg) {
-                RevealRecogniser.Events.STARTED -> {
-
-                }
-                RevealRecogniser.Events.COVERED -> {
-
-                }
-                RevealRecogniser.Events.AWAKE -> {
-                    presenter!!.displayContent()
-
-                }
-                RevealRecogniser.Events.SHORT_REVEAL -> {
-                    presenter!!.goToNextImage()
-
-                }
-                RevealRecogniser.Events.SLEEP -> {
-                    presenter!!.hideContent(MainPresenter.CoverType.BLACK)
-
-                }
-                RevealRecogniser.Events.STOPPED -> {
-                    isGoingToStop = true
-                    finish()
-                }
-                RevealRecogniser.Events.HIDE -> {
-                    presenter!!.hideContent(MainPresenter.CoverType.BLACK)
-                }
-                RevealRecogniser.Events.SHOW -> {
-                    presenter!!.displayContent()
-                }
-            }
-            setBrightness(maxBrightness)
-        }
-
-        revealRecogniser?.addObserver(revealRecogniserObserver)
-
-    }
-
-    /**
-     *  Setup the Refind
-     */
-    private fun setRefind() {
-
-        Glide.with(this).load(R.drawable.refind_cover).into(image)
-
-        //mediaPullRunnable = getPullMediaThread()
-
-        rotationRecogniser = RotationRecogniser(this)
-        rotationListener = object : RotationRecogniser.Listener {
-
-            override fun onPickUp() {
-                if(!gotData && hasConnection(applicationContext)) {
-                    gotData = true
-                    isGettingData = true
-                    rotationRecogniser?.stop()
-                    presenter!!.pullingData(true)
-                    PullMediaWorker.pullMediaRefind(this@MainActivity)
-                    isGettingData = false
-                    rotationRecogniser?.start(rotationListener!!)
-                    presenter!!.pullingData(false)
-                } else {
-                    presenter!!.displayContent()
-                }
-            }
-
-            override fun onRotateUp() {
-                presenter!!.goToNextImage()
-            }
-
-            override fun onRotateDown() {
-                presenter!!.goToPreviousImage()
-            }
-
-            override fun onRotateLeft() {
-
-            }
-
-            override fun onRotateRight() {
-
-            }
-
-            override fun onStandby() {
-                isGoingToStop = true
-                rotationRecogniser!!.stop()
-                rotationRecogniser = null
-                rotationListener = null
-                isGettingData = false
-                gotData = false
-                finish()
-            }
-
-        }
-
+    override fun finishActivity() {
+        finish()
     }
 
     private class MyAmbientCallback : AmbientModeSupport.AmbientCallback()

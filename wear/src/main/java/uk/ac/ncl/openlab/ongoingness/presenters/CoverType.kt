@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.utilities
+package uk.ac.ncl.openlab.ongoingness.presenters
 
 /**
  * Types of cover

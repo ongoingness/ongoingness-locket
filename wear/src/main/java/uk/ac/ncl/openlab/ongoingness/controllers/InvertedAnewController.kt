@@ -1,42 +1,28 @@
-package uk.ac.ncl.openlab.ongoingness.viewmodel
+package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
-import android.util.Log
+import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
-import uk.ac.ncl.openlab.ongoingness.utilities.CoverType
+import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
+import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
 
-const val PULL_CONTENT_ON_WAKE = true
+const val INVERTED_PULL_CONTENT_ON_WAKE = true
 
-class AnewController(context: Context,
-                     recogniser: AbstractRecogniser,
-                     presenter: Presenter,
-                     contentCollection: AbstractContentCollection,
-                     val startedWitTap: Boolean,
-                     val faceState: String,
-                     val battery: Float)
+class InvertedAnewController(context: Context,
+                             recogniser: AbstractRecogniser,
+                             presenter: Presenter,
+                             contentCollection: AbstractContentCollection,
+                             val startedWitTap: Boolean,
+                             val faceState: String,
+                             val battery: Float)
     : AbstractController(context, recogniser, presenter, contentCollection) {
 
-    override fun onRotateUp() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun onRotateDown() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun onPickUp() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
     var gotData = false
-
-    override fun setStatingState() {
-
-    }
+    var start = true
 
     override fun onStartedEvent() {
 
@@ -52,20 +38,21 @@ class AnewController(context: Context,
 
     }
 
-    override fun onStoppedEvent() {}
-
-    override fun onUpEvent() {}
-
-    override fun onDownEvent() {}
-
     override fun onTowardsEvent() {
 
         when(getCurrentState()) {
 
-            ControllerState.STANDBY -> updateState(ControllerState.READY)
+            ControllerState.STANDBY -> {
+
+                if(start) {
+                    awakeUpProcedures()
+                    start = false
+                } else {
+                    updateState(ControllerState.READY)
+                }
+            }
             else -> {}
         }
-
 
     }
 
@@ -74,8 +61,6 @@ class AnewController(context: Context,
         stopKillThread()
         getPresenter().view!!.finishActivity()
     }
-
-    override fun onUnknownEvent() {}
 
     override fun onTapEvent() {
 
@@ -89,7 +74,7 @@ class AnewController(context: Context,
 
             }
 
-            else ->  { }
+            else ->  {}
         }
     }
 
@@ -108,7 +93,6 @@ class AnewController(context: Context,
             else ->{}
 
         }
-
 
     }
 
@@ -134,8 +118,23 @@ class AnewController(context: Context,
         }
     }
 
+    override fun setStatingState() {}
+
+    override fun onStoppedEvent() {}
+
+    override fun onUpEvent() {}
+
+    override fun onDownEvent() {}
+
+    override fun onRotateUp() {}
+
+    override fun onRotateDown() {}
+
+    override fun onUnknownEvent() {}
+
     private fun awakeUpProcedures() {
-        if(PULL_CONTENT_ON_WAKE && !gotData && hasConnection(context)) {
+
+        if(INVERTED_PULL_CONTENT_ON_WAKE && !gotData && hasConnection(context)) {
 
             val postExecuteCallback: (result: Boolean) -> Unit = {
                 gotData = it

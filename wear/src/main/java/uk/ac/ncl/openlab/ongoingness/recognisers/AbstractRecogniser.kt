@@ -12,9 +12,6 @@ abstract class AbstractRecogniser(val content: Context) : Observable() {
 
     fun notifyEvent(event: RecogniserEvent) {
         setChanged()
-
-        Log.d("Recognizer", "$event")
-
         notifyObservers(event)
     }
 

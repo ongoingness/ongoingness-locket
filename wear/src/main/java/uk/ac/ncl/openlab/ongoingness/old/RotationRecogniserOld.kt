@@ -1,4 +1,4 @@
-package uk.ac.ncl.openlab.ongoingness.recognisers
+package uk.ac.ncl.openlab.ongoingness.old
 
 
 import android.content.Context
@@ -21,23 +21,57 @@ import uk.ac.ncl.openlab.ongoingness.utilities.CircularArray
 /**
  * Created by Kyle Montague on 10/11/2018.
  */
-open class RotationRecogniserNew(val context: Context) : AbstractRecogniser(context) {
-
+open class RotationRecogniserOld(val context: Context) {
+    private val tag = "RR"
+    private var listener: Listener? = null
     private var disposables = arrayListOf<Disposable>()
     private var states = ObservableList<State>()
 
-    private enum class State {
+    enum class State {
         UNKNOWN,
         TOWARDS,
         UP,
         AWAY,
-        DOWN
+        DOWN,
+        PICKED_UP,
     }
 
     private var enterState = State.UNKNOWN
     private var previousState = State.UNKNOWN
+    private var lastChanged: Long = System.currentTimeMillis()
 
-    override fun start() {
+    private var timeoutHandler = Handler()
+    private var timeoutRunnable: Runnable? = null
+
+    private var timeoutDuration = 1000L * 30 * 1 //one minute timeout
+    private val timeoutInterval = 5000L
+
+    private var isPickUp = false
+    private var onStandby = false
+
+    init {
+        timeoutRunnable = Runnable {
+
+            if ((System.currentTimeMillis() - lastChanged) >= timeoutDuration) {
+                Log.d(tag, "onstanby")
+                isPickUp = false
+                onStandby = true
+                timeoutHandler.removeCallbacks(timeoutRunnable)
+                listener?.onStandby()
+            } else {
+                timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval) //check again in 5seconds
+            }
+
+        }
+    }
+
+    fun start(listener: Listener) {
+        Log.d(tag, "start")
+        Log.d(tag, "$listener")
+
+        this.listener = listener
+        lastChanged = System.currentTimeMillis()
+        timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval)
 
         try {
 
@@ -63,19 +97,17 @@ open class RotationRecogniserNew(val context: Context) : AbstractRecogniser(cont
                     .subscribe { state -> onStateChange(state) })
 
 
-            notifyEvent(RecogniserEvent.STARTED)
-
         } catch (e: SensorNotFoundException) {
-            Log.d("RotationRecogniser", "Sensor missing, running without sensors")
+            Log.d("RotationRecogniserOld", "Sensor missing, running without sensors")
             throw e
         }
     }
 
-    override fun stop() {
+    fun stop() {
+        this.listener = null
         for (disposable in disposables) {
             disposable.dispose()
         }
-        notifyEvent(RecogniserEvent.STOPPED)
     }
 
 
@@ -104,6 +136,8 @@ open class RotationRecogniserNew(val context: Context) : AbstractRecogniser(cont
             z <= -thresholdGravity -> currentState = State.DOWN
             y >= thresholdGravity -> currentState = State.TOWARDS
             y <= -thresholdGravity -> currentState = State.AWAY
+
+            !isPickUp && y >= 1.0 -> currentState = State.PICKED_UP
         }
 
         if (currentState != State.UNKNOWN)
@@ -113,15 +147,20 @@ open class RotationRecogniserNew(val context: Context) : AbstractRecogniser(cont
 
     private fun onStateChange(currentState: State) {
 
-        if (currentState == State.DOWN) {
+        Log.d("ControllerState", "$currentState")
+
+        if(currentState == State.PICKED_UP) {
+            Log.d(tag, "OnPickUp")
+            onPickUp()
+        } else if (currentState == State.DOWN) {
             //entering
             enterState = previousState
-
+            Log.d(tag, "prev: $previousState current: $enterState")
             //change image
             when (enterState) {
-                State.TOWARDS -> notifyEvent(RecogniserEvent.ROTATE_DOWN)
-                State.AWAY -> notifyEvent(RecogniserEvent.ROTATE_UP)
-                else -> {}
+                State.TOWARDS -> goBack()
+                State.AWAY -> goForward()
+                else -> Log.d(tag,"Changed ControllerState to Unknown")
             }
 
         } else if (previousState == State.DOWN) {
@@ -129,15 +168,54 @@ open class RotationRecogniserNew(val context: Context) : AbstractRecogniser(cont
             if (currentState == enterState) {
                 //undo change
                 when (enterState) {
-                    State.TOWARDS -> notifyEvent(RecogniserEvent.ROTATE_UP)
-                    State.AWAY -> notifyEvent(RecogniserEvent.ROTATE_DOWN)
-                    else -> {}
+                    State.TOWARDS -> goForward()
+                    State.AWAY -> goBack()
+                    else -> Log.d(tag,"Changed ControllerState to Unknown")
                 }
             }
         }
 
         previousState = currentState
+        lastChanged = System.currentTimeMillis()
+
+        if(onStandby) {
+            onStandby = false
+            lastChanged = System.currentTimeMillis()
+            timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval)
+            timeoutRunnable = Runnable {
+
+                if ((System.currentTimeMillis() - lastChanged) >= timeoutDuration) {
+                    Log.d(tag, "onstanby")
+                    isPickUp = false
+                    onStandby = true
+                    listener?.onStandby()
+                } else {
+                    timeoutHandler.postDelayed(timeoutRunnable, timeoutInterval) //check again in 5seconds
+                }
+
+            }
+        }
+
     }
+
+    private fun goForward() {
+        Log.d(tag, "goforward")
+        listener?.onRotateUp()
+    }
+
+    private fun goBack() {
+        Log.d(tag, "goback")
+        listener?.onRotateDown()
+    }
+
+    private fun onPickUp() {
+        Log.d(tag, "onpickup")
+        isPickUp = true
+        listener?.onPickUp()
+
+    }
+
+
 
     class ObservableList<T> {
 
@@ -157,4 +235,20 @@ open class RotationRecogniserNew(val context: Context) : AbstractRecogniser(cont
         }
     }
 
+
+    interface Listener {
+
+        fun onRotateUp()
+
+        fun onRotateDown()
+
+        fun onRotateLeft()
+
+        fun onRotateRight()
+
+        fun onStandby()
+
+        fun onPickUp()
+
+    }
 }

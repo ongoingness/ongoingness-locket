@@ -1,20 +1,21 @@
-package uk.ac.ncl.openlab.ongoingness.viewmodel
+package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
-import android.util.Log
+import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
-import uk.ac.ncl.openlab.ongoingness.utilities.CoverType
+import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
+import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
 
 const val REFIND_PULL_CONTENT_ON_WAKE = true
 
 class RefindController(context: Context,
-                     recogniser: AbstractRecogniser,
-                     presenter: Presenter,
-                     contentCollection: AbstractContentCollection)
+                       recogniser: AbstractRecogniser,
+                       presenter: Presenter,
+                       contentCollection: AbstractContentCollection)
     : AbstractController(context, recogniser, presenter, contentCollection) {
 
     var gotData = false
@@ -52,18 +53,7 @@ class RefindController(context: Context,
 
     }
 
-    override fun onPickUp() {
-
-    }
-
-
-
-    override fun setStatingState() {
-
-    }
-
     override fun onStartedEvent() {
-
 
         if(REFIND_PULL_CONTENT_ON_WAKE && !gotData && hasConnection(context)) {
 
@@ -96,6 +86,8 @@ class RefindController(context: Context,
 
     }
 
+    override fun setStatingState() {}
+
     override fun onStoppedEvent() {}
 
     override fun onUpEvent() {}
@@ -117,36 +109,6 @@ class RefindController(context: Context,
     override fun onChargerDisconnectedEvent() {}
 
     override fun onBatteryChangedEvent(battery: Float) {}
-
-    private fun awakeUpProcedures() {
-        if(PULL_CONTENT_ON_WAKE && !gotData && hasConnection(context)) {
-
-            val postExecuteCallback: (result: Boolean) -> Unit = {
-                gotData = it
-                getContentCollection().restartIndex()
-                val content = getContentCollection().getCurrentContent()
-                if(content != null)
-                    getPresenter().displayContentPiece(content)
-                stopKillThread()
-                updateState(ControllerState.ACTIVE)
-            }
-
-            getPresenter().displayCover(CoverType.WHITE)
-            PullMediaAsyncTask(postExecuteCallback = postExecuteCallback).execute(context)
-            updateState(ControllerState.PULLING_DATA)
-
-        } else {
-
-            getContentCollection().restartIndex()
-            val content = getContentCollection().getCurrentContent()
-            if(content != null)
-                getPresenter().displayContentPiece(content)
-            stopKillThread()
-            updateState(ControllerState.ACTIVE)
-
-        }
-
-    }
 
 }
 

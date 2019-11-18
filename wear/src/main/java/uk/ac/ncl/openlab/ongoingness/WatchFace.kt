@@ -12,10 +12,9 @@ import androidx.work.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
-import uk.ac.ncl.openlab.ongoingness.viewmodel.AbstractController
-import uk.ac.ncl.openlab.ongoingness.viewmodel.WatchFaceController
-import uk.ac.ncl.openlab.ongoingness.viewmodel.WatchFacePresenter
-import uk.ac.ncl.openlab.ongoingness.views.TestActivity
+import uk.ac.ncl.openlab.ongoingness.controllers.WatchFaceController
+import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
+import uk.ac.ncl.openlab.ongoingness.presenters.WatchFacePresenter
 
 /**
  * Important Note: Because watch face apps do not have a default Activity in
@@ -58,8 +57,6 @@ class WatchFace : CanvasWatchFaceService() {
             Logger.start(applicationContext)
 
             setWorkManager()
-
-            //initializeBackground()
 
             when(FLAVOR) {
 

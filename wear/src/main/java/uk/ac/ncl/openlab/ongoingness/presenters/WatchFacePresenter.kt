@@ -1,9 +1,8 @@
-package uk.ac.ncl.openlab.ongoingness.viewmodel
+package uk.ac.ncl.openlab.ongoingness.presenters
 
 import android.content.Context
 import android.graphics.*
 import uk.ac.ncl.openlab.ongoingness.R
-import uk.ac.ncl.openlab.ongoingness.utilities.*
 
 /**
  * Connects the activity view to the media in the local database, allowing it to be displayed on screen.
