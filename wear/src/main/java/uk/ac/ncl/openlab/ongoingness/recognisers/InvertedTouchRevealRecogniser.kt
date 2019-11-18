@@ -20,7 +20,7 @@ import uk.ac.ncl.openlab.ongoingness.R
 import java.util.ArrayList
 import kotlin.math.floor
 
-class TouchRevealRecogniserNew(val context: Context, val activity: Activity) : AbstractRecogniser(context), GestureDetector.OnGestureListener {
+class InvertedTouchRevealRecogniser(val context: Context, val activity: Activity) : AbstractRecogniser(context), GestureDetector.OnGestureListener {
 
     private var disposables: ArrayList<Disposable> = arrayListOf()
     private var lastGravityEvent: RecogniserEvent? = null
@@ -79,14 +79,15 @@ class TouchRevealRecogniserNew(val context: Context, val activity: Activity) : A
         val y = floor(event.values[1]).toInt()
         val z = floor(event.values[2]).toInt()
 
-        if (y >= 2 && z > -9 && z < 9 && lastGravityEvent != RecogniserEvent.TOWARDS) {
+
+        if (y <= -2 && z > -9 && z < 9 && lastGravityEvent != RecogniserEvent.TOWARDS) {
             lastGravityEvent = RecogniserEvent.TOWARDS
             notifyEvent(RecogniserEvent.TOWARDS)
-        }
-        else if (y > -2  && y < 2 && z > -9 && z < 9 && lastGravityEvent != RecogniserEvent.AWAY) {
+        } else if (y > 5 && z <= 8 && lastGravityEvent != RecogniserEvent.AWAY ) {
             lastGravityEvent = RecogniserEvent.AWAY
             notifyEvent(RecogniserEvent.AWAY)
         }
-    }
 
+    }
+    
 }

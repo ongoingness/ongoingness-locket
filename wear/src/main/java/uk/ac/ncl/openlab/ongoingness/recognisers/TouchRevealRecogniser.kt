@@ -128,7 +128,7 @@ class TouchRevealRecogniser(private val context: Context) : Observable(), Gestur
             previousState = currentState
             currentState = state
 
-            Log.d(TAG, "State Update: $currentState")
+            Log.d(TAG, "ControllerState Update: $currentState")
         }
     }
 

@@ -1,8 +1,11 @@
 package uk.ac.ncl.openlab.ongoingness.viewmodel
 
-enum class State{
+enum class ControllerState{
     STANDBY,
+    READY,
     ACTIVE,
     OFF,
+    CHARGING,
+    PULLING_DATA,
     UNKNOWN,
 }

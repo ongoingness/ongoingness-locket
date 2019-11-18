@@ -4,13 +4,13 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.graphics.*
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.BatteryManager
 import android.util.Log
 import androidx.work.*
+import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaWorker
 import uk.ac.ncl.openlab.ongoingness.workers.PushLogsWorker
 import java.io.*
@@ -191,4 +191,78 @@ fun addPushLogsWorkRequest(context: Context) {
     WorkManager.getInstance(context).enqueue(dailyWorkRequest)
 
 }
+
+
+fun getChargingBackground(battery: Float, screenSize: Int, context: Context): Bitmap {
+
+    //First layer
+    val transparent = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
+    val canvasT = Canvas(transparent)
+    canvasT.drawColor(Color.BLACK)
+
+    //Second Layer
+    val mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.flower_pattern_white), screenSize, screenSize, false)
+
+    //Third Layer
+    val blue = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
+
+    val canvasB = Canvas(blue)
+
+    val circleSize = (battery * screenSize) / 2
+
+    val circlePaint = Paint().apply { /*color = Color.parseColor("#009FE3")*/}
+    //circlePaint.shader = LinearGradient(0f, 0f, 0f, screenSize.toFloat(), Color.BLACK, Color.parseColor("#009FE3"), Shader.TileMode.MIRROR)
+    //circlePaint.shader = RadialGradient(screenSize / 2F, screenSize / 2F, circleSize + circleSize / 2, Color.parseColor("#009FE3"), Color.BLACK, Shader.TileMode.MIRROR)
+
+    //circlePaint.style = Paint.Style.STROKE
+
+    canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize,  circlePaint)
+
+    val borderPaint = Paint().apply {color = Color.parseColor("#009FE3"); style = Paint.Style.STROKE; strokeWidth = 10f }
+    canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize, borderPaint)
+
+
+
+    val alphaPaint = Paint()
+    alphaPaint.alpha = 250
+    alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+
+    canvasB.drawBitmap(mBackgroundBitmap, Matrix(), alphaPaint)
+
+
+    val bitmap = overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
+
+    return bitmap
+    /*
+    val bs = ByteArrayOutputStream()
+    bitmap.compress(Bitmap.CompressFormat.PNG, 50, bs)
+
+    currentBitmapByteArray = bs.toByteArray()
+
+    return currentBitmapByteArray
+
+     */
+
+}
+
+fun overlayBitmaps(b1: Bitmap, b2: Bitmap, b3: Bitmap, screenSize: Int): Bitmap {
+
+    val bmOverlay: Bitmap  = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bmOverlay)
+
+    val secondLayerAlphaPaint = Paint()
+    secondLayerAlphaPaint.alpha = 80
+
+    val alphaPaint = Paint()
+    alphaPaint.alpha = 250
+    alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+
+    canvas.drawBitmap(b1, Matrix(), null)
+    canvas.drawBitmap(b2, Matrix(), secondLayerAlphaPaint)
+    canvas.drawBitmap(b3, Matrix(), null)
+
+    return Bitmap.createScaledBitmap(bmOverlay, screenSize, screenSize, false)
+
+}
+
 

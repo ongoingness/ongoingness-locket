@@ -11,7 +11,7 @@ import uk.ac.ncl.openlab.ongoingness.R
 import java.io.ByteArrayOutputStream
 import kotlin.math.abs
 
-const val BROADCAST_INTENT_NAME: String = "BATTERY_INFO"
+//const val BROADCAST_INTENT_NAME: String = "BATTERY_INFO"
 
 class BatteryInfoReceiver(private var context: Context, private var screenSize: Int) {
 

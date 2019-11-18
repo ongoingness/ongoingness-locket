@@ -2,10 +2,7 @@ package uk.ac.ncl.openlab.ongoingness.recognisers
 
 enum class RecogniserEvent{
     STARTED,
-    AWAKE,
-    SLEEP,
     STOPPED,
-    NEXT,
 
     UP,
     DOWN,
@@ -14,4 +11,9 @@ enum class RecogniserEvent{
     UNKNOWN,
     LONG_PRESS,
     TAP,
+
+    ROTATE_UP,
+    ROTATE_DOWN,
+    PICK_UP,
+
 }

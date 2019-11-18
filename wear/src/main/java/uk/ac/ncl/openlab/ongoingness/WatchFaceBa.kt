@@ -12,9 +12,6 @@ import androidx.work.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
-import uk.ac.ncl.openlab.ongoingness.viewmodel.AbstractController
-import uk.ac.ncl.openlab.ongoingness.viewmodel.WatchFaceController
-import uk.ac.ncl.openlab.ongoingness.viewmodel.WatchFacePresenter
 import uk.ac.ncl.openlab.ongoingness.views.TestActivity
 
 /**
@@ -25,29 +22,27 @@ import uk.ac.ncl.openlab.ongoingness.views.TestActivity
  * in the Google Watch Face Code Lab:
  * https://codelabs.developers.google.com/codelabs/watchface/index.html#0
  */
-class WatchFace : CanvasWatchFaceService() {
+class WatchFaceBa : CanvasWatchFaceService() {
 
     override fun onCreateEngine(): Engine {
         return Engine()
     }
 
-    inner class Engine : CanvasWatchFaceService.Engine(), WatchFacePresenter.WatchFaceView {
-
+    inner class Engine : CanvasWatchFaceService.Engine() {
         private var mMuteMode: Boolean = false
-
         private lateinit var mBackgroundPaint: Paint
         private lateinit var mBackgroundBitmap: Bitmap
-
         private var mAmbient: Boolean = false
         private var mLowBitAmbient: Boolean = false
         private var mBurnInProtection: Boolean = false
 
-        private lateinit var controller: WatchFaceController
+        private lateinit var  batteryInfoReceiver: SystemBatteryInfoReceiver//BatteryInfoReceiver
+        private lateinit var bitmapReceiver: BroadcastReceiver
 
         override fun onCreate(holder: SurfaceHolder) {
             super.onCreate(holder)
 
-            setWatchFaceStyle(WatchFaceStyle.Builder(this@WatchFace)
+            setWatchFaceStyle(WatchFaceStyle.Builder(this@WatchFaceBa)
                     .setAcceptsTapEvents(true)
                     .setHideStatusBar(true)
                     .setShowUnreadCountIndicator(false)
@@ -59,44 +54,64 @@ class WatchFace : CanvasWatchFaceService() {
 
             setWorkManager()
 
-            //initializeBackground()
+            initializeBackground()
 
             when(FLAVOR) {
-
                 "locket_touch", "locket_touch_inverted" -> {
+                    batteryInfoReceiver = SystemBatteryInfoReceiver(applicationContext)//BatteryInfoReceiver(applicationContext, getScreenSize())
+                    batteryInfoReceiver.start()
 
-                    val presenter = WatchFacePresenter(applicationContext,
-                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover), getScreenSize(), getScreenSize(), false),
-                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover_white), getScreenSize(), getScreenSize(), false))
-                    presenter.attachView(this)
-                    presenter.displayCover(CoverType.BLACK)
+                    bitmapReceiver = object
+                        : BroadcastReceiver() {
 
-                    controller = WatchFaceController(applicationContext, true, presenter)
+                        override fun onReceive(context: Context, intent: Intent) {
 
-                }
+                            /*
+                            if (intent.hasExtra("background")) {
+                                val bitmap = BitmapFactory.decodeByteArray(
+                                        intent.getByteArrayExtra("background"), 0,
+                                        intent.getByteArrayExtra("background").size)
 
-                "refind" -> {
+                                mBackgroundBitmap = bitmap
 
-                    val presenter = WatchFacePresenter(applicationContext,
-                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover), getScreenSize(), getScreenSize(), false),
-                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover_white), getScreenSize(), getScreenSize(), false))
-                    presenter.attachView(this)
-                    presenter.displayCover(CoverType.BLACK)
 
-                    controller = WatchFaceController(applicationContext, false, presenter)
 
+
+                                invalidate()
+
+                            }*/
+
+                            if(intent.hasExtra("battery")) {
+
+                                mBackgroundBitmap = getChargingBackground(intent.getFloatExtra("battery", 0f), getScreenSize(), applicationContext)
+                                invalidate()
+
+                            }
+
+
+                        }
+                    }
+                    val filter = IntentFilter(BROADCAST_INTENT_NAME).apply {}
+                    registerReceiver(bitmapReceiver, filter)
                 }
             }
         }
 
         override fun onDestroy() {
             super.onDestroy()
-            controller.stop()
+            when(FLAVOR) {
+                "locket_touch", "locket_touch_inverted" -> {
+                    batteryInfoReceiver.stop()
+                    unregisterReceiver(bitmapReceiver)
+                }
+            }
         }
 
-        override fun updateBackgroundWithBitmap(newBackground: Bitmap) {
-            mBackgroundBitmap = newBackground
-            invalidate()
+        private fun initializeBackground() {
+            mBackgroundPaint = Paint().apply {
+                color = Color.RED
+            }
+            mBackgroundBitmap = getCoverBitmap()
         }
 
         override fun onPropertiesChanged(properties: Bundle) {
@@ -116,8 +131,8 @@ class WatchFace : CanvasWatchFaceService() {
             super.onAmbientModeChanged(inAmbientMode)
             this.mAmbient = inAmbientMode
 
-            if (!inAmbientMode)
-                controller.ambientModeChanged()
+            if (!inAmbientMode && !batteryInfoReceiver.charging)
+                launchActivity()
         }
 
         override fun onInterruptionFilterChanged(interruptionFilter: Int) {
@@ -136,7 +151,8 @@ class WatchFace : CanvasWatchFaceService() {
          * used for implementing specific logic to handle the gesture.
          */
         override fun onTapCommand(tapType: Int, x: Int, y: Int, eventTime: Long) {
-            controller.tapEvent()
+            if(!batteryInfoReceiver.charging)
+                launchActivity()
         }
 
 
@@ -149,11 +165,6 @@ class WatchFace : CanvasWatchFaceService() {
          * @param canvas
          */
         private fun drawBackground(canvas: Canvas) {
-
-            mBackgroundPaint = Paint().apply {
-                color = Color.RED
-            }
-
             if (mAmbient && (mLowBitAmbient || mBurnInProtection)) {
                 canvas.drawBitmap(mBackgroundBitmap, 0f, 0f, mBackgroundPaint)
             } else if (mAmbient) {
@@ -163,6 +174,20 @@ class WatchFace : CanvasWatchFaceService() {
             }
         }
 
+        private fun getCoverBitmap(): Bitmap {
+
+            var coverID: Int? = null
+
+            when(FLAVOR){
+                "locket" ->{ coverID = R.drawable.cover }
+                "locket_touch", "locket_touch_inverted" ->{ coverID = R.drawable.cover }
+                "refind" -> { coverID = R.drawable.refind_cover }
+            }
+
+            val bitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, coverID!! ), getScreenSize(), getScreenSize(), false)
+            return bitmap ?: Bitmap.createBitmap(getScreenSize(), getScreenSize(), Bitmap.Config.ARGB_8888)
+        }
+
         override fun onVisibilityChanged(visible: Boolean) {
             super.onVisibilityChanged(visible)
             if (visible) {
@@ -170,10 +195,26 @@ class WatchFace : CanvasWatchFaceService() {
             }
         }
 
+        private fun launchActivity() {
+            val intent = Intent(applicationContext, TestActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+            when(FLAVOR) {
+                "locket_touch", "locket_touch_inverted" -> {
+                    intent.putExtra("broadcastName", BROADCAST_INTENT_NAME)
+                    intent.putExtra("chargingState", batteryInfoReceiver.charging)
+                }
+            }
+
+            if(!batteryInfoReceiver.charging)
+                startActivity(intent)
+        }
+
         /**
          * Get the screen size of a device.
          */
-        override fun getScreenSize(): Int {
+        private fun getScreenSize(): Int {
             val windowManager = applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             val display = windowManager.defaultDisplay
             val size = Point()

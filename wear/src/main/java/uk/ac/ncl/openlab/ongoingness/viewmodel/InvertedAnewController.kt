@@ -9,9 +9,9 @@ import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
 
-const val PULL_CONTENT_ON_WAKE = true
+const val INVERTED_PULL_CONTENT_ON_WAKE = true
 
-class AnewController(context: Context,
+class InvertedAnewController(context: Context,
                      recogniser: AbstractRecogniser,
                      presenter: Presenter,
                      contentCollection: AbstractContentCollection,
@@ -33,6 +33,7 @@ class AnewController(context: Context,
     }
 
     var gotData = false
+    var start = true
 
     override fun setStatingState() {
 
@@ -62,7 +63,15 @@ class AnewController(context: Context,
 
         when(getCurrentState()) {
 
-            ControllerState.STANDBY -> updateState(ControllerState.READY)
+            ControllerState.STANDBY -> {
+
+                if(start) {
+                    awakeUpProcedures()
+                    start = false
+                } else {
+                    updateState(ControllerState.READY)
+                }
+            }
             else -> {}
         }
 
