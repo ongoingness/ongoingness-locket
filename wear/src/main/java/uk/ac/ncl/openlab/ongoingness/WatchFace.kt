@@ -180,12 +180,8 @@ class WatchFace : CanvasWatchFaceService() {
 
 
         private fun setWorkManager() {
-
             WorkManager.getInstance(applicationContext).cancelAllWork()
-
-            addPullMediaWorkRequest(applicationContext)
-            addPushLogsWorkRequest(applicationContext)
-
+            addPullMediaPushLogsWorkRequest(applicationContext)
         }
     }
 }

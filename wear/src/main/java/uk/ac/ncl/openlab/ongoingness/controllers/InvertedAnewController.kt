@@ -10,6 +10,7 @@ import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
 import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
+import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsAsyncTask
 
 const val INVERTED_PULL_CONTENT_ON_WAKE = true
 
@@ -24,6 +25,10 @@ class InvertedAnewController(context: Context,
 
     var gotData = false
     var start = true
+
+    override fun setStatingState() {
+        updateState(ControllerState.STANDBY)
+    }
 
     override fun onStartedEvent() {
 
@@ -73,15 +78,6 @@ class InvertedAnewController(context: Context,
                 if(content != null)
                     getPresenter().displayContentPiece(content)
 
-                /*
-                val c = getContentCollection().getCurrentContent()
-                val p = getContentCollection().getPreviousContent()
-                val n = getContentCollection().getNextContent()
-
-                getPresenter().displayAndPreloadContentPiece(c!!, p!!, n!!)
-                */
-
-
             }
 
             else ->  {}
@@ -115,7 +111,7 @@ class InvertedAnewController(context: Context,
         when(getCurrentState()) {
             ControllerState.CHARGING -> {
                 getPresenter().displayCover(CoverType.BLACK)
-                updateState(ControllerState.STANDBY)
+                updateState(ControllerState.READY)
             }
             else -> {}
         }
@@ -127,8 +123,6 @@ class InvertedAnewController(context: Context,
             else -> {}
         }
     }
-
-    override fun setStatingState() {}
 
     override fun onStoppedEvent() {}
 
@@ -157,7 +151,7 @@ class InvertedAnewController(context: Context,
             }
 
             getPresenter().displayCover(CoverType.WHITE)
-            PullMediaAsyncTask(postExecuteCallback = postExecuteCallback).execute(context)
+            PullMediaPushLogsAsyncTask(postExecuteCallback = postExecuteCallback).execute(context)
             updateState(ControllerState.PULLING_DATA)
 
         } else {
@@ -168,20 +162,8 @@ class InvertedAnewController(context: Context,
             val content = getContentCollection().getCurrentContent()
             if(content != null)
                 getPresenter().displayContentPiece(content)
-
-
-
-/*
-            val c = getContentCollection().getCurrentContent()
-            val p = getContentCollection().getPreviousContent()
-            val n = getContentCollection().getNextContent()
-
-            getPresenter().displayAndPreloadContentPiece(c!!, p!!, n!!)
-            */
-
             stopKillThread()
             updateState(ControllerState.ACTIVE)
-
         }
         Logger.log(LogType.WAKE_UP, listOf(), context)
     }

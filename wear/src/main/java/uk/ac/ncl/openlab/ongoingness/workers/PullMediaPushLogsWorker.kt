@@ -21,6 +21,7 @@ import uk.ac.ncl.openlab.ongoingness.database.repositories.WatchMediaRepository
 import uk.ac.ncl.openlab.ongoingness.database.schemas.MediaDate
 import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
 import uk.ac.ncl.openlab.ongoingness.utilities.API
+import uk.ac.ncl.openlab.ongoingness.utilities.addPullMediaPushLogsWorkRequest
 import uk.ac.ncl.openlab.ongoingness.utilities.addPullMediaWorkRequest
 import uk.ac.ncl.openlab.ongoingness.utilities.deleteFile
 import java.io.File
@@ -34,26 +35,19 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.math.log
 
-class PullMediaWorker(private val ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
+class PullMediaPushLogsWorker(private val ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
 
     override fun doWork(): Result {
 
-        var result = Result.failure()
+        var pullMediaSuccess = false
 
         when (FLAVOR) {
-            "locket_touch", "locket_touch_inverted" -> {
-                if(AsyncHelper.pullMediaLocket(ctx))
-                    result = Result.success()
-            }
-
-            "refind" -> {
-                if(AsyncHelper.pullMediaRefind(ctx))
-                    result = Result.success()
-            }
+            "locket_touch", "locket_touch_inverted" -> pullMediaSuccess = AsyncHelper.pullMediaLocket(ctx)
+            "refind" -> pullMediaSuccess = AsyncHelper.pullMediaRefind(ctx)
         }
-
-        addPullMediaWorkRequest(ctx)
-
+        val result = if(pullMediaSuccess && AsyncHelper.pushLogs(ctx)) Result.success() else Result.failure()
+        addPullMediaPushLogsWorkRequest(ctx)
         return result
+
     }
 }

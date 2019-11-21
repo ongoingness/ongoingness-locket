@@ -84,7 +84,7 @@ class WatchFaceBa : CanvasWatchFaceService() {
 
                             if(intent.hasExtra("battery")) {
 
-                                mBackgroundBitmap = getChargingBackground(intent.getFloatExtra("battery", 0f), getScreenSize(), applicationContext)
+                                //mBackgroundBitmap = getChargingBackground(intent.getFloatExtra("battery", 0f), getScreenSize(), applicationContext)
                                 invalidate()
 
                             }

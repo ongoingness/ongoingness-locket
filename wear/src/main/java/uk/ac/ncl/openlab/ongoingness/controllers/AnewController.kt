@@ -10,6 +10,7 @@ import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
 import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
+import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsAsyncTask
 
 const val PULL_CONTENT_ON_WAKE = true
 
@@ -22,7 +23,7 @@ class AnewController(context: Context,
                      val battery: Float)
     : AbstractController(context, recogniser, presenter, contentCollection) {
 
-    var gotData = false
+    private var gotData = false
 
     override fun onStartedEvent() {
 
@@ -138,7 +139,7 @@ class AnewController(context: Context,
             }
 
             getPresenter().displayCover(CoverType.WHITE)
-            PullMediaAsyncTask(postExecuteCallback = postExecuteCallback).execute(context)
+            PullMediaPushLogsAsyncTask(postExecuteCallback = postExecuteCallback).execute(context)
             updateState(ControllerState.PULLING_DATA)
 
         } else {

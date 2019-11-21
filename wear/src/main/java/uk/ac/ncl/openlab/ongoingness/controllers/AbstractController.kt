@@ -21,7 +21,7 @@ abstract class AbstractController(
         private val presenter: Presenter,
         private val contentCollection: AbstractContentCollection) {
 
-    private var currentControllerState: ControllerState = ControllerState.STANDBY
+    private var currentControllerState: ControllerState = ControllerState.UNKNOWN
     private var previousControllerState: ControllerState = ControllerState.UNKNOWN
 
     private val recogniserObserver = Observer { _, arg ->

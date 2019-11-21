@@ -11,6 +11,7 @@ import android.os.BatteryManager
 import android.util.Log
 import androidx.work.*
 import uk.ac.ncl.openlab.ongoingness.R
+import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsWorker
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaWorker
 import uk.ac.ncl.openlab.ongoingness.workers.PushLogsWorker
 import java.io.*
@@ -192,8 +193,26 @@ fun addPushLogsWorkRequest(context: Context) {
 
 }
 
+fun addPullMediaPushLogsWorkRequest(context: Context) {
 
-fun getChargingBackground(battery: Float, screenSize: Int, context: Context): Bitmap {
+    val constraints = Constraints.Builder()
+            .setRequiresCharging(true)
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+    val timeDiff = calculateNextDailyRequestTimeDiff()
+
+    val dailyWorkRequest = OneTimeWorkRequestBuilder<PullMediaPushLogsWorker>()
+            .setInitialDelay(timeDiff, TimeUnit.MILLISECONDS)
+            .setConstraints(constraints)
+            .build()
+
+    WorkManager.getInstance(context).enqueue(dailyWorkRequest)
+
+}
+
+
+fun getAnewChargingBackground(battery: Float, screenSize: Int, context: Context): Bitmap {
 
     //First layer
     val transparent = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
@@ -205,43 +224,18 @@ fun getChargingBackground(battery: Float, screenSize: Int, context: Context): Bi
 
     //Third Layer
     val blue = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
-
     val canvasB = Canvas(blue)
-
     val circleSize = (battery * screenSize) / 2
-
-    val circlePaint = Paint().apply { /*color = Color.parseColor("#009FE3")*/}
-    //circlePaint.shader = LinearGradient(0f, 0f, 0f, screenSize.toFloat(), Color.BLACK, Color.parseColor("#009FE3"), Shader.TileMode.MIRROR)
-    //circlePaint.shader = RadialGradient(screenSize / 2F, screenSize / 2F, circleSize + circleSize / 2, Color.parseColor("#009FE3"), Color.BLACK, Shader.TileMode.MIRROR)
-
-    //circlePaint.style = Paint.Style.STROKE
-
+    val circlePaint = Paint().apply {}
     canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize,  circlePaint)
-
     val borderPaint = Paint().apply {color = Color.parseColor("#009FE3"); style = Paint.Style.STROKE; strokeWidth = 10f }
     canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize, borderPaint)
-
-
-
     val alphaPaint = Paint()
     alphaPaint.alpha = 250
     alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
-
     canvasB.drawBitmap(mBackgroundBitmap, Matrix(), alphaPaint)
 
-
-    val bitmap = overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
-
-    return bitmap
-    /*
-    val bs = ByteArrayOutputStream()
-    bitmap.compress(Bitmap.CompressFormat.PNG, 50, bs)
-
-    currentBitmapByteArray = bs.toByteArray()
-
-    return currentBitmapByteArray
-
-     */
+    return overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
 
 }
 

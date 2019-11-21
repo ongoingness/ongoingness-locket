@@ -24,7 +24,6 @@ object Logger {
         val currentTime = System.currentTimeMillis().toString()
         var message = ""
 
-
         when(type) {
 
             LogType.WAKE_UP -> {
@@ -93,7 +92,7 @@ object Logger {
        return sb.toString()
     }
 
-    private fun formatLogs(): String {
+    fun formatLogs(): String {
         val sb = StringBuilder()
         sb.append("[")
 

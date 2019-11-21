@@ -17,11 +17,11 @@ class PullMediaAsyncTask(private val preExecuteCallback: () -> Unit = {}, privat
             when(FLAVOR) {
 
                 "locket_touch", "locket_touch_inverted" -> {
-                    return PullMediaWorker.pullMediaLocket(contexts[0]!!)
+                    return AsyncHelper.pullMediaLocket(contexts[0]!!)
                 }
 
                 "refind" -> {
-                   return PullMediaWorker.pullMediaRefind(contexts[0]!!)
+                   return AsyncHelper.pullMediaRefind(contexts[0]!!)
                 }
 
             }

@@ -476,7 +476,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                     isGettingData = true
                     rotationRecogniserOld?.stop()
                     presenter!!.pullingData(true)
-                    PullMediaWorker.pullMediaRefind(this@MainActivity)
+                    //PullMediaWorker.pullMediaRefind(this@MainActivity)
                     isGettingData = false
                     rotationRecogniserOld?.start(rotationListenerOld!!)
                     presenter!!.pullingData(false)
