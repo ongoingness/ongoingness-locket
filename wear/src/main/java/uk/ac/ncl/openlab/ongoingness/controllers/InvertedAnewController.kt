@@ -1,6 +1,7 @@
 package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
+import com.crashlytics.android.Crashlytics
 import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
 import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
@@ -72,6 +73,15 @@ class InvertedAnewController(context: Context,
                 if(content != null)
                     getPresenter().displayContentPiece(content)
 
+                /*
+                val c = getContentCollection().getCurrentContent()
+                val p = getContentCollection().getPreviousContent()
+                val n = getContentCollection().getNextContent()
+
+                getPresenter().displayAndPreloadContentPiece(c!!, p!!, n!!)
+                */
+
+
             }
 
             else ->  {}
@@ -138,7 +148,7 @@ class InvertedAnewController(context: Context,
 
             val postExecuteCallback: (result: Boolean) -> Unit = {
                 gotData = it
-                getContentCollection().restartIndex()
+                getContentCollection().setup()
                 val content = getContentCollection().getCurrentContent()
                 if(content != null)
                     getPresenter().displayContentPiece(content)
@@ -153,9 +163,22 @@ class InvertedAnewController(context: Context,
         } else {
 
             getContentCollection().restartIndex()
+
+
             val content = getContentCollection().getCurrentContent()
             if(content != null)
                 getPresenter().displayContentPiece(content)
+
+
+
+/*
+            val c = getContentCollection().getCurrentContent()
+            val p = getContentCollection().getPreviousContent()
+            val n = getContentCollection().getNextContent()
+
+            getPresenter().displayAndPreloadContentPiece(c!!, p!!, n!!)
+            */
+
             stopKillThread()
             updateState(ControllerState.ACTIVE)
 

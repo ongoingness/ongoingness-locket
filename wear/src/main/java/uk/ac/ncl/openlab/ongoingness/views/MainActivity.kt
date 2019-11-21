@@ -2,12 +2,18 @@ package uk.ac.ncl.openlab.ongoingness.views
 
 import android.content.pm.ActivityInfo
 import android.graphics.*
+import android.graphics.drawable.BitmapDrawable
 import android.os.*
 import android.view.View
 import android.view.WindowManager
 import androidx.fragment.app.FragmentActivity
 import androidx.wear.ambient.AmbientModeSupport
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.resource.gif.GifDrawable
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.target.Target
 import kotlinx.android.synthetic.main.activity_main.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
@@ -37,6 +43,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
         // Keep screen awake
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        setBrightness(maxBrightness)
 
         Logger.start(applicationContext)
         Logger.log(LogType.ACTIVITY_STARTED, listOf(), applicationContext!!)
@@ -125,10 +133,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
             }
         }
-
-
-
-
     }
 
     /**
@@ -168,21 +172,40 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     override fun updateBackgroundWithBitmap(bitmap: Bitmap) {
         runOnUiThread {
             macAddress.visibility = View.INVISIBLE
-            Glide.with(this).load(bitmap).into(image)
+            Glide.with(this).load(bitmap).placeholder(BitmapDrawable(bitmap)).diskCacheStrategy(DiskCacheStrategy.ALL).into(image)
         }
     }
 
     /**
      * Update the background of the watch face.
      */
-    override fun updateBackground(file: File, contentType: ContentType) {
+    override fun updateBackground(file: File, contentType: ContentType, bitmap: BitmapDrawable) {
         runOnUiThread {
             macAddress.visibility = View.INVISIBLE
             when(contentType) {
-               ContentType.IMAGE ->
-                    Glide.with(this).load(file).into(image)
-                ContentType.GIF ->
-                    Glide.with(this).asGif().load(file).into(image)
+                ContentType.IMAGE ->
+                    Glide.with(this)
+                        .load(bitmap)
+                        .placeholder(bitmap)
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(image)
+                ContentType.GIF -> {
+                    Glide.with(this)
+                        .asGif()
+                        .load(file)
+                        .placeholder(bitmap)
+                        .listener(object : RequestListener<GifDrawable>{
+                            override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<GifDrawable>?, isFirstResource: Boolean): Boolean {
+                                return false
+                            }
+
+                            override fun onResourceReady(resource: GifDrawable?, model: Any?, target: Target<GifDrawable>?, dataSource: com.bumptech.glide.load.DataSource?, isFirstResource: Boolean): Boolean {
+                                return false
+                            }
+                        })
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .into(image)
+                }
             }
         }
     }

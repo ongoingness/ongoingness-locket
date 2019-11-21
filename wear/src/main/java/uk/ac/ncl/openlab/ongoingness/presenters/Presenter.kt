@@ -2,6 +2,7 @@ package uk.ac.ncl.openlab.ongoingness.presenters
 
 import android.content.Context
 import android.graphics.*
+import android.graphics.drawable.BitmapDrawable
 import android.util.Log
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.collections.ContentPiece
@@ -21,7 +22,7 @@ class Presenter(private val context: Context,
     var view: View? = null
 
     fun displayContentPiece(contentPiece: ContentPiece) {
-        view?.updateBackground(contentPiece.file, contentPiece.type)
+        view?.updateBackground(contentPiece.file, contentPiece.type, contentPiece.bitmapDrawable)
     }
 
     fun displayCover(type: CoverType) {
@@ -81,12 +82,7 @@ class Presenter(private val context: Context,
 
         val circleSize = (battery * view!!.getScreenSize()) / 2
 
-        val circlePaint = Paint().apply { /*color = Color.parseColor("#009FE3")*/}
-        //circlePaint.shader = LinearGradient(0f, 0f, 0f, screenSize.toFloat(), Color.BLACK, Color.parseColor("#009FE3"), Shader.TileMode.MIRROR)
-        //circlePaint.shader = RadialGradient(screenSize / 2F, screenSize / 2F, circleSize + circleSize / 2, Color.parseColor("#009FE3"), Color.BLACK, Shader.TileMode.MIRROR)
-
-        //circlePaint.style = Paint.Style.STROKE
-
+        val circlePaint = Paint().apply {}
         canvasB.drawCircle(view!!.getScreenSize() / 2F, view!!.getScreenSize() / 2F ,  circleSize,  circlePaint)
 
         val borderPaint = Paint().apply {color = Color.parseColor("#009FE3"); style = Paint.Style.STROKE; strokeWidth = 10f }
@@ -101,18 +97,7 @@ class Presenter(private val context: Context,
         canvasB.drawBitmap(mBackgroundBitmap, Matrix(), alphaPaint)
 
 
-        val bitmap = overlayBitmaps(transparent, mBackgroundBitmap, blue, view!!.getScreenSize())
-
-        return bitmap
-        /*
-        val bs = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.PNG, 50, bs)
-
-        currentBitmapByteArray = bs.toByteArray()
-
-        return currentBitmapByteArray
-
-         */
+        return overlayBitmaps(transparent, mBackgroundBitmap, blue, view!!.getScreenSize())
 
     }
 
@@ -136,18 +121,15 @@ class Presenter(private val context: Context,
 
     }
 
-
-
     /**
      * Control the view, must implement these methods
      */
     interface View {
         fun updateBackgroundWithBitmap(bitmap: Bitmap)
-        fun updateBackground(file: File, contentType: ContentType)
+        fun updateBackground(file: File, contentType: ContentType, bitmap: BitmapDrawable)
         fun displayText(addr: String)
         fun getScreenSize(): Int
         fun finishActivity()
     }
-
 
 }

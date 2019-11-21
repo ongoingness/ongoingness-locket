@@ -1,6 +1,7 @@
 package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
+import com.crashlytics.android.Crashlytics
 import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
 import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
@@ -25,6 +26,7 @@ class RefindController(context: Context,
         when(getCurrentState()) {
 
             ControllerState.ACTIVE -> {
+
                 updateKillThread(System.currentTimeMillis())
                 val content = getContentCollection().goToNextContent()
                 if(content != null)
@@ -41,6 +43,7 @@ class RefindController(context: Context,
         when(getCurrentState()) {
 
             ControllerState.ACTIVE -> {
+
                 updateKillThread(System.currentTimeMillis())
                 val content = getContentCollection().goToPreviousContent()
                 if(content != null)
@@ -59,7 +62,7 @@ class RefindController(context: Context,
 
             val postExecuteCallback: (result: Boolean) -> Unit = {
                 gotData = it
-                getContentCollection().restartIndex()
+                getContentCollection().setup()
                 val content = getContentCollection().getCurrentContent()
                 if(content != null)
                     getPresenter().displayContentPiece(content)

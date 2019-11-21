@@ -1,1 +1,5 @@
 /build
+*google-services.json
+/src/locket_touch
+/src/locket_touch_inverted
+/src/refind

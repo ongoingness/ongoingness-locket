@@ -1,11 +1,14 @@
 package uk.ac.ncl.openlab.ongoingness.collections
 
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProviders
 import uk.ac.ncl.openlab.ongoingness.database.WatchMediaViewModel
 import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
+import uk.ac.ncl.openlab.ongoingness.utilities.getBitmapFromFile
 import java.io.File
 
 abstract class AbstractContentCollection(activity: FragmentActivity) {
@@ -63,6 +66,11 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
         return contentPiece
     }
 
+    fun getNextContent():ContentPiece? {
+        var nextIndex = if (currentIndex == contentList.size - 1) 0 else currentIndex + 1
+        return packageContent(contentList[nextIndex])
+    }
+
     fun goToPreviousContent(): ContentPiece? {
         if(contentList.isEmpty())
             return null
@@ -85,11 +93,17 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
         return contentPiece
     }
 
+    fun getPreviousContent(): ContentPiece? {
+        var previousIndex = if (currentIndex == 0) contentList.size - 1 else currentIndex - 1
+        return packageContent(contentList[previousIndex])
+    }
+
     private fun packageContent(content: WatchMedia): ContentPiece? {
         val file  = File(context!!.filesDir, content.path)
         if(file.exists()) {
             val type = if (content.mimetype.contains("gif")) ContentType.GIF else ContentType.IMAGE
-            return ContentPiece(file, type)
+            val bitmap = BitmapDrawable(getBitmapFromFile(context, file.name))
+            return ContentPiece(file, type, bitmap)
         }
         return null
     }

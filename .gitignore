@@ -9,3 +9,8 @@
 /captures
 .externalNativeBuild
 .idea
+
+*google-services.json
+wear/src/locket_touch
+wear/src/locket_touch_inverted
+wear/src/refind
