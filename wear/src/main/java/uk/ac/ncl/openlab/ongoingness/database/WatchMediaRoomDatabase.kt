@@ -10,7 +10,7 @@ import uk.ac.ncl.openlab.ongoingness.database.schemas.MediaDate
 import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
 import uk.ac.ncl.openlab.ongoingness.utilities.Converters
 
-@Database(entities = [WatchMedia::class, Log::class, MediaDate::class], version = 7)
+@Database(entities = [WatchMedia::class, Log::class, MediaDate::class], version = 8)
 @TypeConverters(Converters::class)
 abstract class WatchMediaRoomDatabase : RoomDatabase() {
 

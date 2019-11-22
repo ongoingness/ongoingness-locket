@@ -51,7 +51,6 @@ class AnewController(context: Context,
     }
 
     override fun onAwayEvent() {
-        Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), context)
         stopKillThread()
         getPresenter().view!!.finishActivity()
     }
@@ -132,8 +131,10 @@ class AnewController(context: Context,
                 gotData = it
                 getContentCollection().setup()
                 val content = getContentCollection().getCurrentContent()
-                if(content != null)
+                if(content != null) {
+                    getContentCollection().startLoggingFields(content)
                     getPresenter().displayContentPiece(content)
+                }
                 stopKillThread()
                 updateState(ControllerState.ACTIVE)
             }
@@ -146,8 +147,10 @@ class AnewController(context: Context,
 
             getContentCollection().restartIndex()
             val content = getContentCollection().getCurrentContent()
-            if(content != null)
+            if(content != null) {
+                getContentCollection().startLoggingFields(content)
                 getPresenter().displayContentPiece(content)
+            }
             stopKillThread()
             updateState(ControllerState.ACTIVE)
 

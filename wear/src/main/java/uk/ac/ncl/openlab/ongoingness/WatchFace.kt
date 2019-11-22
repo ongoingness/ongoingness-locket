@@ -55,6 +55,7 @@ class WatchFace : CanvasWatchFaceService() {
 
 
             Logger.start(applicationContext)
+            Logger.log(LogType.STARTED_WATCHFACE, listOf(), applicationContext)
 
             setWorkManager()
 
@@ -89,6 +90,7 @@ class WatchFace : CanvasWatchFaceService() {
         override fun onDestroy() {
             super.onDestroy()
             controller.stop()
+            Logger.log(LogType.STOPPED_WATCHFACE, listOf(), applicationContext)
         }
 
         override fun updateBackgroundWithBitmap(newBackground: Bitmap) {

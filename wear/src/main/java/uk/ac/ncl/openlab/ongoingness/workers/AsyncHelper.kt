@@ -4,8 +4,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Movie
 import android.util.Log
-import androidx.work.ListenableWorker
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -19,13 +19,10 @@ import uk.ac.ncl.openlab.ongoingness.database.repositories.WatchMediaRepository
 import uk.ac.ncl.openlab.ongoingness.database.schemas.MediaDate
 import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
 import uk.ac.ncl.openlab.ongoingness.utilities.API
+import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
-import uk.ac.ncl.openlab.ongoingness.utilities.addPushLogsWorkRequest
 import uk.ac.ncl.openlab.ongoingness.utilities.deleteFile
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.io.OutputStream
+import java.io.*
 import java.sql.Date
 import java.text.SimpleDateFormat
 import kotlin.coroutines.resume
@@ -43,12 +40,12 @@ class AsyncHelper {
 
                     val callback = { _: ResponseBody? ->
                         Logger.clearLogs()
-                        addPushLogsWorkRequest(context)
+                        Logger.log(LogType.PUSHED_LOGS, listOf("success:true"), context)
                         cont.resume(true)
                     }
 
                     val failure = { _: IOException ->
-                        addPushLogsWorkRequest(context)
+                        Logger.log(LogType.PUSHED_LOGS, listOf("success:false"), context)
                         cont.resume(false)
                     }
 
@@ -100,7 +97,8 @@ class AsyncHelper {
                                             media.getString("locket"),
                                             media.getString("mimetype"),
                                             i,
-                                            Date(SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(media.getString("createdAt")).time))
+                                            Date(SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(media.getString("createdAt")).time),
+                                            0)
 
                                     val times = media.getJSONArray("times")
 
@@ -111,10 +109,12 @@ class AsyncHelper {
                                         if (mediaFetch == payload.length()) {
                                             for (m in toBeRemoved) {
                                                 GlobalScope.launch {
+                                                    Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${m._id}"), context)
                                                     watchMediaRepository.delete(m._id)
                                                     deleteFile(context, m.path)
                                                 }
                                             }
+                                            Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
                                             cont.resume(true)
                                         }
                                     } else {
@@ -133,9 +133,12 @@ class AsyncHelper {
                                                             input!!.copyTo(fileOut)
                                                         }
                                                     }
+                                                    newMedia.duration = Movie.decodeStream(FileInputStream(file)).duration()
+
                                                 } catch (e: Exception) {
                                                     Log.d("InputStream", "$e")
                                                 }
+
 
                                             } else {
                                                 val image = BitmapFactory.decodeStream(inputStream)
@@ -150,13 +153,16 @@ class AsyncHelper {
 
                                                 val job = GlobalScope.launch {
                                                     watchMediaRepository.insert(newMedia)
+                                                    Logger.log(LogType.NEW_CONTENT_ADDED, listOf("contentID:${newMedia._id}"), context)
                                                     addMediaDates(mediaDateRepository, newMedia._id, times)
                                                     if (mediaFetch == payload.length()) {
                                                         for (m in toBeRemoved) {
+                                                            Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${m._id}"), context)
                                                             watchMediaRepository.delete(m._id)
                                                             deleteFile(context, m.path)
                                                         }
                                                         try {
+                                                            Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
                                                             cont.resume(true)
                                                         } catch (e : Exception) {
                                                             Log.d("PullMedia", "$e")
@@ -172,9 +178,11 @@ class AsyncHelper {
                                 if (toBeRemoved.isNotEmpty()) {
                                     GlobalScope.launch {
                                         for (media in toBeRemoved) {
+                                            Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${media._id}"), context)
                                             watchMediaRepository.delete(media._id)
                                             deleteFile(context, media.path)
                                         }
+                                        Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
                                         cont.resume(true)
                                     }
                                 }
@@ -185,6 +193,7 @@ class AsyncHelper {
 
                     val failure = { e: java.lang.Exception ->
                         Log.d("Error", "$e")
+                        Logger.log(LogType.PULLED_CONTENT, listOf("success:false"), context)
                         cont.resume(false)
                     }
 
@@ -219,6 +228,7 @@ class AsyncHelper {
                 if (stringResponse != "[]") {
 
                     for (mediaToRemove in mediaList) {
+                        Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${mediaToRemove._id}"), context)
                         deleteFile(context, mediaToRemove.path)
                     }
                     repository.deleteAll()
@@ -228,17 +238,16 @@ class AsyncHelper {
                     val payload: JSONArray = jsonResponse.getJSONArray("payload")
                     if (payload.length() > 0) {
 
-
                         //Set present Image
                         val presentImage: JSONObject = payload.getJSONObject(0)
-
 
                         val  newWatchMedia = WatchMedia(presentImage.getString("_id"),
                                 presentImage.getString("path"),
                                 presentImage.getString("locket"),
                                 presentImage.getString("mimetype"),
                                 0,
-                                Date(System.currentTimeMillis())) //fixme check the name from the api json response
+                                Date(System.currentTimeMillis()),
+                                0) //fixme check the name from the api json response
 
                         api.fetchBitmap(newWatchMedia._id) { body ->
                             val inputStream = body?.byteStream()
@@ -256,6 +265,7 @@ class AsyncHelper {
                                 inputStream?.close()
                                 GlobalScope.launch {
                                     repository.insert(newWatchMedia)
+                                    Logger.log(LogType.NEW_CONTENT_ADDED, listOf("contentID:${newWatchMedia._id}"), context)
                                 }
                             }
                         }
@@ -270,7 +280,8 @@ class AsyncHelper {
                                         "past",
                                         pastImage.getString("mimetype"),
                                         i,
-                                        Date(System.currentTimeMillis()))) //fixme check the name from the api json response
+                                        Date(System.currentTimeMillis()),
+                                        0)) //fixme check the name from the api json response
                             } catch (e: java.lang.Exception) {
                                 e.printStackTrace()
                             }
@@ -295,6 +306,7 @@ class AsyncHelper {
                                     stream.close()
                                     GlobalScope.launch {
                                         repository.insert(media)
+                                        Logger.log(LogType.NEW_CONTENT_ADDED, listOf("contentID:${media._id}"), context)
                                     }
                                 }
                             }
@@ -303,7 +315,6 @@ class AsyncHelper {
                     }
                 }
             }
-
             return result
         }
 

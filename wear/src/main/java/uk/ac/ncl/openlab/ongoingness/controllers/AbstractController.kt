@@ -86,10 +86,8 @@ abstract class AbstractController(
         contentCollection.setup()
         recogniser.addObserver(recogniserObserver)
         context.registerReceiver(batteryReceiver, IntentFilter("BATTERY_INFO").apply {})
-
         killRunnable = Runnable {
             if(System.currentTimeMillis() - lastChanged > killDelta) {
-                Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), context)
                 presenter.view!!.finishActivity()
             } else {
                 killHandler.postDelayed(killRunnable, timeCheckInterval)
@@ -104,11 +102,13 @@ abstract class AbstractController(
     }
 
     open fun stop() {
+        contentCollection.stop()
         killHandler.removeCallbacks(killRunnable)
         context.unregisterReceiver(batteryReceiver)
         recogniser.stop()
         presenter.detachView()
-        contentCollection.stop()
+        Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), context)
+        Logger.deleteLogSessionToken()
     }
 
     fun updateState(controllerState: ControllerState){

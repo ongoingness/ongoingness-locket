@@ -63,7 +63,6 @@ class InvertedAnewController(context: Context,
     }
 
     override fun onAwayEvent() {
-        Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), context)
         stopKillThread()
         getPresenter().view!!.finishActivity()
     }
@@ -92,7 +91,9 @@ class InvertedAnewController(context: Context,
 
             ControllerState.ACTIVE -> {
                 getPresenter().displayCover(CoverType.BLACK)
+                getContentCollection().stop()
                 Logger.log(LogType.SLEEP, listOf(), context)
+                Logger.deleteLogSessionToken()
                 updateState(ControllerState.READY)
             }
 
@@ -144,10 +145,14 @@ class InvertedAnewController(context: Context,
                 gotData = it
                 getContentCollection().setup()
                 val content = getContentCollection().getCurrentContent()
-                if(content != null)
+                if(content != null) {
+                    getContentCollection().startLoggingFields(content)
                     getPresenter().displayContentPiece(content)
+                }
                 stopKillThread()
                 updateState(ControllerState.ACTIVE)
+                Logger.setLogSessionToken()
+                Logger.log(LogType.WAKE_UP, listOf(), context)
             }
 
             getPresenter().displayCover(CoverType.WHITE)
@@ -155,17 +160,18 @@ class InvertedAnewController(context: Context,
             updateState(ControllerState.PULLING_DATA)
 
         } else {
-
-            getContentCollection().restartIndex()
-
-
+            getContentCollection().setup()
             val content = getContentCollection().getCurrentContent()
-            if(content != null)
+            if(content != null) {
+                getContentCollection().startLoggingFields(content)
                 getPresenter().displayContentPiece(content)
+            }
             stopKillThread()
             updateState(ControllerState.ACTIVE)
+            Logger.setLogSessionToken()
+            Logger.log(LogType.WAKE_UP, listOf(), context)
         }
-        Logger.log(LogType.WAKE_UP, listOf(), context)
+
     }
 
 }

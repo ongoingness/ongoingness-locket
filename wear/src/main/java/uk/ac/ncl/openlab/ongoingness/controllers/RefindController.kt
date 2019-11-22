@@ -65,8 +65,10 @@ class RefindController(context: Context,
                 gotData = it
                 getContentCollection().setup()
                 val content = getContentCollection().getCurrentContent()
-                if(content != null)
+                if(content != null) {
+                    getContentCollection().startLoggingFields(content)
                     getPresenter().displayContentPiece(content)
+                }
                 stopKillThread()
                 Logger.log(LogType.WAKE_UP, listOf(), context)
 
@@ -82,8 +84,10 @@ class RefindController(context: Context,
         } else {
             getContentCollection().restartIndex()
             val content = getContentCollection().getCurrentContent()
-            if(content != null)
+            if(content != null) {
+                getContentCollection().startLoggingFields(content)
                 getPresenter().displayContentPiece(content)
+            }
             startKillThread(1000L * 30 * 1  , 5000L)
             updateState(ControllerState.ACTIVE)
         }

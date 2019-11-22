@@ -11,9 +11,19 @@ object Logger {
 
     private lateinit var repository: LogRepository
 
+    private var sessionToken: Long? = null
+
     fun start(context: Context) {
         if (!(Logger::repository.isInitialized))
             repository = LogRepository(WatchMediaRoomDatabase.getDatabase(context).logDao())
+    }
+
+    fun setLogSessionToken() {
+        sessionToken = System.currentTimeMillis()
+    }
+
+    fun deleteLogSessionToken() {
+        sessionToken = null
     }
 
     fun log(type: LogType, content: List<String>, context: Context)  {
@@ -28,37 +38,41 @@ object Logger {
 
             LogType.WAKE_UP -> {
                 message = "Device was awaken."
+                if(sessionToken != null) mutableContentList.add("session:$sessionToken")
             }
 
-            LogType.NEXT_IMAGE -> {
-                message = "User went to the next image."
-
-            }
-
-            LogType.PREV_IMAGE -> {
-                message = "User went to the next image."
+            LogType.CONTENT_DISPLAYED -> {
+                message = "Device displayed content."
+                if(sessionToken != null) mutableContentList.add("session:$sessionToken")
             }
 
             LogType.SLEEP -> {
                 message = "Device went to sleep."
+                if(sessionToken != null) mutableContentList.add("session:$sessionToken")
             }
 
-            LogType.ACTIVITY_STARTED -> {
-                message = "Activity Started."
-            }
+            LogType.ACTIVITY_STARTED -> message = "Activity Started."
 
             LogType.ACTIVITY_TERMINATED -> {
                 message = "Activity Terminated."
+                if(sessionToken != null) mutableContentList.add("session:$sessionToken")
             }
 
-            LogType.CHARGER_CONNECTED -> {
-                message = "Charger Connected.."
-            }
+            LogType.CHARGER_CONNECTED -> message = "Charger Connected."
 
-            LogType.CHARGER_DISCONNECTED -> {
-                message = "Charger Disconnected."
-            }
+            LogType.CHARGER_DISCONNECTED -> message = "Charger Disconnected."
 
+            LogType.PULLED_CONTENT -> message = "Pulled Content From Server."
+
+            LogType.PUSHED_LOGS -> message = "Pushed Logs To Server."
+
+            LogType.NEW_CONTENT_ADDED -> message = "New Content Added."
+
+            LogType.CONTENT_REMOVED -> message = "Content Removed."
+
+            LogType.STARTED_WATCHFACE -> message = "WatchFace Started."
+
+            LogType.STOPPED_WATCHFACE -> message = "WatchFace Stopped."
 
         }
 
@@ -117,26 +131,21 @@ object Logger {
         repository.deleteAll()
     }
 
-    fun sendLogs(): String {
-        val logs = formatLogs()
-        val api = API()
-
-        GlobalScope.launch {
-            api.sendLogs(logs, callback = { repository.deleteAll()}, failure = {})
-        }
-
-        return logs
-    }
 }
 
 enum class LogType {
     ACTIVITY_STARTED,
     WAKE_UP,
-    NEXT_IMAGE,
-    PREV_IMAGE,
+    CONTENT_DISPLAYED,
     SLEEP,
     ACTIVITY_TERMINATED,
     CHARGER_CONNECTED,
-    CHARGER_DISCONNECTED
+    CHARGER_DISCONNECTED,
+    PULLED_CONTENT,
+    PUSHED_LOGS,
+    NEW_CONTENT_ADDED,
+    CONTENT_REMOVED,
+    STARTED_WATCHFACE,
+    STOPPED_WATCHFACE
 }
 

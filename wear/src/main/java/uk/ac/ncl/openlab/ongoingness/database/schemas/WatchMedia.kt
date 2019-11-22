@@ -12,9 +12,9 @@ data class WatchMedia(
         @ColumnInfo(name = "collection")      val collection: String,
         @ColumnInfo(name = "mimetype")        val mimetype: String,
         @ColumnInfo(name = "order")           val order: Int,
-        @ColumnInfo(name = "createdAt")       val createdAt: Date)
+        @ColumnInfo(name = "createdAt")       val createdAt: Date,
+        @ColumnInfo(name = "duration")        var duration: Int)
 {
-
 
     override fun equals(other: Any?): Boolean {
         if(other == null || other !is WatchMedia)

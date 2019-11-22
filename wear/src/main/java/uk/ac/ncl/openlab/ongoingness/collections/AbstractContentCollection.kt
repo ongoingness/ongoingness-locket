@@ -1,7 +1,7 @@
 package uk.ac.ncl.openlab.ongoingness.collections
 
-import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
+import android.util.Log
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProviders
 import uk.ac.ncl.openlab.ongoingness.database.WatchMediaViewModel
@@ -18,18 +18,28 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
     private var watchMediaViewModel =  ViewModelProviders.of(activity).get(WatchMediaViewModel::class.java)
     private var contentList: List<WatchMedia> = listOf()
 
-    private  var newContentTimestamp: Long? = null
-    private  var indexTimestamp: Int? = null
+    private var newContentTimestamp: Long? = null
+    private var indexTimestamp: Int? = null
+    private var contentPieceTimestamp: ContentPiece? = null
+    private var actionTimestamp: ContentLogAction? = null
+
+    private var stopped = false
 
     abstract fun setContent(watchMediaViewModel : WatchMediaViewModel) : List<WatchMedia>
 
     fun setup() {
+        stopped = false
         contentList = setContent(watchMediaViewModel)
         restartIndex()
     }
 
     fun stop() {
-        logTransition(LogType.NEXT_IMAGE)
+
+        if(!stopped) {
+            logTransition(ContentLogAction.STOPPED, null)
+            stopped = true
+        }
+
     }
 
     fun restartIndex() {
@@ -61,7 +71,7 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
 
         }
 
-        logTransition(LogType.NEXT_IMAGE)
+        logTransition(ContentLogAction.NEXT, contentPiece)
 
         return contentPiece
     }
@@ -88,7 +98,7 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
             contentPiece = packageContent(contentList[currentIndex])
         }
 
-        logTransition(LogType.PREV_IMAGE)
+        logTransition(ContentLogAction.PREVIOUS, contentPiece)
 
         return contentPiece
     }
@@ -108,21 +118,57 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
         return null
     }
 
-    private fun logTransition(type: LogType) {
-        if(newContentTimestamp == null) {
-            newContentTimestamp = System.currentTimeMillis()
-            indexTimestamp = currentIndex
-        } else {
+    fun startLoggingFields(contentPiece: ContentPiece) {
+        newContentTimestamp = System.currentTimeMillis()
+        indexTimestamp = currentIndex
+        contentPieceTimestamp = contentPiece
+        actionTimestamp = ContentLogAction.STARTED
+    }
+
+    private fun logTransition(contentLogAction: ContentLogAction, contentPiece: ContentPiece?) {
+
+        if(newContentTimestamp != null) {
+
             val timePassed = System.currentTimeMillis() - newContentTimestamp!!
 
-            val content = listOf("imageID:${contentList[currentIndex]._id}", "displayedTime:$timePassed")
+            var content = mutableListOf("contentID:${contentList[indexTimestamp!!]._id}",
+                    "displayedTime:$timePassed",
+                    "action:$actionTimestamp",
+                    "type:${contentPieceTimestamp!!.type}")
 
-            Logger.log( type, content, context!! )
+            when(contentPieceTimestamp!!.type) {
 
-            newContentTimestamp = System.currentTimeMillis()
-            indexTimestamp = currentIndex
+                ContentType.GIF -> {
 
+                    content.add("duration: ${contentList[indexTimestamp!!].duration}")
+                    //content.add("type:GIF")
+                }
+
+                ContentType.IMAGE -> {
+                    //content.add("type:IMAGE")
+                }
+
+            }
+
+            content.add( if(contentLogAction == ContentLogAction.STOPPED)
+                "lastContentSeen:true" else "lastContentSeen:false" )
+
+            Logger.log( LogType.CONTENT_DISPLAYED, content, context!! )
+
+            Log.d("content", "$content")
+
+            if(contentPiece != null) {
+                newContentTimestamp = System.currentTimeMillis()
+                indexTimestamp = currentIndex
+                contentPieceTimestamp = contentPiece
+                actionTimestamp = contentLogAction
+            }
         }
+
+    }
+
+    private enum class ContentLogAction {
+        STARTED, NEXT, PREVIOUS, STOPPED
     }
 
 }

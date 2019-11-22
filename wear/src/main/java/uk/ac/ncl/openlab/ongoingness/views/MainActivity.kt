@@ -158,9 +158,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
      */
     override fun onDestroy() {
         super.onDestroy()
-        controller.stop()
-
-
     }
 
     /**
@@ -250,6 +247,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     }
 
     override fun finishActivity() {
+        controller.stop()
         finish()
     }
 

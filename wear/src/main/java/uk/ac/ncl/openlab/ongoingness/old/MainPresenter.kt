@@ -152,11 +152,12 @@ class MainPresenter {
                 Log.d("KYLE",localCollection.toString()) //fixme - remove
                 val content = listOf("imageID:${localCollection[currentIndex]._id}", "displayedTime:$timePassed")
 
+                /*
                 if((indexTime == localCollection.size && currentIndex == 0) || currentIndex > indexTime!!)
                     Logger.log(LogType.NEXT_IMAGE, content, context!! )
                 else if((indexTime == 0 && currentIndex == localCollection.size) || currentIndex < indexTime!!)
                     Logger.log(LogType.PREV_IMAGE, content, context!! )
-
+                */
                 newImageTime = System.currentTimeMillis()
                 indexTime = currentIndex
 
