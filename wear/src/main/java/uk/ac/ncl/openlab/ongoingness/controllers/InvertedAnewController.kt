@@ -1,7 +1,10 @@
 package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import com.crashlytics.android.Crashlytics
+import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
 import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
@@ -12,7 +15,7 @@ import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsAsyncTask
 
-const val INVERTED_PULL_CONTENT_ON_WAKE = true
+const val INVERTED_PULL_CONTENT_ON_WAKE = false
 
 class InvertedAnewController(context: Context,
                              recogniser: AbstractRecogniser,
@@ -76,6 +79,8 @@ class InvertedAnewController(context: Context,
                 val content = getContentCollection().goToNextContent()
                 if(content != null)
                     getPresenter().displayContentPiece(content)
+                else
+                    getPresenter().view!!.updateBackgroundWithBitmap( Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.sed), getPresenter().view!!.getScreenSize(), getPresenter().view!!.getScreenSize(), false))
 
             }
 
@@ -148,7 +153,8 @@ class InvertedAnewController(context: Context,
                 if(content != null) {
                     getContentCollection().startLoggingFields(content)
                     getPresenter().displayContentPiece(content)
-                }
+                } else
+                    getPresenter().displayWarning()
                 stopKillThread()
                 updateState(ControllerState.ACTIVE)
                 Logger.setLogSessionToken()
@@ -165,6 +171,8 @@ class InvertedAnewController(context: Context,
             if(content != null) {
                 getContentCollection().startLoggingFields(content)
                 getPresenter().displayContentPiece(content)
+            } else {
+                getPresenter().displayWarning()
             }
             stopKillThread()
             updateState(ControllerState.ACTIVE)

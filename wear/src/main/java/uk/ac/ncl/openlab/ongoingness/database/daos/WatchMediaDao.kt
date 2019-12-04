@@ -29,6 +29,9 @@ interface WatchMediaDao {
     @Query("SELECT * from watch_media")
     fun getAll(): List<WatchMedia>
 
+    @Query("SELECT * FROM watch_media WHERE collection LIKE :collection")
+    fun getCollection(collection: String): List<WatchMedia>
+
     @Query("SELECT * FROM watch_media JOIN media_date ON media_date.mediaId = watch_media._id WHERE strftime('%j-%Y',date) IS strftime('%j-%Y',:date)")
     fun getForDate(date: Date):List<WatchMedia>
 

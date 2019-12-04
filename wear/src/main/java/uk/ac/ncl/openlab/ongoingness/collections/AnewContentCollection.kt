@@ -7,7 +7,8 @@ import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
 class AnewContentCollection(activity: FragmentActivity) : AbstractContentCollection(activity) {
 
     override fun setContent(watchMediaViewModel: WatchMediaViewModel): List<WatchMedia> {
-        return watchMediaViewModel.allWatchMedia().sortedWith(compareBy({it.collection}, {it.createdAt}))
+        return watchMediaViewModel.getCollection("permanent").sortedBy { it.createdAt }.reversed() +
+                watchMediaViewModel.getCollection("temporary").sortedBy { it.createdAt }.reversed()
     }
 
 }

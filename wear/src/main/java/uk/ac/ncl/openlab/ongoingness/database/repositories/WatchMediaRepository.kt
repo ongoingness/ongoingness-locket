@@ -32,6 +32,10 @@ class WatchMediaRepository(private val watchMediaDao: WatchMediaDao) {
         return watchMediaDao.getAll()
     }
 
+    @WorkerThread
+    fun getCollection(collection: String): List<WatchMedia> {
+        return watchMediaDao.getCollection(collection)
+    }
 
     @WorkerThread
     fun getMediaWithDate(date: Date):List<WatchMedia>{

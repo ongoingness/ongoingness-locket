@@ -86,6 +86,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 controller.setup()
 
+                presenter.displayCode()
+
             }
 
             "locket_touch_inverted" -> {
@@ -111,6 +113,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 controller.setup()
 
+                presenter.displayCode()
+
             }
 
             "refind" -> {
@@ -130,6 +134,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         contentCollection = contentCollection)
 
                 controller.setup()
+
+                presenter.displayCode()
 
             }
         }

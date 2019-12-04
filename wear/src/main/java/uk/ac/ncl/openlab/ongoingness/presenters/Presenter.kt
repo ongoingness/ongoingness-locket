@@ -36,6 +36,12 @@ class Presenter(private val context: Context,
         view?.updateBackgroundWithBitmap(getAnewChargingBackground(battery, view!!.getScreenSize(), context))
     }
 
+
+    fun displayWarning() {
+        view?.updateBackgroundWithBitmap(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.problem), view!!.getScreenSize(), view!!.getScreenSize(), false))
+    }
+
+
     /**
      * Attach the view to the presenter
      *
