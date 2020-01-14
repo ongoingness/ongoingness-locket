@@ -23,23 +23,16 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
     private var contentPieceTimestamp: ContentPiece? = null
     private var actionTimestamp: ContentLogAction? = null
 
-    private var stopped = false
 
     abstract fun setContent(watchMediaViewModel : WatchMediaViewModel) : List<WatchMedia>
 
     fun setup() {
-        stopped = false
         contentList = setContent(watchMediaViewModel)
         restartIndex()
     }
 
     fun stop() {
-
-        if(!stopped) {
-            logTransition(ContentLogAction.STOPPED, null)
-            stopped = true
-        }
-
+        logTransition(ContentLogAction.STOPPED, null)
     }
 
     fun restartIndex() {
@@ -136,24 +129,13 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
                     "action:$actionTimestamp",
                     "type:${contentPieceTimestamp!!.type}")
 
-            when(contentPieceTimestamp!!.type) {
-
-                ContentType.GIF -> {
-
-                    content.add("duration: ${contentList[indexTimestamp!!].duration}")
-                    //content.add("type:GIF")
-                }
-
-                ContentType.IMAGE -> {
-                    //content.add("type:IMAGE")
-                }
-
-            }
+            if(contentPieceTimestamp!!.type == ContentType.GIF)
+                content.add("duration: ${contentList[indexTimestamp!!].duration}")
 
             content.add( if(contentLogAction == ContentLogAction.STOPPED)
                 "lastContentSeen:true" else "lastContentSeen:false" )
 
-            Logger.log( LogType.CONTENT_DISPLAYED, content, context!! )
+            Runnable { Logger.log( LogType.CONTENT_DISPLAYED, content, context!! ) }.run()
 
             Log.d("content", "$content")
 

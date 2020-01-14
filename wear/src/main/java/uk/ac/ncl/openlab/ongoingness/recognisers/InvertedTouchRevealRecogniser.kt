@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -29,10 +30,12 @@ class InvertedTouchRevealRecogniser(val context: Context, val activity: Activity
     override fun start() {
         disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GRAVITY, SensorManager.SENSOR_DELAY_UI)
                 .subscribeOn(Schedulers.computation())
+
                 .distinctUntilChanged(RxSensorFilter.uniqueEventValues())
                 .compose<RxSensorEvent>(RxSensorTransformer.lowPassFilter(0.2f))
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { rxSensorEvent -> processGravity(rxSensorEvent) })
+                .subscribe ({ rxSensorEvent -> processGravity(rxSensorEvent)}, {error -> Log.d("Sensor", "Error: $error") }))
+
 
         val gesture = GestureDetector(context, this)
         val touchListener = View.OnTouchListener {
@@ -53,11 +56,13 @@ class InvertedTouchRevealRecogniser(val context: Context, val activity: Activity
     }
 
     override fun onSingleTapUp(e: MotionEvent?): Boolean {
+        Log.d("REC", "SingleTap")
         notifyEvent(RecogniserEvent.TAP)
         return true
     }
 
     override fun onLongPress(e: MotionEvent?) {
+        Log.d("REC", "LONG_PRESS")
         notifyEvent(RecogniserEvent.LONG_PRESS)
     }
 

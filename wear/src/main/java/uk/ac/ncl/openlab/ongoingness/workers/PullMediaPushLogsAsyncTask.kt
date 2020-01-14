@@ -17,7 +17,7 @@ class PullMediaPushLogsAsyncTask(private val preExecuteCallback: () -> Unit = {}
             var pullMediaSuccess = false
 
             when (FLAVOR) {
-                "locket_touch", "locket_touch_inverted" -> pullMediaSuccess = AsyncHelper.pullMediaLocket(contexts[0]!!)
+                "locket_touch", "locket_touch_inverted", "locket_touch_s" -> pullMediaSuccess = AsyncHelper.pullMediaLocket(contexts[0]!!)
                 "refind" -> pullMediaSuccess = AsyncHelper.pullMediaRefind(contexts[0]!!)
             }
 

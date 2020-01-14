@@ -41,11 +41,11 @@ class WatchMediaViewModel(application: Application) : AndroidViewModel(applicati
         return repository.getCollection(collection);
     }
 
-    fun getWatchMediaForDate(date: Date):List<WatchMedia>{
-        return repository.getMediaWithDate(date)
+    fun getWatchMediaForDate(day: Int, month: Int): List<WatchMedia>{
+        return repository.getMediaWithDate(day, month)
     }
 
-    fun getWatchMediaWithNoDate():List<WatchMedia>{
+    fun getWatchMediaWithNoDate():List<WatchMedia> {
         return repository.getMediaWithNoDates()
     }
 

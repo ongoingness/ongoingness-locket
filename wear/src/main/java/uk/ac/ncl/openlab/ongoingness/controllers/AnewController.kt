@@ -112,7 +112,7 @@ class AnewController(context: Context,
         }
     }
 
-    override fun setStatingState() {}
+    override fun setStartingState() {}
 
     override fun onStoppedEvent() {}
 

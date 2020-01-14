@@ -25,6 +25,8 @@ import uk.ac.ncl.openlab.ongoingness.utilities.deleteFile
 import java.io.*
 import java.sql.Date
 import java.text.SimpleDateFormat
+import java.time.MonthDay
+import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -319,9 +321,17 @@ class AsyncHelper {
         }
 
         private suspend fun addMediaDates(repository: MediaDateRepository, mediaId:String, times:JSONArray){
-            for (j in 0 until times.length()){
-                val item = times[j] as Long?
-                val newMediaDate = MediaDate(MediaDate.longToDate(item!!), mediaId)
+            Log.d("Times", "$times")
+            for (j in 0 until times.length()) {
+                val time = times.getJSONObject(j).getLong("value") as Long?
+                Log.d("Times", "$time")
+
+
+                var c = Calendar.getInstance()
+                c.timeInMillis = time!!
+
+
+                val newMediaDate = MediaDate(MediaDate.longToDate(time!!), mediaId, c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.MONTH) )
                 repository.insert(newMediaDate)
             }
         }

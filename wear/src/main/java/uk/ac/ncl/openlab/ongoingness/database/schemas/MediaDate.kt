@@ -11,10 +11,12 @@ import java.sql.Date
         onDelete = ForeignKey.CASCADE)])
 data class MediaDate (
     @ColumnInfo(name = "date") val date: Date,
-    @ColumnInfo(name = "mediaId") val mediaId:String){
+    @ColumnInfo(name = "mediaId") val mediaId: String,
+    @ColumnInfo(name = "day") val day: Int,
+    @ColumnInfo(name = "month") val month: Int)
+{
 
     @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "_id")   var id: Int =  0
-
 
     companion object {
         fun longToDate(long:Long):Date{

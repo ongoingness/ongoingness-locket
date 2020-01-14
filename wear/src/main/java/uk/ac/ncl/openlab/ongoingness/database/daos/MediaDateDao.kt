@@ -33,11 +33,18 @@ interface MediaDateDao {
     @Query("DELETE FROM watch_media WHERE _id LIKE :id")
     suspend fun delete(id: String)
 
+    @Query("SELECT * from media_date WHERE media_date.day IS day AND media_date.month IS month")
+    fun getDayOfTheMonth(day: Int, month: Int)
+
+    /*
+
+    ????????    strtime appears to not work with the date   ??????????
+
     @Query("SELECT * FROM media_date WHERE strftime('%j',date) IS strftime('%j',:date)")
     fun getDayOfYear(date: Date):List<MediaDate>
 
     @Query("SELECT * FROM media_date WHERE strftime('%j-%Y',date) IS strftime('%j-%Y',:date)")
     fun getDate(date: Date):List<MediaDate>
-
+    */
 
 }

@@ -32,12 +32,10 @@ interface WatchMediaDao {
     @Query("SELECT * FROM watch_media WHERE collection LIKE :collection")
     fun getCollection(collection: String): List<WatchMedia>
 
-    @Query("SELECT * FROM watch_media JOIN media_date ON media_date.mediaId = watch_media._id WHERE strftime('%j-%Y',date) IS strftime('%j-%Y',:date)")
-    fun getForDate(date: Date):List<WatchMedia>
-
-    @Query("SELECT * FROM watch_media JOIN media_date ON media_date.mediaId = watch_media._id WHERE strftime('%j',date) IS strftime('%j',:date)")
-    fun getForDayOfYear(date: Date):List<WatchMedia>
+    @Query("SELECT * FROM watch_media JOIN media_date ON media_date.mediaId = watch_media._id WHERE media_date.day IS :day AND media_date.month IS :month")
+    fun getMediaForDayOfMonth(day: Int, month: Int):List<WatchMedia>
 
     @Query("SELECT * FROM watch_media LEFT OUTER JOIN media_date ON media_date.mediaId = watch_media._id")
     fun getMediaWithNoDates(): List<WatchMedia>
+
 }

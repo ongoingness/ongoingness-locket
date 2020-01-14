@@ -23,18 +23,14 @@ class InvertedAnewController(context: Context,
                              contentCollection: AbstractContentCollection,
                              val startedWitTap: Boolean,
                              val faceState: String,
-                             val battery: Float)
+                             val battery: Float,
+                             private val pullContentOnWake : Boolean)
     : AbstractController(context, recogniser, presenter, contentCollection) {
 
     var gotData = false
     var start = true
 
-    override fun setStatingState() {
-        updateState(ControllerState.STANDBY)
-    }
-
-    override fun onStartedEvent() {
-
+    override fun setStartingState() {
         startKillThread(30 * 1000L, 5 * 60 * 1000L)
 
         if(faceState == ControllerState.CHARGING.toString()) {
@@ -44,30 +40,26 @@ class InvertedAnewController(context: Context,
             getPresenter().displayCover(CoverType.BLACK)
             updateState(ControllerState.STANDBY)
         }
-
     }
+
+    override fun onStartedEvent() {}
 
     override fun onTowardsEvent() {
 
         when(getCurrentState()) {
-
-            ControllerState.STANDBY -> {
-
-                if(start) {
-                    awakeUpProcedures()
-                    start = false
-                } else {
-                    updateState(ControllerState.READY)
-                }
-            }
+            ControllerState.STANDBY -> awakeUpProcedures()
             else -> {}
         }
 
     }
 
     override fun onAwayEvent() {
-        stopKillThread()
-        getPresenter().view!!.finishActivity()
+        if(getCurrentState() != ControllerState.OFF) {
+            updateState(ControllerState.OFF)
+            stopKillThread()
+            if(getPresenter().view != null)
+                getPresenter().view!!.finishActivity()
+        }
     }
 
     override fun onTapEvent() {
@@ -80,7 +72,7 @@ class InvertedAnewController(context: Context,
                 if(content != null)
                     getPresenter().displayContentPiece(content)
                 else
-                    getPresenter().view!!.updateBackgroundWithBitmap( Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.sed), getPresenter().view!!.getScreenSize(), getPresenter().view!!.getScreenSize(), false))
+                    getPresenter().displayWarning()
 
             }
 
@@ -144,7 +136,7 @@ class InvertedAnewController(context: Context,
 
     private fun awakeUpProcedures() {
 
-        if(INVERTED_PULL_CONTENT_ON_WAKE && !gotData && hasConnection(context)) {
+        if(pullContentOnWake && !gotData && hasConnection(context)) {
 
             val postExecuteCallback: (result: Boolean) -> Unit = {
                 gotData = it

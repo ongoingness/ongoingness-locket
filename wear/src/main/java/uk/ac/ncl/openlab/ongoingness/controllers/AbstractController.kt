@@ -24,6 +24,8 @@ abstract class AbstractController(
     private var currentControllerState: ControllerState = ControllerState.UNKNOWN
     private var previousControllerState: ControllerState = ControllerState.UNKNOWN
 
+    private var stopped = false
+
     private val recogniserObserver = Observer { _, arg ->
 
         when(arg) {
@@ -94,7 +96,7 @@ abstract class AbstractController(
             }
         }
 
-        setStatingState()
+        setStartingState()
     }
 
     open fun start() {
@@ -102,13 +104,16 @@ abstract class AbstractController(
     }
 
     open fun stop() {
-        contentCollection.stop()
-        killHandler.removeCallbacks(killRunnable)
-        context.unregisterReceiver(batteryReceiver)
-        recogniser.stop()
-        presenter.detachView()
-        Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), context)
-        Logger.deleteLogSessionToken()
+        if(!stopped) {
+            contentCollection.stop()
+            killHandler.removeCallbacks(killRunnable)
+            context.unregisterReceiver(batteryReceiver)
+            recogniser.stop()
+            presenter.detachView()
+            Logger.log(LogType.ACTIVITY_TERMINATED, listOf(), context)
+            Logger.deleteLogSessionToken()
+            stopped = true
+        }
     }
 
     fun updateState(controllerState: ControllerState){
@@ -160,7 +165,7 @@ abstract class AbstractController(
         killHandler.removeCallbacks(killRunnable)
     }
 
-    abstract fun setStatingState()
+    abstract fun setStartingState()
     abstract fun onStartedEvent()
     abstract fun onStoppedEvent()
     abstract fun onUpEvent()

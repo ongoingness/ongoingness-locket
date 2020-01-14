@@ -55,7 +55,7 @@ class MainPresenter {
 
             "locket_touch_s" -> {
                 var arraylist:ArrayList<WatchMedia> =  ArrayList()
-                arraylist.addAll(watchMediaViewModel.getWatchMediaForDate(Date(System.currentTimeMillis())).sortedWith(compareBy {it.createdAt}))
+                //arraylist.addAll(watchMediaViewModel.getWatchMediaForDate(Date(System.currentTimeMillis())).sortedWith(compareBy {it.createdAt}))
                 arraylist.addAll(watchMediaViewModel.getWatchMediaWithNoDate().sortedWith(compareBy {it.createdAt}))
                 mediaCollection =  arraylist
             }

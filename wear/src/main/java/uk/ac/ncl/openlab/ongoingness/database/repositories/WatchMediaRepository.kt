@@ -3,7 +3,6 @@ package uk.ac.ncl.openlab.ongoingness.database.repositories
 import androidx.annotation.WorkerThread
 import uk.ac.ncl.openlab.ongoingness.database.daos.WatchMediaDao
 import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
-import java.sql.Date
 
 class WatchMediaRepository(private val watchMediaDao: WatchMediaDao) {
 
@@ -38,8 +37,8 @@ class WatchMediaRepository(private val watchMediaDao: WatchMediaDao) {
     }
 
     @WorkerThread
-    fun getMediaWithDate(date: Date):List<WatchMedia>{
-        return watchMediaDao.getForDayOfYear(date)
+    fun getMediaWithDate(day: Int, month: Int):List<WatchMedia>{
+        return watchMediaDao.getMediaForDayOfMonth(day, month)
     }
 
     @WorkerThread

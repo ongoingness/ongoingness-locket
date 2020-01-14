@@ -4,6 +4,7 @@ import android.content.pm.ActivityInfo
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.os.*
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import androidx.fragment.app.FragmentActivity
@@ -19,6 +20,7 @@ import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.collections.AnewContentCollection
 import uk.ac.ncl.openlab.ongoingness.collections.ContentType
+import uk.ac.ncl.openlab.ongoingness.collections.MomentoContentCollection
 import uk.ac.ncl.openlab.ongoingness.collections.RefindContentCollection
 import uk.ac.ncl.openlab.ongoingness.controllers.AbstractController
 import uk.ac.ncl.openlab.ongoingness.controllers.AnewController
@@ -28,6 +30,7 @@ import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import uk.ac.ncl.openlab.ongoingness.recognisers.*
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
+import uk.ac.ncl.openlab.ongoingness.utilities.getMacAddress
 import java.io.File
 
 class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider, Presenter.View {
@@ -36,6 +39,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     private val minBrightness: Float = 0.01f
 
     private lateinit var controller: AbstractController
+
+    private var lastException: Throwable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,8 +91,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 controller.setup()
 
-                presenter.displayCode()
-
             }
 
             "locket_touch_inverted" -> {
@@ -109,11 +112,10 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         contentCollection = contentCollection,
                         startedWitTap = startedWithTap,
                         faceState = faceState,
-                        battery = battery)
+                        battery = battery,
+                        pullContentOnWake = false)
 
                 controller.setup()
-
-                presenter.displayCode()
 
             }
 
@@ -135,8 +137,32 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 controller.setup()
 
-                presenter.displayCode()
+            }
 
+            "locket_touch_s" -> {
+
+                val presenter = Presenter(applicationContext,
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover), getScreenSize(), getScreenSize(), false),
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover_white), getScreenSize(), getScreenSize(), false))
+                presenter.attachView(this@MainActivity)
+
+                val recogniser = InvertedTouchRevealRecogniser(applicationContext,this@MainActivity)
+
+                val contentCollection = MomentoContentCollection(this@MainActivity)
+
+                controller = InvertedAnewController(context = applicationContext,
+                        presenter = presenter,
+                        recogniser = recogniser,
+                        contentCollection = contentCollection,
+                        startedWitTap = startedWithTap,
+                        faceState = faceState,
+                        battery = battery,
+                        pullContentOnWake = true)
+
+                controller.setup()
+
+                val mac = getMacAddress()
+                Log.d("MAC",mac)
             }
         }
     }
@@ -258,4 +284,6 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     }
 
     private class MyAmbientCallback : AmbientModeSupport.AmbientCallback()
+
+
 }

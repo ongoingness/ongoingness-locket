@@ -14,13 +14,13 @@ android {
         applicationId "uk.ac.ncl.openlab.ongoingness"
         minSdkVersion 25
         targetSdkVersion 28
-        versionCode 1
-        versionName "1.0"
+        versionCode 4
+        versionName "4.0"
         multiDexEnabled true
 
         //buildConfigField('String','API_URL','"https://ongoingness-v2-api.openlab.ncl.ac.uk/api/"')
-        //buildConfigField('String','API_URL','"https://ongoingness-api.openlab.ncl.ac.uk/api/"')
-        buildConfigField('String','API_URL','"https://ongoingness-api-dev.openlab.ncl.ac.uk/api/"')
+        buildConfigField('String','API_URL','"https://ongoingness-api.openlab.ncl.ac.uk/api/"')
+        //buildConfigField('String','API_URL','"https://ongoingness-api-dev.openlab.ncl.ac.uk/api/"')
 
 
     }
@@ -62,6 +62,7 @@ android {
             dimension = 'version'
             applicationIdSuffix = '.locket_touch_s'
             versionNameSuffix = '-locket_touch_s'
+            resValue "string", "app_name", "Momento"
         }
     }
 

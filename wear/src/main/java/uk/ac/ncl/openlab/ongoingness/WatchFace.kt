@@ -3,9 +3,11 @@ package uk.ac.ncl.openlab.ongoingness
 import android.content.*
 import android.graphics.*
 import android.os.Bundle
+import android.os.Handler
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
+import android.util.Log
 import android.view.SurfaceHolder
 import android.view.WindowManager
 import androidx.work.*
@@ -43,6 +45,9 @@ class WatchFace : CanvasWatchFaceService() {
 
         private lateinit var controller: WatchFaceController
 
+        private var falseStartReleaseInterval = 4000L
+        private var previousTapTime: Long? = null
+
         override fun onCreate(holder: SurfaceHolder) {
             super.onCreate(holder)
 
@@ -78,6 +83,18 @@ class WatchFace : CanvasWatchFaceService() {
                     val presenter = WatchFacePresenter(applicationContext,
                             Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover), getScreenSize(), getScreenSize(), false),
                             Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover_white), getScreenSize(), getScreenSize(), false))
+                    presenter.attachView(this)
+                    presenter.displayCover(CoverType.BLACK)
+
+                    controller = WatchFaceController(applicationContext, false, presenter)
+
+                }
+
+                "locket_touch_s" -> {
+
+                    val presenter = WatchFacePresenter(applicationContext,
+                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover), getScreenSize(), getScreenSize(), false),
+                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover_white), getScreenSize(), getScreenSize(), false))
                     presenter.attachView(this)
                     presenter.displayCover(CoverType.BLACK)
 
@@ -135,7 +152,12 @@ class WatchFace : CanvasWatchFaceService() {
          * used for implementing specific logic to handle the gesture.
          */
         override fun onTapCommand(tapType: Int, x: Int, y: Int, eventTime: Long) {
-            controller.tapEvent()
+
+            if(previousTapTime == null || (previousTapTime != null && eventTime - previousTapTime!! > falseStartReleaseInterval)) {
+                previousTapTime = eventTime
+                controller.tapEvent()
+            }
+
         }
 
 
