@@ -30,11 +30,11 @@ interface MediaDateDao {
     @Query("SELECT * FROM media_date WHERE mediaId LIKE :mediaId")
     fun getMedia(mediaId: String) : List<MediaDate>?
 
-    @Query("DELETE FROM watch_media WHERE _id LIKE :id")
+    @Query("DELETE FROM media_date WHERE _id LIKE :id")
     suspend fun delete(id: String)
 
-    @Query("SELECT * from media_date WHERE media_date.day IS day AND media_date.month IS month")
-    fun getDayOfTheMonth(day: Int, month: Int)
+    @Query("SELECT * from media_date WHERE media_date.day IS :day AND media_date.month IS :month")
+    fun getDayOfTheMonth(day: Int, month: Int) : List<MediaDate>?
 
     /*
 

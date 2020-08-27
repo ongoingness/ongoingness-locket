@@ -6,6 +6,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Movie
 import android.util.Log
+import com.google.android.gms.tasks.Task
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ktx.remoteConfig
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -33,7 +36,41 @@ import kotlin.coroutines.suspendCoroutine
 class AsyncHelper {
 
     companion object {
+/*
+        fun fetchRemoteConfig(context: Context) : Boolean {
 
+            return runBlocking {
+
+                val result = suspendCoroutine<Boolean> { cont ->
+
+                    val callback = { _: Task<Boolean> ->
+
+                        cont.resume(true)
+                    }
+
+                    val failure = { _: IOException ->
+                        cont.resume(false)
+                    }
+
+                    Firebase.remoteConfig.fetchAndActivate().addOnCompleteListener(context., callback)
+                }
+                result
+            }
+
+
+            Firebase.remoteConfig.fetchAndActivate().addOnCompleteListener(contexts[0]!!) { task ->
+                if (task.isSuccessful) {
+                    val updated = task.result
+                    Log.d("ss", "Config params updated: $updated")
+
+                } else {
+
+                }
+
+            }
+
+        }
+ */
         fun pushLogs(context: Context): Boolean {
 
             return runBlocking {

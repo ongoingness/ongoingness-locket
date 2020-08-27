@@ -3,6 +3,8 @@ package uk.ac.ncl.openlab.ongoingness.utilities
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ktx.remoteConfig
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import io.reactivex.Observable
@@ -10,6 +12,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import okhttp3.*
+import org.json.JSONArray
 import org.json.JSONObject
 import retrofit2.Retrofit
 import retrofit2.http.*
@@ -99,7 +102,7 @@ class API {
 
     val gson = Gson()
 
-    private val apiUrl = BuildConfig.API_URL
+    private val apiUrl = Firebase.remoteConfig.getString("SERVER_URL")//BuildConfig.API_URL
     private var token: String? = null
     private val client: OkHttpClient = OkHttpClient
             .Builder()
@@ -308,14 +311,15 @@ class API {
         generateToken( callback =  { token ->
             Log.d("API", token)
 
-            val formBody = FormBody.Builder()
-                    .add("logs", logs)
-                    .build()
+            val JSON: MediaType? = MediaType.parse("application/json; charset=utf-8")
+            val jsonObject = JSONObject();
+            jsonObject.put("logs", JSONArray(logs))
+            val body : RequestBody  = RequestBody.create(JSON, jsonObject.toString());
 
             val url = "log"
             val request = Request.Builder()
                     .url(apiUrl + url)
-                    .post(formBody)
+                    .post(body)
                     .header("x-access-token", token!!)
                     .build()
 

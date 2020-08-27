@@ -15,6 +15,9 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.load.resource.gif.GifDrawable
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ktx.get
+import com.google.firebase.remoteconfig.ktx.remoteConfig
 import kotlinx.android.synthetic.main.activity_main.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
@@ -113,9 +116,12 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         startedWitTap = startedWithTap,
                         faceState = faceState,
                         battery = battery,
-                        pullContentOnWake = false)
+                        pullContentOnWake = Firebase.remoteConfig.getBoolean("FETCH_ON_AWAKE"))
 
                 controller.setup()
+
+                val mac = getMacAddress()
+                Log.d("MAC",mac)
 
             }
 

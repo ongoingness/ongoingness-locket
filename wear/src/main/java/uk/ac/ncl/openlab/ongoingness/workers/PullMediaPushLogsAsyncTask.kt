@@ -2,6 +2,9 @@ package uk.ac.ncl.openlab.ongoingness.workers
 
 import android.content.Context
 import android.os.AsyncTask
+import android.util.Log
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ktx.remoteConfig
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 
 class PullMediaPushLogsAsyncTask(private val preExecuteCallback: () -> Unit = {}, private val postExecuteCallback: (Boolean) -> Unit = {}) : AsyncTask<Context, Void, Boolean>() {
@@ -14,6 +17,7 @@ class PullMediaPushLogsAsyncTask(private val preExecuteCallback: () -> Unit = {}
     override fun doInBackground(vararg contexts: Context?): Boolean {
 
         if(contexts.isNotEmpty() && contexts[0] != null) {
+
             var pullMediaSuccess = false
 
             when (FLAVOR) {

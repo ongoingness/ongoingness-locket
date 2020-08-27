@@ -7,6 +7,8 @@ import android.graphics.BitmapFactory
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import android.util.Log
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ktx.remoteConfig
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -38,6 +40,8 @@ import kotlin.math.log
 class PullMediaPushLogsWorker(private val ctx: Context, params: WorkerParameters) : Worker(ctx, params) {
 
     override fun doWork(): Result {
+
+        Firebase.remoteConfig.fetchAndActivate()
 
         var pullMediaSuccess = false
 

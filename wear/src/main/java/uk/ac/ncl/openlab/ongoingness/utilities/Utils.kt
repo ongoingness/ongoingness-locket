@@ -10,6 +10,8 @@ import android.net.Network
 import android.os.BatteryManager
 import android.util.Log
 import androidx.work.*
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ktx.remoteConfig
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsWorker
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaWorker
@@ -140,6 +142,17 @@ fun getBatteryLevel(context: Context): Float? {
     }
 }
 
+fun calculateNextMinutesRequestTimeDiff(interval : Int): Long {
+
+    val currentTime = Calendar.getInstance()
+    val dueDate = Calendar.getInstance()
+
+    dueDate.add(Calendar.MINUTE, interval)
+
+    return dueDate.timeInMillis - currentTime.timeInMillis;
+
+}
+
 fun calculateNextDailyRequestTimeDiff(): Long {
 
     val currentDate = Calendar.getInstance()
@@ -196,11 +209,13 @@ fun addPushLogsWorkRequest(context: Context) {
 fun addPullMediaPushLogsWorkRequest(context: Context) {
 
     val constraints = Constraints.Builder()
-            .setRequiresCharging(true)
+            .setRequiresCharging(Firebase.remoteConfig.getBoolean("FETCH_REQUIRES_CHARGING"))
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-    val timeDiff = calculateNextDailyRequestTimeDiff()
+    //val timeDiff = calculateNextDailyRequestTimeDiff()
+
+    val timeDiff = calculateNextMinutesRequestTimeDiff(Firebase.remoteConfig.getString("FETCH_INTERVAL_MINUTES").toInt())
 
     val dailyWorkRequest = OneTimeWorkRequestBuilder<PullMediaPushLogsWorker>()
             .setInitialDelay(timeDiff, TimeUnit.MILLISECONDS)

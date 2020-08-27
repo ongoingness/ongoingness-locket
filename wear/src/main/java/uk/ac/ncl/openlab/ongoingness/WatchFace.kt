@@ -11,6 +11,9 @@ import android.util.Log
 import android.view.SurfaceHolder
 import android.view.WindowManager
 import androidx.work.*
+import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ktx.remoteConfig
+import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
@@ -63,6 +66,13 @@ class WatchFace : CanvasWatchFaceService() {
             Logger.log(LogType.STARTED_WATCHFACE, listOf(), applicationContext)
 
             setWorkManager()
+
+            val remoteConfig = Firebase.remoteConfig
+            val configSettings = remoteConfigSettings {
+                minimumFetchIntervalInSeconds = 60
+            }
+            remoteConfig.setConfigSettingsAsync(configSettings)
+            remoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
 
             when(FLAVOR) {
 

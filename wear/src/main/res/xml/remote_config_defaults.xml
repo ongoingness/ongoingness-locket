@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- START xml_defaults -->
+<defaultsMap>
+    <entry>
+        <key>FETCH_ON_AWAKE</key>
+        <value>false</value>
+    </entry>
+    <entry>
+        <key>FETCH_INTERVAL_MINUTES</key>
+        <value>2</value>
+    </entry>
+    <entry>
+        <key>SERVER_URL</key>
+        <value>http://134.122.106.9:3000/api/</value>
+    </entry>
+    <entry>
+        <key>FETCH_REQUIRES_CHARGING</key>
+        <value>true</value>
+    </entry>
+</defaultsMap>
+<!-- END xml_defaults -->

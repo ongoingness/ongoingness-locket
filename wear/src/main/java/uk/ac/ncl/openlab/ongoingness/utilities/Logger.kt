@@ -1,6 +1,8 @@
 package uk.ac.ncl.openlab.ongoingness.utilities
 
 import android.content.Context
+import android.util.Log.d
+import com.google.gson.Gson
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import uk.ac.ncl.openlab.ongoingness.database.schemas.Log
@@ -107,24 +109,7 @@ object Logger {
     }
 
     fun formatLogs(): String {
-        val sb = StringBuilder()
-        sb.append("[")
-
-        for(log in repository.getAll()) {
-            sb.append("{")
-            sb.append("\"level\": \"${log.level}\",")
-            sb.append("\"code\": \"${log.code}\",")
-            sb.append("\"content\": ${log.content},")
-            sb.append("\"message\": \"${log.message}\",")
-            sb.append("\"timestamp\": \"${log.timestamp}\"")
-            sb.append("}")
-
-            if(repository.getAll().last() != log)
-                sb.append(",")
-        }
-        sb.append("]")
-
-        return sb.toString()
+        return Gson().toJson(repository.getAll())
     }
 
     fun clearLogs() {

@@ -1,10 +1,7 @@
 package uk.ac.ncl.openlab.ongoingness.database.daos
 
 import androidx.lifecycle.LiveData
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
+import androidx.room.*
 import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
 import java.sql.Date
 
@@ -32,9 +29,11 @@ interface WatchMediaDao {
     @Query("SELECT * FROM watch_media WHERE collection LIKE :collection")
     fun getCollection(collection: String): List<WatchMedia>
 
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT * FROM watch_media JOIN media_date ON media_date.mediaId = watch_media._id WHERE media_date.day IS :day AND media_date.month IS :month")
     fun getMediaForDayOfMonth(day: Int, month: Int):List<WatchMedia>
 
+    @SuppressWarnings(RoomWarnings.CURSOR_MISMATCH)
     @Query("SELECT * FROM watch_media LEFT OUTER JOIN media_date ON media_date.mediaId = watch_media._id")
     fun getMediaWithNoDates(): List<WatchMedia>
 
