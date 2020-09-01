@@ -62,17 +62,12 @@ class WatchFace : CanvasWatchFaceService() {
                     .build())
 
 
+            setRemoteConfig()
+
             Logger.start(applicationContext)
             Logger.log(LogType.STARTED_WATCHFACE, listOf(), applicationContext)
 
             setWorkManager()
-
-            val remoteConfig = Firebase.remoteConfig
-            val configSettings = remoteConfigSettings {
-                minimumFetchIntervalInSeconds = 60
-            }
-            remoteConfig.setConfigSettingsAsync(configSettings)
-            remoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
 
             when(FLAVOR) {
 
@@ -216,6 +211,15 @@ class WatchFace : CanvasWatchFaceService() {
         private fun setWorkManager() {
             WorkManager.getInstance(applicationContext).cancelAllWork()
             addPullMediaPushLogsWorkRequest(applicationContext)
+        }
+
+        private fun setRemoteConfig() {
+            val remoteConfig = Firebase.remoteConfig
+            val configSettings = remoteConfigSettings {
+                minimumFetchIntervalInSeconds = 60
+            }
+            remoteConfig.setConfigSettingsAsync(configSettings)
+            remoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
         }
     }
 }

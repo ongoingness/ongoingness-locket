@@ -2,12 +2,16 @@ package uk.ac.ncl.openlab.ongoingness.workers
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.BatteryManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import android.util.Log
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.remoteconfig.ktx.get
 import com.google.firebase.remoteconfig.ktx.remoteConfig
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -42,6 +46,18 @@ class PullMediaPushLogsWorker(private val ctx: Context, params: WorkerParameters
     override fun doWork(): Result {
 
         Firebase.remoteConfig.fetchAndActivate()
+
+        val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
+            ctx.registerReceiver(null, ifilter)
+        }
+
+        val batteryPct: Float? = batteryStatus?.let { intent ->
+            val level: Int = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale: Int = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            level * 100 / scale.toFloat()
+        }
+
+        if(batteryPct != null && batteryPct < Firebase.remoteConfig.getDouble("FETCH_BATTERY_MIN_LEVEL")) return Result.failure()
 
         var pullMediaSuccess = false
 

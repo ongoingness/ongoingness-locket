@@ -15,7 +15,11 @@
     </entry>
     <entry>
         <key>FETCH_REQUIRES_CHARGING</key>
-        <value>true</value>
+        <value>false</value>
+    </entry>
+    <entry>
+        <key>FETCH_BATTERY_MIN_LEVEL</key>
+        <value>20</value>
     </entry>
 </defaultsMap>
 <!-- END xml_defaults -->

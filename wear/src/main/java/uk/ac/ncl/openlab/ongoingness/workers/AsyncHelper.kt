@@ -36,41 +36,7 @@ import kotlin.coroutines.suspendCoroutine
 class AsyncHelper {
 
     companion object {
-/*
-        fun fetchRemoteConfig(context: Context) : Boolean {
 
-            return runBlocking {
-
-                val result = suspendCoroutine<Boolean> { cont ->
-
-                    val callback = { _: Task<Boolean> ->
-
-                        cont.resume(true)
-                    }
-
-                    val failure = { _: IOException ->
-                        cont.resume(false)
-                    }
-
-                    Firebase.remoteConfig.fetchAndActivate().addOnCompleteListener(context., callback)
-                }
-                result
-            }
-
-
-            Firebase.remoteConfig.fetchAndActivate().addOnCompleteListener(contexts[0]!!) { task ->
-                if (task.isSuccessful) {
-                    val updated = task.result
-                    Log.d("ss", "Config params updated: $updated")
-
-                } else {
-
-                }
-
-            }
-
-        }
- */
         fun pushLogs(context: Context): Boolean {
 
             return runBlocking {
@@ -157,6 +123,7 @@ class AsyncHelper {
                                             cont.resume(true)
                                         }
                                     } else {
+
                                         api.fetchBitmap(newMedia._id) { body ->
 
                                             val inputStream = body?.byteStream()

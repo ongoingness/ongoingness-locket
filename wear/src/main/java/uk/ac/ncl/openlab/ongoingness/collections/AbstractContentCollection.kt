@@ -10,6 +10,7 @@ import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.getBitmapFromFile
 import java.io.File
+import java.io.IOException
 
 abstract class AbstractContentCollection(activity: FragmentActivity) {
 
@@ -27,8 +28,22 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
     abstract fun setContent(watchMediaViewModel : WatchMediaViewModel) : List<WatchMedia>
 
     fun setup() {
-        contentList = setContent(watchMediaViewModel)
+        //contentList = setContent(watchMediaViewModel)
+        //restartIndex()
+
+        //Check if there are watchMedia without the file
+        val tempContentList = setContent(watchMediaViewModel)
+        Log.d("tesrtert", tempContentList.toString())
+
+        for(wm in tempContentList) {
+            if(packageContent(wm) == null) {
+                watchMediaViewModel.delete(wm, context)
+            }
+        }
+        Log.d("tesrtert after", tempContentList.toString())
+        contentList = tempContentList
         restartIndex()
+
     }
 
     fun stop() {
@@ -53,6 +68,8 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
         var contentPiece: ContentPiece? = null
 
         //TODO It may loop infinitely if no images were downloaded but are in the database
+        //TODO
+
         while(contentPiece == null) {
 
             if(currentIndex == contentList.size-1)
@@ -103,10 +120,14 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
 
     private fun packageContent(content: WatchMedia): ContentPiece? {
         val file  = File(context!!.filesDir, content.path)
-        if(file.exists()) {
-            val type = if (content.mimetype.contains("gif")) ContentType.GIF else ContentType.IMAGE
-            val bitmap = BitmapDrawable(getBitmapFromFile(context, file.name))
-            return ContentPiece(file, type, bitmap)
+        if(file.exists() && file.length() > 0) {
+            try {
+                val type = if (content.mimetype.contains("gif")) ContentType.GIF else ContentType.IMAGE
+                val bitmap = BitmapDrawable(getBitmapFromFile(context, file.name))
+                return ContentPiece(file, type, bitmap)
+            } catch (e: Exception) {
+                return null
+            }
         }
         return null
     }
