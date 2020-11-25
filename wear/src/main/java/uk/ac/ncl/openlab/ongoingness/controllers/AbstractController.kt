@@ -42,6 +42,11 @@ abstract class AbstractController(
             RecogniserEvent.ROTATE_UP -> onRotateUp()
             RecogniserEvent.ROTATE_DOWN -> onRotateDown()
 
+            RecogniserEvent.ROTATE_LEFT -> onRotateLeft()
+            RecogniserEvent.ROTATE_RIGHT -> onRotateRight()
+            RecogniserEvent.AWAY_LEFT -> onAwayLeft()
+            RecogniserEvent.AWAY_RIGHT -> onAwayRight()
+
         }
 
     }
@@ -180,4 +185,9 @@ abstract class AbstractController(
     abstract fun onBatteryChangedEvent(battery: Float)
     abstract fun onRotateUp()
     abstract fun onRotateDown()
+    abstract fun onRotateLeft()
+    abstract fun onRotateRight()
+    abstract fun onAwayLeft()
+    abstract fun onAwayRight()
+
 }

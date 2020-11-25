@@ -62,7 +62,7 @@ class PullMediaPushLogsWorker(private val ctx: Context, params: WorkerParameters
         var pullMediaSuccess = false
 
         when (FLAVOR) {
-            "locket_touch", "locket_touch_inverted" -> pullMediaSuccess = AsyncHelper.pullMediaLocket(ctx)
+            "locket_touch", "locket_touch_inverted", "locket_touch_s" -> pullMediaSuccess = AsyncHelper.pullMediaLocket(ctx)
             "refind" -> pullMediaSuccess = AsyncHelper.pullMediaRefind(ctx)
         }
         val result = if(pullMediaSuccess && AsyncHelper.pushLogs(ctx)) Result.success() else Result.failure()

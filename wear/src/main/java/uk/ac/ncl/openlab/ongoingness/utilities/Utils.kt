@@ -12,6 +12,7 @@ import android.util.Log
 import androidx.work.*
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.remoteconfig.ktx.remoteConfig
+import uk.ac.ncl.openlab.ongoingness.BuildConfig
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsWorker
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaWorker
@@ -226,6 +227,40 @@ fun addPullMediaPushLogsWorkRequest(context: Context) {
 
 }
 
+fun getChargingBackground(battery: Float, screenSize: Int, context: Context): Bitmap {
+
+    //First layer
+    val transparent = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
+    val canvasT = Canvas(transparent)
+    canvasT.drawColor(Color.BLACK)
+
+    //Second Layer
+    val backgroundBitmap = when(BuildConfig.FLAVOR){
+        "locket_touch", "locket_touch_inverted" -> R.drawable.flower_pattern_white
+        "refind" -> R.drawable.refind_cover
+        "locket_touch_s" -> R.drawable.s_cover_charging
+        else -> R.drawable.flower_pattern_white
+    }
+    val mBackgroundBitmap = Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, backgroundBitmap), screenSize, screenSize, false)
+
+    //Third Layer
+    val blue = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
+    val canvasB = Canvas(blue)
+    val circleSize = (battery * screenSize) / 2
+    val circlePaint = Paint().apply {}
+    canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize,  circlePaint)
+    val borderPaint = Paint().apply {color = Color.parseColor("#009FE3"); style = Paint.Style.STROKE; strokeWidth = 10f }
+    canvasB.drawCircle(screenSize / 2F, screenSize / 2F ,  circleSize, borderPaint)
+    val alphaPaint = Paint()
+    alphaPaint.alpha = 250
+    alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
+    canvasB.drawBitmap(mBackgroundBitmap, Matrix(), alphaPaint)
+
+    val overlay = overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
+
+    return darkenBitmap(overlay, screenSize)
+}
+
 
 fun getAnewChargingBackground(battery: Float, screenSize: Int, context: Context): Bitmap {
 
@@ -250,8 +285,19 @@ fun getAnewChargingBackground(battery: Float, screenSize: Int, context: Context)
     alphaPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP)
     canvasB.drawBitmap(mBackgroundBitmap, Matrix(), alphaPaint)
 
-    return overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
+     return overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
+}
 
+fun darkenBitmap(bitmap: Bitmap, screenSize: Int): Bitmap {
+    val darkB = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
+    val darkCanvas = Canvas(darkB)
+
+    val darknessPaint = Paint().apply {}
+    darknessPaint.colorFilter = LightingColorFilter(0xFF404040.toInt(), 0)
+
+    darkCanvas.drawBitmap(bitmap, Matrix(), darknessPaint)
+
+    return Bitmap.createScaledBitmap(darkB, screenSize, screenSize, false)
 }
 
 fun overlayBitmaps(b1: Bitmap, b2: Bitmap, b3: Bitmap, screenSize: Int): Bitmap {

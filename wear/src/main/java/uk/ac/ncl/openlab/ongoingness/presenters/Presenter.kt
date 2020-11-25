@@ -33,7 +33,8 @@ class Presenter(private val context: Context,
     }
 
     fun displayChargingCover(battery: Float) {
-        view?.updateBackgroundWithBitmap(getAnewChargingBackground(battery, view!!.getScreenSize(), context))
+        //view?.updateBackgroundWithBitmap(getAnewChargingBackground(battery, view!!.getScreenSize(), context))
+        view?.updateBackgroundWithBitmap(getChargingBackground(battery, view!!.getScreenSize(), context))
     }
 
 

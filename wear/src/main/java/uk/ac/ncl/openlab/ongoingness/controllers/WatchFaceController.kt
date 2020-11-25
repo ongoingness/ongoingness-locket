@@ -124,15 +124,22 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
 
 
     private fun startActivity(startedtWithTap: Boolean) {
-        val intent = Intent(context, MainActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
-        intent.putExtra("startedWithTap", startedtWithTap)
-        intent.putExtra("state", currentControllerState.toString())
-        intent.putExtra("battery", battery)
+        when(currentControllerState) {
 
-        context.startActivity(intent)
+            ControllerState.STANDBY -> {
+
+                val intent = Intent(context, MainActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+                intent.putExtra("startedWithTap", startedtWithTap)
+                intent.putExtra("state", currentControllerState.toString())
+                intent.putExtra("battery", battery)
+
+                context.startActivity(intent)
+            }
+        }
     }
 
 }

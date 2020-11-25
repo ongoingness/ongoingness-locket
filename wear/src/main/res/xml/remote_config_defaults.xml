@@ -7,11 +7,11 @@
     </entry>
     <entry>
         <key>FETCH_INTERVAL_MINUTES</key>
-        <value>2</value>
+        <value>1</value>
     </entry>
     <entry>
         <key>SERVER_URL</key>
-        <value>http://134.122.106.9:3000/api/</value>
+        <value>https://app.enablingongoingness.com/api/</value>
     </entry>
     <entry>
         <key>FETCH_REQUIRES_CHARGING</key>
@@ -20,6 +20,10 @@
     <entry>
         <key>FETCH_BATTERY_MIN_LEVEL</key>
         <value>20</value>
+    </entry>
+    <entry>
+        <key>IVVOR_INVERTED</key>
+        <value>false</value>
     </entry>
 </defaultsMap>
 <!-- END xml_defaults -->

@@ -147,6 +147,7 @@ class API {
         }
         val mac: String = getMacAddress() // Get mac address
         Log.d("MAC Address", mac)
+        Log.d("API URL", apiUrl)
         val formBody = FormBody.Builder()
                 .add("mac", mac)
                 .build()

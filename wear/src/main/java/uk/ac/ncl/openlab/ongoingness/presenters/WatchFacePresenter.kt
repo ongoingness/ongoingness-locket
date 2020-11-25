@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.utilities.getAnewChargingBackground
+import uk.ac.ncl.openlab.ongoingness.utilities.getChargingBackground
 
 /**
  * Connects the activity view to the media in the local database, allowing it to be displayed on screen.
@@ -22,7 +23,8 @@ class WatchFacePresenter(private val context: Context,
     }
 
     fun displayChargingCover(battery: Float) {
-        watchFaceView?.updateBackgroundWithBitmap(getAnewChargingBackground(battery, watchFaceView!!.getScreenSize(), context))
+        //watchFaceView?.updateBackgroundWithBitmap(getAnewChargingBackground(battery, watchFaceView!!.getScreenSize(), context))
+        watchFaceView?.updateBackgroundWithBitmap(getChargingBackground(battery, watchFaceView!!.getScreenSize(), context))
     }
 
     /**

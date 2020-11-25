@@ -21,14 +21,8 @@ import com.google.firebase.remoteconfig.ktx.remoteConfig
 import kotlinx.android.synthetic.main.activity_main.*
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
-import uk.ac.ncl.openlab.ongoingness.collections.AnewContentCollection
-import uk.ac.ncl.openlab.ongoingness.collections.ContentType
-import uk.ac.ncl.openlab.ongoingness.collections.MomentoContentCollection
-import uk.ac.ncl.openlab.ongoingness.collections.RefindContentCollection
-import uk.ac.ncl.openlab.ongoingness.controllers.AbstractController
-import uk.ac.ncl.openlab.ongoingness.controllers.AnewController
-import uk.ac.ncl.openlab.ongoingness.controllers.InvertedAnewController
-import uk.ac.ncl.openlab.ongoingness.controllers.RefindController
+import uk.ac.ncl.openlab.ongoingness.collections.*
+import uk.ac.ncl.openlab.ongoingness.controllers.*
 import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import uk.ac.ncl.openlab.ongoingness.recognisers.*
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
@@ -90,7 +84,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         contentCollection = contentCollection,
                         startedWitTap = startedWithTap,
                         faceState = faceState,
-                        battery = battery)
+                        battery = battery,
+                        pullContentOnWake = false)
 
                 controller.setup()
 
@@ -145,25 +140,75 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
             }
 
-            "locket_touch_s" -> {
+            "ivvor_v1" -> {
+                var recogniser: AbstractRecogniser
 
                 val presenter = Presenter(applicationContext,
-                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover), getScreenSize(), getScreenSize(), false),
-                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.refind_cover_white), getScreenSize(), getScreenSize(), false))
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover), getScreenSize(), getScreenSize(), false),
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover_white), getScreenSize(), getScreenSize(), false))
                 presenter.attachView(this@MainActivity)
-
-                val recogniser = InvertedTouchRevealRecogniser(applicationContext,this@MainActivity)
 
                 val contentCollection = MomentoContentCollection(this@MainActivity)
 
-                controller = InvertedAnewController(context = applicationContext,
+                if(Firebase.remoteConfig.getBoolean("IVVOR_INVERTED")) {
+
+                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+
+                    recogniser = InvertedTouchRevealRecogniser(applicationContext,this@MainActivity)
+
+                    controller = InvertedAnewController(context = applicationContext,
+                            presenter = presenter,
+                            recogniser = recogniser,
+                            contentCollection = contentCollection,
+                            startedWitTap = startedWithTap,
+                            faceState = faceState,
+                            battery = battery,
+                            pullContentOnWake = Firebase.remoteConfig.getBoolean("FETCH_ON_AWAKE"))
+
+                } else {
+
+                    recogniser = TouchRevealRecogniser(applicationContext, this@MainActivity)
+
+                    controller = AnewController(context = applicationContext,
+                            presenter = presenter,
+                            recogniser = recogniser,
+                            contentCollection = contentCollection,
+                            startedWitTap = startedWithTap,
+                            faceState = faceState,
+                            battery = battery,
+                            pullContentOnWake = Firebase.remoteConfig.getBoolean("FETCH_ON_AWAKE"))
+
+
+                }
+
+
+                controller.setup()
+
+                val mac = getMacAddress()
+                Log.d("MAC",mac)
+            }
+
+
+            "locket_touch_s" -> {
+
+                var recogniser: AbstractRecogniser
+
+                val presenter = Presenter(applicationContext,
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover), getScreenSize(), getScreenSize(), false),
+                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover_white), getScreenSize(), getScreenSize(), false))
+                presenter.attachView(this@MainActivity)
+
+                val contentCollection = MomentoContentCollection(this@MainActivity)
+
+                recogniser = HVRotationRecogniser(applicationContext, this@MainActivity)
+
+                controller = IvvorController(context = applicationContext,
                         presenter = presenter,
                         recogniser = recogniser,
                         contentCollection = contentCollection,
-                        startedWitTap = startedWithTap,
                         faceState = faceState,
                         battery = battery,
-                        pullContentOnWake = true)
+                        pullContentOnWake = Firebase.remoteConfig.getBoolean("FETCH_ON_AWAKE"))
 
                 controller.setup()
 
@@ -207,7 +252,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
     override fun updateBackgroundWithBitmap(bitmap: Bitmap) {
         runOnUiThread {
             macAddress.visibility = View.INVISIBLE
-            Glide.with(this).load(bitmap).placeholder(BitmapDrawable(bitmap)).diskCacheStrategy(DiskCacheStrategy.ALL).into(image)
+            Glide.with(this).load(bitmap).placeholder(BitmapDrawable(bitmap))/*.diskCacheStrategy(DiskCacheStrategy.ALL)*/.into(image)
         }
     }
 

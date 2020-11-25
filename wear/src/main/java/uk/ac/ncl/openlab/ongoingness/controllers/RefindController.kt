@@ -57,6 +57,22 @@ class RefindController(context: Context,
 
     }
 
+    override fun onRotateLeft() {
+        TODO("Not yet implemented")
+    }
+
+    override fun onRotateRight() {
+        TODO("Not yet implemented")
+    }
+
+    override fun onAwayLeft() {
+        TODO("Not yet implemented")
+    }
+
+    override fun onAwayRight() {
+        TODO("Not yet implemented")
+    }
+
     override fun onStartedEvent() {
 
         if(REFIND_PULL_CONTENT_ON_WAKE && !gotData && hasConnection(context)) {

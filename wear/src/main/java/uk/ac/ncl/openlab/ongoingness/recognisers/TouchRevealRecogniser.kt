@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -40,6 +41,8 @@ class TouchRevealRecogniser(val context: Context, val activity: Activity) : Abst
         }
 
         val mImageView = activity.findViewById<ImageView>(R.id.image)
+
+        mImageView.requestFocus()
         mImageView.setOnTouchListener(touchListener)
 
         notifyEvent(RecogniserEvent.STARTED)
@@ -53,11 +56,13 @@ class TouchRevealRecogniser(val context: Context, val activity: Activity) : Abst
     }
 
     override fun onSingleTapUp(e: MotionEvent?): Boolean {
+        Log.d("REC", "SingleTap")
         notifyEvent(RecogniserEvent.TAP)
         return true
     }
 
     override fun onLongPress(e: MotionEvent?) {
+        Log.d("REC", "LONG_PRESS")
         notifyEvent(RecogniserEvent.LONG_PRESS)
     }
 
@@ -80,10 +85,12 @@ class TouchRevealRecogniser(val context: Context, val activity: Activity) : Abst
         val z = floor(event.values[2]).toInt()
 
         if (y >= 2 && z > -9 && z < 9 && lastGravityEvent != RecogniserEvent.TOWARDS) {
+            Log.d("REC", "TOWARDS")
             lastGravityEvent = RecogniserEvent.TOWARDS
             notifyEvent(RecogniserEvent.TOWARDS)
         }
-        else if (y > -2  && y < 2 && z > -9 && z < 9 && lastGravityEvent != RecogniserEvent.AWAY) {
+        else if (y < -2/*y > -2  && y < 2*/ && z > -9 && z < 9 && lastGravityEvent != RecogniserEvent.AWAY) {
+            Log.d("REC", "AWAY")
             lastGravityEvent = RecogniserEvent.AWAY
             notifyEvent(RecogniserEvent.AWAY)
         }

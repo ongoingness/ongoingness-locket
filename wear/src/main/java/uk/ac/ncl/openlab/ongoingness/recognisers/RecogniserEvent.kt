@@ -16,4 +16,9 @@ enum class RecogniserEvent{
     ROTATE_DOWN,
     PICK_UP,
 
+    ROTATE_LEFT,
+    ROTATE_RIGHT,
+    AWAY_LEFT,
+    AWAY_RIGHT,
+
 }

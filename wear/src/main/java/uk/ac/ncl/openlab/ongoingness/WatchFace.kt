@@ -98,12 +98,12 @@ class WatchFace : CanvasWatchFaceService() {
                 "locket_touch_s" -> {
 
                     val presenter = WatchFacePresenter(applicationContext,
-                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover), getScreenSize(), getScreenSize(), false),
-                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.cover_white), getScreenSize(), getScreenSize(), false))
+                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover), getScreenSize(), getScreenSize(), false),
+                            Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover_white), getScreenSize(), getScreenSize(), false))
                     presenter.attachView(this)
                     presenter.displayCover(CoverType.BLACK)
 
-                    controller = WatchFaceController(applicationContext, false, presenter)
+                    controller = WatchFaceController(applicationContext, true, presenter)
 
                 }
             }
