@@ -56,14 +56,7 @@ class IvvorController(context: Context,
     }
 
     override fun onAwayEvent() {
-
-        if(getCurrentState() != ControllerState.OFF) {
-            updateState(ControllerState.OFF)
-            stopKillThread()
-            if(getPresenter().view != null)
-                getPresenter().view!!.finishActivity()
-        }
-
+        turnOff()
     }
 
     override fun onUnknownEvent() {}
@@ -72,11 +65,17 @@ class IvvorController(context: Context,
 
     override fun onLongPressEvent() {}
 
-    override fun onChargerConnectedEvent(battery: Float) {}
+    override fun onChargerConnectedEvent(battery: Float) {
+        turnOff()
+    }
 
-    override fun onChargerDisconnectedEvent() {}
+    override fun onChargerDisconnectedEvent() {
+        turnOff()
+    }
 
-    override fun onBatteryChangedEvent(battery: Float) {}
+    override fun onBatteryChangedEvent(battery: Float) {
+        turnOff()
+    }
 
     override fun onRotateUp() {}
 
@@ -162,5 +161,16 @@ class IvvorController(context: Context,
             Logger.setLogSessionToken()
             Logger.log(LogType.WAKE_UP, listOf(), context)
         }
+    }
+
+    private fun turnOff() {
+
+        if(getCurrentState() != ControllerState.OFF) {
+            updateState(ControllerState.OFF)
+            stopKillThread()
+            if(getPresenter().view != null)
+                getPresenter().view!!.finishActivity()
+        }
+
     }
 }

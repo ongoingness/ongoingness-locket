@@ -19,7 +19,9 @@
         android:id="@+id/macAddress"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginTop="120dp"
         android:gravity="center"
-        android:textAlignment="center" />
+        android:textAlignment="center"
+        android:textSize="20sp" />
 
 </androidx.wear.widget.BoxInsetLayout>

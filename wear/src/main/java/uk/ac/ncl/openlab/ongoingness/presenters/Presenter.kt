@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.util.Log
+import android.widget.TextView
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.collections.ContentPiece
 import uk.ac.ncl.openlab.ongoingness.collections.ContentType
@@ -40,6 +41,7 @@ class Presenter(private val context: Context,
 
     fun displayWarning() {
         view?.updateBackgroundWithBitmap(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.problem), view!!.getScreenSize(), view!!.getScreenSize(), false))
+        view?.displayText(getMacAddress())
     }
 
 

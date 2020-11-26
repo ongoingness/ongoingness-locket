@@ -12,6 +12,8 @@ import com.gvillani.rxsensors.RxSensorTransformer
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
+import uk.ac.ncl.openlab.ongoingness.utilities.LogType
+import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import java.util.ArrayList
 import kotlin.math.floor
 
@@ -20,6 +22,8 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
     private var disposables: ArrayList<Disposable> = arrayListOf()
     private var lastVerticalGravityEvent: RecogniserEvent? = null
     private var lastHorizontalGravityEvent: RecogniserEvent? = null
+
+    private var newContentTimestamp: Long? = null
 
     override fun start() {
         disposables.add(RxSensor.sensorEvent(context, Sensor.TYPE_GRAVITY, SensorManager.SENSOR_DELAY_UI)
@@ -61,10 +65,20 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
 
         //Horizontal
         if(x in 2..9 && z in 0..9 && lastHorizontalGravityEvent != RecogniserEvent.ROTATE_LEFT) {
+
+            if(newContentTimestamp != null) {
+                logAwayDuration(LogType.AWAY_LEFT_DURATION)
+            }
+
             Log.d("REC", "ROTATE LEFT")
             lastHorizontalGravityEvent = RecogniserEvent.ROTATE_LEFT
             notifyEvent(RecogniserEvent.ROTATE_LEFT)
         } else if (x in -10..-2 && z in 0..9 && lastHorizontalGravityEvent != RecogniserEvent.ROTATE_RIGHT) {
+
+            if(newContentTimestamp != null) {
+                logAwayDuration(LogType.AWAY_RIGHT_DURATION)
+            }
+
             Log.d("REC", "ROTATE RIGHT")
             lastHorizontalGravityEvent = RecogniserEvent.ROTATE_RIGHT
             notifyEvent(RecogniserEvent.ROTATE_RIGHT)
@@ -72,16 +86,30 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
 
         if(x in -3..3 && z in -10..-6) {
             if(lastHorizontalGravityEvent == RecogniserEvent.ROTATE_LEFT) {
+
+                newContentTimestamp = System.currentTimeMillis()
+
                 Log.d("REC", "AWAY LEFT")
                 lastHorizontalGravityEvent = RecogniserEvent.AWAY_LEFT
                 notifyEvent(RecogniserEvent.AWAY_LEFT)
             } else if(lastHorizontalGravityEvent == RecogniserEvent.ROTATE_RIGHT) {
+
+                newContentTimestamp = System.currentTimeMillis()
+
                 Log.d("REC", "AWAY RIGHT")
                 lastHorizontalGravityEvent = RecogniserEvent.AWAY_RIGHT
                 notifyEvent(RecogniserEvent.AWAY_RIGHT)
             }
         }
 
+    }
+
+    private fun logAwayDuration(logType: LogType) {
+        val awayTime = System.currentTimeMillis() - newContentTimestamp!!
+        Log.d("Away time", "$awayTime")
+        val content = mutableListOf("awayTime:$awayTime")
+        Runnable { Logger.log( logType, content, context!! ) }.run()
+        newContentTimestamp = null
     }
 
 }

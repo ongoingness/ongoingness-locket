@@ -76,6 +76,21 @@ object Logger {
 
             LogType.STOPPED_WATCHFACE -> message = "WatchFace Stopped."
 
+            LogType.AWAY_LEFT_DURATION -> {
+                message = "Device was away on the left."
+                if(sessionToken != null) mutableContentList.add("session:$sessionToken")
+            }
+
+            LogType.AWAY_RIGHT_DURATION -> {
+                message = "Device was away on the right."
+                if(sessionToken != null) mutableContentList.add("session:$sessionToken")
+            }
+
+            else -> {
+                message = "New log"
+                if(sessionToken != null) mutableContentList.add("session:$sessionToken")
+            }
+
         }
 
         GlobalScope.launch {
@@ -133,5 +148,7 @@ enum class LogType {
     STARTED_WATCHFACE,
     STOPPED_WATCHFACE,
     ERROR,
+    AWAY_LEFT_DURATION,
+    AWAY_RIGHT_DURATION,
 }
 
