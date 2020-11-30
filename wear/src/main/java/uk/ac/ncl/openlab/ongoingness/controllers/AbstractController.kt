@@ -46,6 +46,7 @@ abstract class AbstractController(
             RecogniserEvent.ROTATE_RIGHT -> onRotateRight()
             RecogniserEvent.AWAY_LEFT -> onAwayLeft()
             RecogniserEvent.AWAY_RIGHT -> onAwayRight()
+            RecogniserEvent.AWAY_TOWARDS -> onAwayTowards()
 
         }
 
@@ -189,5 +190,6 @@ abstract class AbstractController(
     abstract fun onRotateRight()
     abstract fun onAwayLeft()
     abstract fun onAwayRight()
+    abstract fun onAwayTowards()
 
 }

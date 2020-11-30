@@ -49,10 +49,15 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
         val y = floor(event.values[1]).toInt()
         val z = floor(event.values[2]).toInt()
 
-        //Log.d("test", "X:$x Y:$y Z:$z")
+        var imageChanged = false
 
         //Vertical
-        if (y >= 2 && z > -9 && z < 9 && lastVerticalGravityEvent != RecogniserEvent.TOWARDS) {
+        if (y >= 7 && z > -7 && z < 9 && lastVerticalGravityEvent != RecogniserEvent.TOWARDS) {
+
+            if(newContentTimestamp != null) {
+                logAwayDuration(LogType.AWAY_TOWARDS_DURATION)
+            }
+
             Log.d("REC", "TOWARDS")
             lastVerticalGravityEvent = RecogniserEvent.TOWARDS
             notifyEvent(RecogniserEvent.TOWARDS)
@@ -62,6 +67,8 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
             lastVerticalGravityEvent = RecogniserEvent.AWAY
             notifyEvent(RecogniserEvent.AWAY)
         }
+
+
 
         //Horizontal
         if(x in 2..9 && z in 0..9 && lastHorizontalGravityEvent != RecogniserEvent.ROTATE_LEFT) {
@@ -85,23 +92,38 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
         }
 
         if(x in -3..3 && z in -10..-6) {
-            if(lastHorizontalGravityEvent == RecogniserEvent.ROTATE_LEFT) {
 
+            if(lastHorizontalGravityEvent == RecogniserEvent.ROTATE_LEFT) {
+                Log.d("yyy", "$y")
                 newContentTimestamp = System.currentTimeMillis()
 
                 Log.d("REC", "AWAY LEFT")
                 lastHorizontalGravityEvent = RecogniserEvent.AWAY_LEFT
+                imageChanged = true
                 notifyEvent(RecogniserEvent.AWAY_LEFT)
-            } else if(lastHorizontalGravityEvent == RecogniserEvent.ROTATE_RIGHT) {
 
+            } else if(lastHorizontalGravityEvent == RecogniserEvent.ROTATE_RIGHT) {
+                Log.d("yyy", "$y")
                 newContentTimestamp = System.currentTimeMillis()
 
                 Log.d("REC", "AWAY RIGHT")
                 lastHorizontalGravityEvent = RecogniserEvent.AWAY_RIGHT
+                imageChanged = true
                 notifyEvent(RecogniserEvent.AWAY_RIGHT)
             }
         }
 
+        /*
+        if(!imageChanged && lastVerticalGravityEvent == RecogniserEvent.TOWARDS &&
+                x == -1 && y in 0 .. 6 && z in -10 .. -8) {
+            Log.d("xxx", "$x")
+            newContentTimestamp = System.currentTimeMillis()
+
+            Log.d("REC", "AWAY TOWARDS")
+            lastVerticalGravityEvent = RecogniserEvent.AWAY_TOWARDS
+            notifyEvent(RecogniserEvent.AWAY_TOWARDS)
+        }
+         */
     }
 
     private fun logAwayDuration(logType: LogType) {

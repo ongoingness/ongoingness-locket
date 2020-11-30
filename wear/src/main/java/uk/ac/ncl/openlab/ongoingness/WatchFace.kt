@@ -42,10 +42,6 @@ class WatchFace : CanvasWatchFaceService() {
         private lateinit var mBackgroundPaint: Paint
         private lateinit var mBackgroundBitmap: Bitmap
 
-        private var mAmbient: Boolean = false
-        private var mLowBitAmbient: Boolean = false
-        private var mBurnInProtection: Boolean = false
-
         private lateinit var controller: WatchFaceController
 
         private var falseStartReleaseInterval = 4000L
@@ -60,7 +56,6 @@ class WatchFace : CanvasWatchFaceService() {
                     .setShowUnreadCountIndicator(false)
                     .setHideNotificationIndicator(true)
                     .build())
-
 
             setRemoteConfig()
 
@@ -122,10 +117,13 @@ class WatchFace : CanvasWatchFaceService() {
 
         override fun onPropertiesChanged(properties: Bundle) {
             super.onPropertiesChanged(properties)
-            mLowBitAmbient = properties.getBoolean(
+            val mLowBitAmbient = properties.getBoolean(
                     WatchFaceService.PROPERTY_LOW_BIT_AMBIENT, false)
-            mBurnInProtection = properties.getBoolean(
+            val mBurnInProtection = properties.getBoolean(
                     WatchFaceService.PROPERTY_BURN_IN_PROTECTION, false)
+
+            controller.lowBitAmbientChanged(mLowBitAmbient)
+            controller.burnInProtectionChanged(mBurnInProtection)
         }
 
         override fun onTimeTick() {
@@ -135,10 +133,7 @@ class WatchFace : CanvasWatchFaceService() {
 
         override fun onAmbientModeChanged(inAmbientMode: Boolean) {
             super.onAmbientModeChanged(inAmbientMode)
-            this.mAmbient = inAmbientMode
-
-            if (!inAmbientMode)
-                controller.ambientModeChanged()
+            controller.ambientModeChanged(inAmbientMode)
         }
 
         override fun onInterruptionFilterChanged(interruptionFilter: Int) {
@@ -177,16 +172,9 @@ class WatchFace : CanvasWatchFaceService() {
         private fun drawBackground(canvas: Canvas) {
 
             mBackgroundPaint = Paint().apply {
-                color = Color.RED
+                color = Color.BLACK
             }
-
-            if (mAmbient && (mLowBitAmbient || mBurnInProtection)) {
-                canvas.drawBitmap(mBackgroundBitmap, 0f, 0f, mBackgroundPaint)
-            } else if (mAmbient) {
-                canvas.drawBitmap(mBackgroundBitmap, 0f, 0f, mBackgroundPaint)
-            } else {
-                canvas.drawBitmap(mBackgroundBitmap, 0f, 0f, mBackgroundPaint)
-            }
+            canvas.drawBitmap(mBackgroundBitmap, 0f, 0f, mBackgroundPaint)
         }
 
         override fun onVisibilityChanged(visible: Boolean) {

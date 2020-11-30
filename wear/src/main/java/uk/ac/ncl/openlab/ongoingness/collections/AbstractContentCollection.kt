@@ -33,14 +33,12 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
 
         //Check if there are watchMedia without the file
         val tempContentList = setContent(watchMediaViewModel)
-        Log.d("tesrtert", tempContentList.toString())
 
         for(wm in tempContentList) {
-            if(packageContent(wm) == null) {
+            if(!contentFileExists(wm)) {
                 watchMediaViewModel.delete(wm, context)
             }
         }
-        Log.d("tesrtert after", tempContentList.toString())
         contentList = tempContentList
         restartIndex()
 
@@ -130,6 +128,11 @@ abstract class AbstractContentCollection(activity: FragmentActivity) {
             }
         }
         return null
+    }
+
+    private fun contentFileExists(content: WatchMedia): Boolean {
+        val file  = File(context!!.filesDir, content.path)
+        return file.exists() && file.length() > 0
     }
 
     fun startLoggingFields(contentPiece: ContentPiece) {

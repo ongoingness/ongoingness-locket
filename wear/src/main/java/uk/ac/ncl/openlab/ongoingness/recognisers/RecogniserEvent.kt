@@ -21,4 +21,6 @@ enum class RecogniserEvent{
     AWAY_LEFT,
     AWAY_RIGHT,
 
+    AWAY_TOWARDS,
+
 }

@@ -147,6 +147,10 @@ class InvertedAnewController(context: Context,
         TODO("Not yet implemented")
     }
 
+    override fun onAwayTowards() {
+        TODO("Not yet implemented")
+    }
+
     override fun onUnknownEvent() {}
 
     private fun awakeUpProcedures() {

@@ -158,6 +158,9 @@ class AnewController(context: Context,
     override fun onAwayLeft() {}
 
     override fun onAwayRight() {}
+    override fun onAwayTowards() {
+        TODO("Not yet implemented")
+    }
 
     private fun awakeUpProcedures() {
 

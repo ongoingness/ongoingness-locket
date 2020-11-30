@@ -293,7 +293,7 @@ fun darkenBitmap(bitmap: Bitmap, screenSize: Int): Bitmap {
     val darkCanvas = Canvas(darkB)
 
     val darknessPaint = Paint().apply {}
-    darknessPaint.colorFilter = LightingColorFilter(0xFF404040.toInt(), 0)
+    darknessPaint.colorFilter = LightingColorFilter(0xFF808080.toInt(), 0)
 
     darkCanvas.drawBitmap(bitmap, Matrix(), darknessPaint)
 

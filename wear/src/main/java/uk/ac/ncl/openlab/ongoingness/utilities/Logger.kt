@@ -150,5 +150,6 @@ enum class LogType {
     ERROR,
     AWAY_LEFT_DURATION,
     AWAY_RIGHT_DURATION,
+    AWAY_TOWARDS_DURATION,
 }
 

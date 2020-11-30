@@ -41,31 +41,35 @@ android {
             applicationIdSuffix ".locket"
             versionNameSuffix "-locket"
             resValue "string", "app_name", "Locket"
+            resValue "string", "preview", "@drawable/placeholder"
         }
         refind {
             dimension "version"
             applicationIdSuffix ".refind"
             versionNameSuffix "-refind"
             resValue "string", "app_name", "Refind"
+            resValue "string", "preview", "@drawable/refind_cover"
         }
         locket_touch {
             dimension = 'version'
             applicationIdSuffix = '.anew'
             versionNameSuffix = '-anew_touch'
             resValue "string", "app_name", "Anew"
-
+            resValue "string", "preview", "@drawable/cover"
         }
         locket_touch_inverted {
             dimension = 'version'
             applicationIdSuffix = '.anew_inv'
             versionNameSuffix = '-anew_touch_inv'
             resValue "string", "app_name", "Anew Inverted"
+            resValue "string", "preview", "@drawable/cover"
         }
         locket_touch_s {
             dimension = 'version'
             applicationIdSuffix = '.locket_touch_s'
             versionNameSuffix = '-locket_touch_s'
-            resValue "string", "app_name", "Momento"
+            resValue "string", "app_name", "Ivvor"
+            resValue "string", "preview", "@drawable/s_cover"
         }
     }
 

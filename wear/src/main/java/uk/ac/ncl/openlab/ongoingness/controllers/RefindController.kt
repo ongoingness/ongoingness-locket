@@ -73,6 +73,10 @@ class RefindController(context: Context,
         TODO("Not yet implemented")
     }
 
+    override fun onAwayTowards() {
+        TODO("Not yet implemented")
+    }
+
     override fun onStartedEvent() {
 
         if(REFIND_PULL_CONTENT_ON_WAKE && !gotData && hasConnection(context)) {

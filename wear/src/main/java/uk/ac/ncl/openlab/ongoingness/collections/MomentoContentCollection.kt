@@ -11,16 +11,10 @@ class MomentoContentCollection(activity: FragmentActivity) : AbstractContentColl
 
     override fun setContent(watchMediaViewModel: WatchMediaViewModel): List<WatchMedia> {
 
-        var date = Date(System.currentTimeMillis())
-        Log.d("currentDate", "$date")
-
         var c = Calendar.getInstance()
         c.timeInMillis = System.currentTimeMillis()
 
-
         var temporaryList = watchMediaViewModel.getWatchMediaForDate(c.get(Calendar.DAY_OF_MONTH), c.get(Calendar.MONTH))
-
-        Log.d("tempoeraryList", "$temporaryList")
 
         if(temporaryList.isEmpty())
             return watchMediaViewModel.getCollection("permanent").sortedBy { it.createdAt }

@@ -22,6 +22,10 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
 
     private var battery = 0f
 
+    private var inAmbientMode = false
+    private var mLowBitAmbient = false
+    private var mBurnInProtection = false
+
     init {
 
         if(batteryChecking) {
@@ -41,7 +45,11 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
 
                                     when(currentControllerState) {
 
-                                        ControllerState.STANDBY -> updateState(ControllerState.CHARGING)
+                                        ControllerState.STANDBY ->  {
+                                            battery = intent.getFloatExtra("battery", 0f)
+                                            presenter.displayChargingCover(battery)
+                                            updateState(ControllerState.CHARGING)
+                                        }
                                         else -> {}
                                     }
                                 }
@@ -103,8 +111,7 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
     fun updateState(controllerState: ControllerState){
         synchronized(currentControllerState) {
             if (controllerState == currentControllerState)
-                return //no change, so no need to notify of change
-
+                return //no change, so no need to notify the change
 
             Log.d("watch face state update", "$currentControllerState")
 
@@ -118,10 +125,19 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
     }
 
 
-    fun ambientModeChanged() {
-        startActivity(false)
+    fun ambientModeChanged(state: Boolean) {
+        inAmbientMode = state
+        if(!state)
+            startActivity(false)
     }
 
+    fun lowBitAmbientChanged(state: Boolean) {
+        mLowBitAmbient = state
+    }
+
+    fun burnInProtectionChanged(state: Boolean) {
+        mBurnInProtection = state
+    }
 
     private fun startActivity(startedtWithTap: Boolean) {
 

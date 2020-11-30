@@ -21,29 +21,19 @@ class IvvorController(context: Context,
 
     private var gotData = false
 
-    override fun setStartingState() {}
-
     override fun onStartedEvent() {
 
-        startKillThread(30 * 1000L, 5 * 60 * 1000L)
+        startKillThread(30 * 1000L, 10 * 60 * 1000L)
 
         if(faceState == ControllerState.CHARGING.toString()) {
             stopKillThread()
             getPresenter().view!!.finishActivity()
-            //getPresenter().displayChargingCover(battery)
-            //updateState(ControllerState.CHARGING)
         } else {
             getPresenter().displayCover(CoverType.BLACK)
             updateState(ControllerState.STANDBY)
         }
 
     }
-
-    override fun onStoppedEvent() {}
-
-    override fun onUpEvent() {}
-
-    override fun onDownEvent() {}
 
     override fun onTowardsEvent() {
 
@@ -55,15 +45,10 @@ class IvvorController(context: Context,
 
     }
 
+
     override fun onAwayEvent() {
         turnOff()
     }
-
-    override fun onUnknownEvent() {}
-
-    override fun onTapEvent() {}
-
-    override fun onLongPressEvent() {}
 
     override fun onChargerConnectedEvent(battery: Float) {
         turnOff()
@@ -77,6 +62,44 @@ class IvvorController(context: Context,
         turnOff()
     }
 
+    override fun onAwayLeft() {
+        when(getCurrentState()) {
+            ControllerState.READY -> awakeUpProcedures()
+            ControllerState.ACTIVE -> nextImage()
+            else ->  { }
+        }
+    }
+
+    override fun onAwayRight() {
+        when(getCurrentState()) {
+            ControllerState.READY -> awakeUpProcedures()
+            ControllerState.ACTIVE -> nextImage()
+            else ->  { }
+        }
+    }
+
+    override fun onAwayTowards() {
+        when(getCurrentState()) {
+            ControllerState.ACTIVE -> nextImage()
+            else -> {
+            }
+        }
+    }
+
+    override fun setStartingState() {}
+
+    override fun onStoppedEvent() {}
+
+    override fun onUpEvent() {}
+
+    override fun onDownEvent() {}
+
+    override fun onUnknownEvent() {}
+
+    override fun onTapEvent() {}
+
+    override fun onLongPressEvent() {}
+
     override fun onRotateUp() {}
 
     override fun onRotateDown() {}
@@ -85,49 +108,12 @@ class IvvorController(context: Context,
 
     override fun onRotateRight() {}
 
-    override fun onAwayLeft() {
-        when(getCurrentState()) {
-
-            ControllerState.READY -> awakeUpProcedures()
-
-            ControllerState.ACTIVE -> {
-                val content = getContentCollection().goToNextContent()
-                Log.d("whar", "$content")
-                if(content != null)
-                    getPresenter().displayContentPiece(content)
-                else
-                    getPresenter().displayWarning()
-
-            }
-
-            else ->  { }
-        }
-    }
-
-    override fun onAwayRight() {
-        when(getCurrentState()) {
-
-            ControllerState.READY -> awakeUpProcedures()
-
-            ControllerState.ACTIVE -> {
-                val content = getContentCollection().goToNextContent()
-                Log.d("whar", "$content")
-                if(content != null)
-                    getPresenter().displayContentPiece(content)
-                else
-                    getPresenter().displayWarning()
-
-            }
-
-            else ->  { }
-        }
-    }
-
     private fun awakeUpProcedures() {
 
         if(pullContentOnWake && !gotData && hasConnection(context)) {
 
             val postExecuteCallback: (result: Boolean) -> Unit = {
+                updateKillThread(System.currentTimeMillis())
                 gotData = it
                 getContentCollection().setup()
                 val content = getContentCollection().getCurrentContent()
@@ -147,20 +133,26 @@ class IvvorController(context: Context,
             updateState(ControllerState.PULLING_DATA)
 
         } else {
-            getContentCollection().setup()
             val content = getContentCollection().getCurrentContent()
-            Log.d("s","$content ${getPresenter()}")
             if(content != null) {
                 getContentCollection().startLoggingFields(content)
                 getPresenter().displayContentPiece(content)
             } else {
                 getPresenter().displayWarning()
             }
-            stopKillThread()
             updateState(ControllerState.ACTIVE)
             Logger.setLogSessionToken()
             Logger.log(LogType.WAKE_UP, listOf(), context)
         }
+    }
+
+    private fun nextImage() {
+        updateKillThread(System.currentTimeMillis())
+        val content = getContentCollection().goToNextContent()
+        if(content != null)
+            getPresenter().displayContentPiece(content)
+        else
+            getPresenter().displayWarning()
     }
 
     private fun turnOff() {

@@ -23,7 +23,6 @@ class WatchFacePresenter(private val context: Context,
     }
 
     fun displayChargingCover(battery: Float) {
-        //watchFaceView?.updateBackgroundWithBitmap(getAnewChargingBackground(battery, watchFaceView!!.getScreenSize(), context))
         watchFaceView?.updateBackgroundWithBitmap(getChargingBackground(battery, watchFaceView!!.getScreenSize(), context))
     }
 
