@@ -11,6 +11,7 @@ class MomentoContentCollection(activity: FragmentActivity) : AbstractContentColl
 
     override fun setContent(watchMediaViewModel: WatchMediaViewModel): List<WatchMedia> {
 
+
         var c = Calendar.getInstance()
         c.timeInMillis = System.currentTimeMillis()
 
@@ -20,6 +21,8 @@ class MomentoContentCollection(activity: FragmentActivity) : AbstractContentColl
             return watchMediaViewModel.getCollection("permanent").sortedBy { it.createdAt }
 
         return temporaryList.sortedBy { it.createdAt }
+
+        return mutableListOf()
 
     }
 

@@ -23,6 +23,7 @@ import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.collections.*
 import uk.ac.ncl.openlab.ongoingness.controllers.*
+import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
 import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
 import uk.ac.ncl.openlab.ongoingness.recognisers.*
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
@@ -197,7 +198,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover), getScreenSize(), getScreenSize(), false),
                         Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover_white), getScreenSize(), getScreenSize(), false))
                 presenter.attachView(this@MainActivity)
-
+                
                 val contentCollection = MomentoContentCollection(this@MainActivity)
 
                 recogniser = HVRotationRecogniser(applicationContext, this@MainActivity)
@@ -214,6 +215,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
                 val mac = getMacAddress()
                 Log.d("MAC",mac)
+
+
             }
         }
     }

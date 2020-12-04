@@ -16,8 +16,8 @@ android {
         applicationId "uk.ac.ncl.openlab.ongoingness"
         minSdkVersion 25
         targetSdkVersion 28
-        versionCode 10
-        versionName "10.0"
+        versionCode 11
+        versionName "11.0"
         multiDexEnabled true
 
         //buildConfigField('String','API_URL','"https://ongoingness-v2-api.openlab.ncl.ac.uk/api/"')
