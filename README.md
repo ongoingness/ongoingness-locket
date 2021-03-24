@@ -1,6 +1,38 @@
-# Ongoingness Locket
-This is a neck worn locket, that updates the image every time the locket is opened.
-The locket is built on an Android watch.
+# Ongoingness Android Wear App
+
+Android Wear application and watch face for the multiple pieces of the Enabling Ongoingness 
+project. Each piece is present in the code as distinct build variants.
+The app displays media content (Images and GIFs) one at a time in the piece screen, periodicaly 
+checks in background for new content in the server and Provides a way for user to navigate 
+through the media content.
+
+
+## Build Variants
+
+### refind
+Used in the Refind piece, it displays a total of 6 media items, one belonging to the present collection
+and 5 beloging to the past collection. The media belonging to the past collection are chosen based
+on the lastest media item added to the present collection, its tags and the tags of the media in the
+past collection.
+
+In regards to interaction, the app starts when the screen is tapped or the device is picked up. To move through
+the media content, the user can rotate the piece vertically away to get the next media content, and
+rotate the piece vertically towards to get the previous media content in the screen.
+
+### locket_touch
+Used in the Anew piece, it displays a maximum of 20 media items, 7 beloging to the permanent collection and
+13 beloging to the temporary collection. The permanent collection media is always displayed first followed by
+the media in the temporary collection.
+
+In regards to interaction, the apps starts by long pressing the screen. To mov ethourgh the media content, the user
+can tap the screen.
+
+### locket_touch_inverted
+Used in the Anew piece,
+
+### locket_touch_s
+Used in the Ivvor piece,
+
 
 ## Description
 ### The Watch Face
