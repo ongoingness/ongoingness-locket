@@ -2,8 +2,9 @@
 
 Android Wear application and watch face for the multiple pieces of the Enabling Ongoingness 
 project. Each piece is present in the code as distinct build variants.
+
 The app displays media content (Images and GIFs) one at a time in the piece screen, periodicaly 
-checks in background for new content in the server and Provides a way for user to navigate 
+checks in background for new content in the server and provides a way for user to navigate 
 through the media content.
 
 
@@ -24,11 +25,11 @@ Used in the Anew piece, it displays a maximum of 20 media items, 7 beloging to t
 13 beloging to the temporary collection. The permanent collection media is always displayed first followed by
 the media in the temporary collection.
 
-In regards to interaction, the apps starts by long pressing the screen. To mov ethourgh the media content, the user
-can tap the screen.
+In regards to interaction, the apps starts having the screen facing the user and by long pressing the screen.
+To move through the media content, the user can tap the screen.
 
 ### locket_touch_inverted
-Used in the Anew piece,
+Used in the Anew piece, works the same way as the build variant described above. The only difference is that it expects the device to be upside down, meaning that the screen displays images inverted vertically and the act of having the user face the screen is also inverted.
 
 ### locket_touch_s
 Used in the Ivvor piece,
@@ -55,6 +56,26 @@ sensor. When the light reaches below a certain threshold the locket will be clos
 this will set the screen brightness to `0`. If the light reading is greater than the
 threshold it will set screen brightness to max, and then update the image. It will cycle
 through all media, alternating between temporary and permanent collections.
+
+## Project Structure
+
+### /collections
+
+### /controllers
+
+### /database
+
+### /presenters
+
+### /recognisers
+
+### /utilities
+
+### /views
+
+### /workers
+
+
 
 ## Registering the Device
 User's first need to get the MAC address of the device. After this they can register an
