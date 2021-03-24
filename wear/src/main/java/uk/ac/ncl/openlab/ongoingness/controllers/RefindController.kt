@@ -75,6 +75,8 @@ class RefindController(context: Context,
                 if(content != null) {
                     getContentCollection().startLoggingFields(content)
                     getPresenter().displayContentPiece(content)
+                } else {
+                    getPresenter().displayWarning()
                 }
                 stopKillThread()
                 Logger.log(LogType.WAKE_UP, listOf(), context)

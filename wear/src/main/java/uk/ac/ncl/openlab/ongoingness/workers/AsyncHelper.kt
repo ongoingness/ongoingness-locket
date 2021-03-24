@@ -193,6 +193,7 @@ class AsyncHelper {
                         val stringResponse = response!!.body()?.string()
                         if (stringResponse == "[]") {
                             Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
+                            response.body()!!.close()
                             cont.resume(true)
                             return@callback
                         }
@@ -202,6 +203,7 @@ class AsyncHelper {
 
                         if (!code.startsWith('2')) {
                             Logger.log(LogType.PULLED_CONTENT, listOf("success:false"), context)
+                            response.body()!!.close()
                             cont.resume(false)
                             return@callback
                         }
@@ -209,6 +211,7 @@ class AsyncHelper {
                         val payload: JSONArray = jsonResponse.getJSONArray("payload")
                         if (payload.length() == 0) {
                             Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
+                            response.body()!!.close()
                             cont.resume(true)
                             return@callback
                         }
@@ -223,19 +226,30 @@ class AsyncHelper {
                         //Set present image
                         val presentImage: JSONObject = payload.getJSONObject(0)
 
-                        val newWatchMedia = WatchMedia(presentImage.getString("_id"),
-                                presentImage.getString("path"),
-                                /*presentImage.getString("locket")*/"present",
-                                presentImage.getString("mimetype"),
-                                0,
-                                Date(System.currentTimeMillis()),
-                                0) //fixme check the name from the api json response
+                        //If the number of media content in the past archive is less that 6,
+                        //the server will not return media content belonging to the present collection thus crashing.
+                        try {
+                            val newWatchMedia = WatchMedia(presentImage.getString("_id"),
+                                    presentImage.getString("path"),
+                                    /*presentImage.getString("locket")*/"present",
+                                    presentImage.getString("mimetype"),
+                                    0,
+                                    Date(System.currentTimeMillis()),
+                                    0) //fixme check the name from the api json response
 
-                        fetchMedia(context, api, newWatchMedia, watchMediaRepository)
+                            fetchMedia(context, api, newWatchMedia, watchMediaRepository)
+
+                        } catch (e: java.lang.Exception) {
+                            Logger.log(LogType.PULLED_CONTENT, listOf("success:false"), context)
+                            response.body()!!.close()
+                            cont.resume(false)
+                            return@callback
+                        }
 
                         //Set past images
                         if (payload.length() < 1) {
                             Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
+                            response.body()!!.close()
                             cont.resume(true)
                             return@callback
                         }
@@ -261,6 +275,10 @@ class AsyncHelper {
                         for (media: WatchMedia in pastImages) {
                             fetchMedia(context, api, media, watchMediaRepository)
                         }
+
+                        response.body()!!.close()
+                        cont.resume(true)
+                        return@callback
                     }
 
                     val failure = { e: java.lang.Exception ->

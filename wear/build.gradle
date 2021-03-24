@@ -28,7 +28,7 @@ android {
         buildConfigField('Boolean','IVVOR_INVERTED', 'false')
         buildConfigField('int','FETCH_BATTERY_MIN_LEVEL', '20')
         buildConfigField('Boolean','FETCH_REQUIRES_CHARGING', 'false')
-        buildConfigField('Boolean','FETCH_ON_AWAKE', 'true')
+        buildConfigField('Boolean','FETCH_ON_AWAKE', 'false')
         buildConfigField('int','FETCH_INTERVAL_MINUTES', '60')
     }
     buildTypes {
