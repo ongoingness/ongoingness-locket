@@ -39,14 +39,34 @@ class WatchFace : CanvasWatchFaceService() {
 
     inner class Engine : CanvasWatchFaceService.Engine(), WatchFacePresenter.WatchFaceView {
 
+        /**
+         * Mute mode flag.
+         */
         private var mMuteMode: Boolean = false
 
+        /**
+         * Color of the background.
+         */
         private lateinit var mBackgroundPaint: Paint
+
+        /**
+         * Bitmap to be displayed in the background.
+         */
         private lateinit var mBackgroundBitmap: Bitmap
 
+        /**
+         * Controller of the watch face.
+         */
         private lateinit var controller: WatchFaceController
 
+        /**
+         * False start avoid check.
+         */
         private var falseStartReleaseInterval = 4000L
+
+        /**
+         * Timestamp of the previous screen tap.
+         */
         private var previousTapTime: Long? = null
 
         override fun onCreate(holder: SurfaceHolder) {

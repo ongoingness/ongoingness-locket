@@ -6,6 +6,7 @@ import com.google.gson.Gson
 import okhttp3.*
 import org.json.JSONArray
 import org.json.JSONObject
+import uk.ac.ncl.openlab.ongoingness.BuildConfig
 import java.io.IOException
 import java.lang.Exception
 import java.util.concurrent.TimeUnit
@@ -22,7 +23,7 @@ class API(val context: Context) {
     /**
      * API server base end-point.
      */
-    private val apiUrl = "https://app.enablingongoingness.com/api/"//"http:abccccccccc.pt/"////"https:abc"
+    private val apiUrl = BuildConfig.API_URL
 
     /**
      * User authentication token.

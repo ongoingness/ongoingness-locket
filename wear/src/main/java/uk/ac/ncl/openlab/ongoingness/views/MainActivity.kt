@@ -78,6 +78,8 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
             battery = intent.getFloatExtra("battery", 0f)
 
         when(FLAVOR){
+
+            //Anew
             "locket_touch" -> {
 
                 val presenter = Presenter(applicationContext,
@@ -102,6 +104,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
             }
 
+            //Anew
             "locket_touch_inverted" -> {
 
                 requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
@@ -152,53 +155,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
 
             }
 
-            "ivvor_v1" -> {
-                var recogniser: AbstractRecogniser
-
-                val presenter = Presenter(applicationContext,
-                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover), getScreenSize(), getScreenSize(), false),
-                        Bitmap.createScaledBitmap(BitmapFactory.decodeResource(applicationContext.resources, R.drawable.s_cover_white), getScreenSize(), getScreenSize(), false))
-                presenter.attachView(this@MainActivity)
-
-                val contentCollection = IvvorContentCollection(this@MainActivity)
-
-                if(BuildConfig.IVVOR_INVERTED) {
-
-                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
-
-                    recogniser = InvertedTouchRevealRecogniser(applicationContext,this@MainActivity)
-
-                    controller = InvertedAnewController(context = applicationContext,
-                            presenter = presenter,
-                            recogniser = recogniser,
-                            contentCollection = contentCollection,
-                            startedWitTap = startedWithTap,
-                            faceState = faceState,
-                            battery = battery,
-                            pullContentOnWake = BuildConfig.FETCH_ON_AWAKE)
-
-                } else {
-
-                    recogniser = TouchRevealRecogniser(applicationContext, this@MainActivity)
-
-                    controller = AnewController(context = applicationContext,
-                            presenter = presenter,
-                            recogniser = recogniser,
-                            contentCollection = contentCollection,
-                            startedWithTap = startedWithTap,
-                            faceState = faceState,
-                            battery = battery,
-                            pullContentOnWake = BuildConfig.FETCH_ON_AWAKE)
-
-
-                }
-
-                controller?.setup()
-
-                val mac = getMacAddress()
-                Log.d("MAC",mac)
-            }
-
+            //Ivvor
             "locket_touch_s" -> {
 
                 var recogniser: AbstractRecogniser
@@ -218,7 +175,7 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
                         contentCollection = contentCollection,
                         faceState = faceState,
                         battery = battery,
-                        pullContentOnWake = BuildConfig.FETCH_ON_AWAKE)
+                        pullContentOnWake = false)
 
                 controller?.setup()
 
