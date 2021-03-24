@@ -6,11 +6,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Movie
 import android.util.Log
-import com.google.android.gms.tasks.Task
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.Response
 import okhttp3.ResponseBody
@@ -21,22 +16,29 @@ import uk.ac.ncl.openlab.ongoingness.database.repositories.MediaDateRepository
 import uk.ac.ncl.openlab.ongoingness.database.repositories.WatchMediaRepository
 import uk.ac.ncl.openlab.ongoingness.database.schemas.MediaDate
 import uk.ac.ncl.openlab.ongoingness.database.schemas.WatchMedia
-import uk.ac.ncl.openlab.ongoingness.utilities.API
-import uk.ac.ncl.openlab.ongoingness.utilities.LogType
-import uk.ac.ncl.openlab.ongoingness.utilities.Logger
-import uk.ac.ncl.openlab.ongoingness.utilities.deleteFile
+import uk.ac.ncl.openlab.ongoingness.utilities.*
 import java.io.*
 import java.sql.Date
 import java.text.SimpleDateFormat
-import java.time.MonthDay
 import java.util.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
+/**
+ * Set of helper functions to facilitated the push of logs and pull of data to the server.
+ *
+ * @author Luis Carvalho
+ */
 class AsyncHelper {
 
     companion object {
 
+        /**
+         *  Synchronously pushes the logs to the server in a coroutine.
+         *
+         * @param context context of the application.
+         * @return true if the logs where pushed successfully.
+         */
         fun pushLogs(context: Context): Boolean {
 
             return runBlocking {
@@ -54,13 +56,19 @@ class AsyncHelper {
                         cont.resume(false)
                     }
 
-                    API().sendLogs(Logger.formatLogs(), callback, failure)
+                    API(context).sendLogs(Logger.formatLogs(), callback, failure)
                 }
                 result
             }
 
         }
 
+        /**
+         * Synchronously pulls all media content belonging to a user from the server in a coroutine.
+         *
+         * @param context context of the application.
+         * @result true if media was pulled successfully from the server.
+         */
         @SuppressLint("SimpleDateFormat")
         fun pullMediaLocket(context: Context): Boolean {
 
@@ -68,7 +76,7 @@ class AsyncHelper {
 
                 val result = suspendCoroutine<Boolean> { cont ->
 
-                    val api = API()
+                    val api = API(context)
 
                     val watchMediaDao = WatchMediaRoomDatabase.getDatabase(context).watchMediaDao()
                     val watchMediaRepository = WatchMediaRepository(watchMediaDao)
@@ -78,126 +86,68 @@ class AsyncHelper {
 
                     val mediaList = watchMediaRepository.getAll().sortedWith(compareBy({ it.collection }, { it.order }))
 
-                    val callback = { response: Response? ->
+                    val callback = callback@{ response: Response? ->
+
+                        resetFailureCounter(context)
 
                         val stringResponse = response!!.body()?.string()
                         val jsonResponse = JSONObject(stringResponse)
 
                         val code = jsonResponse.getString("code")
 
-                        if (code.startsWith('2')) {
+                        if (!code.startsWith('2')) {
+                            Logger.log(LogType.PULLED_CONTENT, listOf("success:false"), context)
+                            cont.resume(false)
+                            return@callback
+                        }
 
-                            val payload: JSONArray = jsonResponse.getJSONArray("payload")
+                        val payload: JSONArray = jsonResponse.getJSONArray("payload")
 
-                            val toBeRemoved = mediaList.toTypedArray().copyOf().toMutableList()
+                        val toBeRemoved = mediaList.toTypedArray().copyOf().toMutableList()
 
-                            var mediaFetch = 0
+                        if (payload.length() == 0) {
+                            removeMedia(context, toBeRemoved, watchMediaRepository)
+                            Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
+                            response.body()?.close()
+                            cont.resume(true)
+                            return@callback
+                        }
 
-                            if (payload.length() > 0) {
+                        for (i in 0 until payload.length()) {
+                            val media: JSONObject = payload.getJSONObject(i)
+                            val newMedia = WatchMedia(media.getString("_id"),
+                                    media.getString("path"),
+                                    media.getString("locket"),
+                                    media.getString("mimetype"),
+                                    i,
+                                    Date(SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(media.getString("createdAt")).time),
+                                    0)
 
-                                for (i in 0 until payload.length()) {
-                                    val media: JSONObject = payload.getJSONObject(i)
-                                    val newMedia = WatchMedia(media.getString("_id"),
-                                            media.getString("path"),
-                                            media.getString("locket"),
-                                            media.getString("mimetype"),
-                                            i,
-                                            Date(SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(media.getString("createdAt")).time),
-                                            0)
+                            val times = media.getJSONArray("times")
 
-                                    val times = media.getJSONArray("times")
-
-                                    if (mediaList.contains(newMedia)) {
-                                        toBeRemoved.remove(newMedia)
-                                        mediaFetch++
-
-                                        if (mediaFetch == payload.length()) {
-                                            for (m in toBeRemoved) {
-                                                GlobalScope.launch {
-                                                    Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${m._id}"), context)
-                                                    watchMediaRepository.delete(m._id)
-                                                    deleteFile(context, m.path)
-                                                }
-                                            }
-                                            Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
-                                            cont.resume(true)
-                                        }
-                                    } else {
-
-                                        api.fetchBitmap(newMedia._id) { body ->
-
-                                            val inputStream = body?.byteStream()
-                                            val file = File(context.filesDir, newMedia.path)
-                                            lateinit var outputStream: OutputStream
-
-                                            outputStream = FileOutputStream(file)
-                                            if (newMedia.mimetype.contains("video") || newMedia.mimetype.contains("gif")) {
-
-                                                try {
-                                                    inputStream.use { input ->
-                                                        outputStream.use { fileOut ->
-                                                            input!!.copyTo(fileOut)
-                                                        }
-                                                    }
-                                                    newMedia.duration = Movie.decodeStream(FileInputStream(file)).duration()
-
-                                                } catch (e: Exception) {
-                                                    Log.d("InputStream", "$e")
-                                                }
-
-
-                                            } else {
-                                                val image = BitmapFactory.decodeStream(inputStream)
-                                                image.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-                                            }
-                                            outputStream.flush()
-                                            outputStream.close()
-                                            inputStream?.close()
-                                            mediaFetch++
-
-                                            runBlocking {
-
-                                                val job = GlobalScope.launch {
-                                                    watchMediaRepository.insert(newMedia)
-                                                    Logger.log(LogType.NEW_CONTENT_ADDED, listOf("contentID:${newMedia._id}"), context)
-                                                    addMediaDates(mediaDateRepository, newMedia._id, times)
-                                                    if (mediaFetch == payload.length()) {
-                                                        for (m in toBeRemoved) {
-                                                            Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${m._id}"), context)
-                                                            watchMediaRepository.delete(m._id)
-                                                            deleteFile(context, m.path)
-                                                        }
-                                                        try {
-                                                            Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
-                                                            cont.resume(true)
-                                                        } catch (e : Exception) {
-                                                            Log.d("PullMedia", "$e")
-                                                        }
-                                                    }
-                                                }
-                                                job.join()
-                                            }
-                                        }
-                                    }
-                                }
+                            if (mediaList.contains(newMedia)) {
+                                toBeRemoved.remove(newMedia)
                             } else {
-                                if (toBeRemoved.isNotEmpty()) {
-                                    GlobalScope.launch {
-                                        for (media in toBeRemoved) {
-                                            Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${media._id}"), context)
-                                            watchMediaRepository.delete(media._id)
-                                            deleteFile(context, media.path)
-                                        }
-                                        Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
-                                        cont.resume(true)
+                                val fetchResult = fetchMedia(context, api, newMedia, watchMediaRepository)
+                                if(fetchResult) {
+                                    runBlocking {
+                                        addMediaDates(mediaDateRepository, newMedia._id, times)
                                     }
                                 }
                             }
-
                         }
+                        removeMedia(context, toBeRemoved, watchMediaRepository)
+                        Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
+                        response.body()?.close()
+                        cont.resume(true)
+                        return@callback
                     }
 
                     val failure = { e: java.lang.Exception ->
+                        if(e.message!!.startsWith('4')) {
+                            Log.d("404", "Page does not exist.")
+                            recordFailure(context)
+                        }
                         Log.d("Error", "$e")
                         Logger.log(LogType.PULLED_CONTENT, listOf("success:false"), context)
                         cont.resume(false)
@@ -209,76 +159,90 @@ class AsyncHelper {
             }
         }
 
-        //TODO
-        // Probably not working
+        /**
+         * Synchronously pulls the most recent piece of media belonging to the present collection,
+         * plus 5 from the past collection if a new piece of present media is found.
+         *
+         * @param context context of the application.
+         * @result true if media was pulled successfully from the server.
+         */
         fun pullMediaRefind(context: Context): Boolean {
 
-            val api = API()
+            return runBlocking {
 
-            val watchMediaDao = WatchMediaRoomDatabase.getDatabase(context).watchMediaDao()
-            val repository = WatchMediaRepository(watchMediaDao)
+                val result = suspendCoroutine<Boolean> { cont ->
 
-            var result = false
+                    val api = API(context)
 
-            val mediaList = repository.getAll().sortedBy { it.order }
-            val currentImageID: String
-            currentImageID = if (mediaList.isNullOrEmpty()) {
-                "test"
-            } else {
-                mediaList[0]._id
-            }
-            api.fetchInferredMedia(currentImageID) { response ->
+                    val watchMediaDao = WatchMediaRoomDatabase.getDatabase(context).watchMediaDao()
+                    val watchMediaRepository = WatchMediaRepository(watchMediaDao)
 
-                val stringResponse = response!!.body()?.string()
-
-                if (stringResponse != "[]") {
-
-                    for (mediaToRemove in mediaList) {
-                        Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${mediaToRemove._id}"), context)
-                        deleteFile(context, mediaToRemove.path)
+                    // Get the current media belonging to the present collection in the device.
+                    val mediaList = watchMediaRepository.getAll().sortedBy { it.order }
+                    val currentImageID: String
+                    currentImageID = if (mediaList.isNullOrEmpty()) {
+                        "test"
+                    } else {
+                        mediaList[0]._id
                     }
-                    repository.deleteAll()
 
-                    val jsonResponse = JSONObject(stringResponse)
+                    val callback = callback@{ response: Response? ->
 
-                    val payload: JSONArray = jsonResponse.getJSONArray("payload")
-                    if (payload.length() > 0) {
+                        resetFailureCounter(context)
 
-                        //Set present Image
+                        val stringResponse = response!!.body()?.string()
+                        if (stringResponse == "[]") {
+                            Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
+                            cont.resume(true)
+                            return@callback
+                        }
+
+                        val jsonResponse = JSONObject(stringResponse)
+                        val code = jsonResponse.getString("code")
+
+                        if (!code.startsWith('2')) {
+                            Logger.log(LogType.PULLED_CONTENT, listOf("success:false"), context)
+                            cont.resume(false)
+                            return@callback
+                        }
+
+                        val payload: JSONArray = jsonResponse.getJSONArray("payload")
+                        if (payload.length() == 0) {
+                            Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
+                            cont.resume(true)
+                            return@callback
+                        }
+
+                        //Delete existing media
+                        for (mediaToRemove in mediaList) {
+                            Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${mediaToRemove._id}"), context)
+                            deleteFile(context, mediaToRemove.path)
+                        }
+                        watchMediaRepository.deleteAll()
+
+                        //Set present image
                         val presentImage: JSONObject = payload.getJSONObject(0)
 
-                        val  newWatchMedia = WatchMedia(presentImage.getString("_id"),
+                        val newWatchMedia = WatchMedia(presentImage.getString("_id"),
                                 presentImage.getString("path"),
-                                presentImage.getString("locket"),
+                                /*presentImage.getString("locket")*/"present",
                                 presentImage.getString("mimetype"),
                                 0,
                                 Date(System.currentTimeMillis()),
                                 0) //fixme check the name from the api json response
 
-                        api.fetchBitmap(newWatchMedia._id) { body ->
-                            val inputStream = body?.byteStream()
-                            val image = BitmapFactory.decodeStream(inputStream)
-                            val file = File(context.filesDir, newWatchMedia.path)
-                            lateinit var stream: OutputStream
-                            try {
-                                stream = FileOutputStream(file)
-                                image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                stream.flush()
-                            } catch (e: IOException) { // Catch the exception
-                                e.printStackTrace()
-                            } finally {
-                                stream.close()
-                                inputStream?.close()
-                                GlobalScope.launch {
-                                    repository.insert(newWatchMedia)
-                                    Logger.log(LogType.NEW_CONTENT_ADDED, listOf("contentID:${newWatchMedia._id}"), context)
-                                }
-                            }
+                        fetchMedia(context, api, newWatchMedia, watchMediaRepository)
+
+                        //Set past images
+                        if (payload.length() < 1) {
+                            Logger.log(LogType.PULLED_CONTENT, listOf("success:true"), context)
+                            cont.resume(true)
+                            return@callback
                         }
 
-
                         val pastImages = mutableListOf<WatchMedia>()
-                        for (i in 1..5) {
+                        var totalMedia = 0
+                        for (i in 1 until payload.length()) {
                             try {
                                 val pastImage: JSONObject = payload.getJSONObject(i)
                                 pastImages.add(WatchMedia(pastImage.getString("id"),
@@ -287,45 +251,41 @@ class AsyncHelper {
                                         pastImage.getString("mimetype"),
                                         i,
                                         Date(System.currentTimeMillis()),
-                                        0)) //fixme check the name from the api json response
+                                        0))
+                                totalMedia += 1
                             } catch (e: java.lang.Exception) {
                                 e.printStackTrace()
                             }
                         }
 
-                        var imageCounter = 0
                         for (media: WatchMedia in pastImages) {
-                            api.fetchBitmap(media._id) { body ->
-                                val inputStream = body?.byteStream()
-                                val image = BitmapFactory.decodeStream(inputStream)
-                                val file = File(context.filesDir, media.path)
-                                lateinit var stream: OutputStream
-                                try {
-                                    stream = FileOutputStream(file)
-                                    image.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-                                    stream.flush()
-                                } catch (e: IOException) { // Catch the exception
-                                    e.printStackTrace()
-                                } finally {
-                                    inputStream?.close()
-                                    imageCounter += 1
-                                    stream.close()
-                                    GlobalScope.launch {
-                                        repository.insert(media)
-                                        Logger.log(LogType.NEW_CONTENT_ADDED, listOf("contentID:${media._id}"), context)
-                                    }
-                                }
-                            }
+                            fetchMedia(context, api, media, watchMediaRepository)
                         }
-                        result = true
                     }
+
+                    val failure = { e: java.lang.Exception ->
+                        if(e.message!!.startsWith('4')) {
+                            Log.d("404", "Page does not exist.")
+                            recordFailure(context)
+                        }
+                        Log.d("Error", "$e")
+                        Logger.log(LogType.PULLED_CONTENT, listOf("success:false"), context)
+                        cont.resume(false)
+                    }
+                    api.fetchInferredMedia(currentImageID, callback, failure)
                 }
+                result
             }
-            return result
         }
 
+        /**
+         * Adds the dates of a new media content item to the local database.
+         *
+         * @param repository access point to the database.
+         * @param mediaId id of media content item.
+         * @param times JSON Array of all the dates to be recorded.
+         */
         private suspend fun addMediaDates(repository: MediaDateRepository, mediaId:String, times:JSONArray){
-            Log.d("Times", "$times")
             for (j in 0 until times.length()) {
                 val time = times.getJSONObject(j).getLong("value") as Long?
                 Log.d("Times", "$time")
@@ -340,6 +300,88 @@ class AsyncHelper {
             }
         }
 
+        /**
+         * Synchronously fetches a media file from the server and stores it in the device.
+         *
+         * @param context context of the application.
+         * @param api object containing the server calls.
+         * @param media media item containing info of the file to be fetch.
+         * @param repository access point to the local database.
+         * @return true if the file was successfully fetch and the info was added to the local database.
+         */
+        private fun fetchMedia(context: Context, api: API, media: WatchMedia, repository: WatchMediaRepository): Boolean {
+
+            return  runBlocking {
+
+                val result = suspendCoroutine<Boolean> { cont ->
+
+                    val callback = callback@ { body: ResponseBody? ->
+                        val inputStream = body?.byteStream()
+                        val file = File(context.filesDir, media.path)
+                        lateinit var outputStream: OutputStream
+
+                        outputStream = FileOutputStream(file)
+                        if (media.mimetype.contains("video") || media.mimetype.contains("gif")) {
+
+                            try {
+                                inputStream.use { input ->
+                                    outputStream.use { fileOut ->
+                                        input!!.copyTo(fileOut)
+                                    }
+                                }
+                                media.duration = Movie.decodeStream(FileInputStream(file)).duration()
+
+                            } catch (e: Exception) {
+                                Log.d("InputStream", "$e")
+                                body?.close()
+                                cont.resume(false)
+                                return@callback
+                            }
+
+                        } else {
+                            val image = BitmapFactory.decodeStream(inputStream)
+                            image.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                        }
+                        outputStream.flush()
+                        outputStream.close()
+                        inputStream?.close()
+
+                        runBlocking {
+                            repository.insert(media)
+                            body?.close()
+                            Logger.log(LogType.NEW_CONTENT_ADDED, listOf("contentID:${media._id}"), context)
+                            cont.resume(true)
+                        }
+                    }
+
+                    val failure = { e: Exception ->
+                        cont.resume(false)
+                    }
+
+                    api.fetchBitmap(media._id, 300, callback, failure)
+                }
+                result
+            }
+        }
+
+        /**
+         * Given a list of media items, it removes the from the local database.
+         *
+         * @param context context of the application.
+         * @param toBeRemoved list of media items to be removed.
+         * @param watchMediaRepository access point to the local database.
+         */
+        private fun removeMedia(context: Context, toBeRemoved:List<WatchMedia>, watchMediaRepository: WatchMediaRepository) {
+            return  runBlocking {
+                if (toBeRemoved.isNotEmpty()) {
+                    for (media in toBeRemoved) {
+                        Logger.log(LogType.CONTENT_REMOVED, listOf("contentID:${media._id}"), context)
+                        watchMediaRepository.delete(media._id)
+                        deleteFile(context, media.path)
+                    }
+                }
+            }
+        }
     }
 
 }

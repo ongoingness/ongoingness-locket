@@ -4,6 +4,11 @@ import android.content.Context
 import android.os.AsyncTask
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 
+/**
+ * AsyncTask that pulls media content from the server.
+ *
+ * @author Luis Carvalho
+ */
 class PullMediaAsyncTask(private val preExecuteCallback: () -> Unit = {}, private val postExecuteCallback: (Boolean) -> Unit = {}) : AsyncTask<Context, Void, Boolean>() {
 
     override fun onPreExecute() {

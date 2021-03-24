@@ -1,5 +1,10 @@
 package uk.ac.ncl.openlab.ongoingness.recognisers
 
+/**
+ * Types of event sent by the recognisers.
+ *
+ * @author Luis Carvalho
+ */
 enum class RecogniserEvent{
     STARTED,
     STOPPED,
@@ -14,7 +19,6 @@ enum class RecogniserEvent{
 
     ROTATE_UP,
     ROTATE_DOWN,
-    PICK_UP,
 
     ROTATE_LEFT,
     ROTATE_RIGHT,
@@ -22,5 +26,4 @@ enum class RecogniserEvent{
     AWAY_RIGHT,
 
     AWAY_TOWARDS,
-
 }

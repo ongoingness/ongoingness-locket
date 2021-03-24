@@ -3,17 +3,12 @@ package uk.ac.ncl.openlab.ongoingness
 import android.content.*
 import android.graphics.*
 import android.os.Bundle
-import android.os.Handler
 import android.support.wearable.watchface.CanvasWatchFaceService
 import android.support.wearable.watchface.WatchFaceService
 import android.support.wearable.watchface.WatchFaceStyle
-import android.util.Log
 import android.view.SurfaceHolder
 import android.view.WindowManager
 import androidx.work.*
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
-import com.google.firebase.remoteconfig.ktx.remoteConfigSettings
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
@@ -28,6 +23,13 @@ import uk.ac.ncl.openlab.ongoingness.presenters.WatchFacePresenter
  * are unsure how to do this, please review the "Run Starter project" section
  * in the Google Watch Face Code Lab:
  * https://codelabs.developers.google.com/codelabs/watchface/index.html#0
+ */
+
+/**
+ * Main watch face class. Chooses what code to run based on the selected flavour.
+ * In charge of starting the presenter class and hooking it to a controller.
+ *
+ * @author Luis Carvalho
  */
 class WatchFace : CanvasWatchFaceService() {
 
@@ -57,15 +59,16 @@ class WatchFace : CanvasWatchFaceService() {
                     .setHideNotificationIndicator(true)
                     .build())
 
-            setRemoteConfig()
-
+            //Start the logger
             Logger.start(applicationContext)
             Logger.log(LogType.STARTED_WATCHFACE, listOf(), applicationContext)
 
+            //Set the workers to pull and push data
             setWorkManager()
 
             when(FLAVOR) {
 
+                //Anew
                 "locket_touch", "locket_touch_inverted" -> {
 
                     val presenter = WatchFacePresenter(applicationContext,
@@ -90,6 +93,7 @@ class WatchFace : CanvasWatchFaceService() {
 
                 }
 
+                //Ivvor
                 "locket_touch_s" -> {
 
                     val presenter = WatchFacePresenter(applicationContext,
@@ -160,14 +164,14 @@ class WatchFace : CanvasWatchFaceService() {
 
         }
 
-
         override fun onDraw(canvas: Canvas, bounds: Rect) {
             drawBackground(canvas)
         }
 
         /**
          * Draw the background of the watch face.
-         * @param canvas
+         *
+         * @param canvas canvas to be drawn.
          */
         private fun drawBackground(canvas: Canvas) {
 
@@ -186,6 +190,7 @@ class WatchFace : CanvasWatchFaceService() {
 
         /**
          * Get the screen size of a device.
+         * @return the size of the screen.
          */
         override fun getScreenSize(): Int {
             val windowManager = applicationContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -195,20 +200,15 @@ class WatchFace : CanvasWatchFaceService() {
             return size.x
         }
 
-
+        /**
+         * Starts by cancelling all scheduled workers and schedules a new one.
+         */
         private fun setWorkManager() {
             WorkManager.getInstance(applicationContext).cancelAllWork()
-            addPullMediaPushLogsWorkRequest(applicationContext)
+            if(isLogging(applicationContext))
+                addPullMediaPushLogsWorkRequest(applicationContext)
         }
 
-        private fun setRemoteConfig() {
-            val remoteConfig = Firebase.remoteConfig
-            val configSettings = remoteConfigSettings {
-                minimumFetchIntervalInSeconds = 60
-            }
-            remoteConfig.setConfigSettingsAsync(configSettings)
-            remoteConfig.setDefaultsAsync(R.xml.remote_config_defaults)
-        }
     }
 }
 

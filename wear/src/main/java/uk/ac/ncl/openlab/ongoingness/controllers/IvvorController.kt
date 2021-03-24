@@ -1,7 +1,6 @@
 package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
-import android.util.Log
 import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
 import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
@@ -9,8 +8,17 @@ import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
 import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
+import uk.ac.ncl.openlab.ongoingness.utilities.isLogging
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsAsyncTask
 
+/**
+ * Controller used by the Ivvor flavour.
+ *
+ * @param faceState the state of the watch face at the start of the app.
+ * @param battery the battery level at the start of the app.
+ * @param pullContentOnWake flag to decide if the app pulls data from the server on start.
+ * @author Luis Carvalho
+ */
 class IvvorController(context: Context,
                         recogniser: AbstractRecogniser,
                         presenter: Presenter,
@@ -19,6 +27,9 @@ class IvvorController(context: Context,
                         val battery: Float,
                       private val pullContentOnWake: Boolean) : AbstractController(context, recogniser, presenter, contentCollection) {
 
+    /**
+     * Registers if this controller has got data from the server already.
+     */
     private var gotData = false
 
     override fun onStartedEvent() {
@@ -44,7 +55,6 @@ class IvvorController(context: Context,
         }
 
     }
-
 
     override fun onAwayEvent() {
         turnOff()
@@ -87,30 +97,23 @@ class IvvorController(context: Context,
     }
 
     override fun setStartingState() {}
-
     override fun onStoppedEvent() {}
-
     override fun onUpEvent() {}
-
     override fun onDownEvent() {}
-
     override fun onUnknownEvent() {}
-
     override fun onTapEvent() {}
-
     override fun onLongPressEvent() {}
-
     override fun onRotateUp() {}
-
     override fun onRotateDown() {}
-
     override fun onRotateLeft() {}
-
     override fun onRotateRight() {}
 
+    /**
+     * Calls for new content from the server if allowed and starts displaying content in the screen.
+     */
     private fun awakeUpProcedures() {
 
-        if(pullContentOnWake && !gotData && hasConnection(context)) {
+        if(pullContentOnWake && !gotData && hasConnection(context) && isLogging(context)) {
 
             val postExecuteCallback: (result: Boolean) -> Unit = {
                 updateKillThread(System.currentTimeMillis())
@@ -146,6 +149,9 @@ class IvvorController(context: Context,
         }
     }
 
+    /**
+     * Displays the next image in the content collection.
+     */
     private fun nextImage() {
         updateKillThread(System.currentTimeMillis())
         val content = getContentCollection().goToNextContent()
@@ -155,6 +161,9 @@ class IvvorController(context: Context,
             getPresenter().displayWarning()
     }
 
+    /**
+     * Stops the termination thread and terminates the app.
+     */
     private fun turnOff() {
 
         if(getCurrentState() != ControllerState.OFF) {

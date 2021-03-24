@@ -21,9 +21,29 @@ import uk.ac.ncl.openlab.ongoingness.R
 import java.util.ArrayList
 import kotlin.math.floor
 
-class InvertedTouchRevealRecogniser(val context: Context, val activity: Activity) : AbstractRecogniser(context), GestureDetector.OnGestureListener {
+/**
+ * Recognises the vertical rotation of the device through the gravity sensor and listens to touchscreen interactions.
+ * This is a gravity inverted version of the TouchRevealRecogniser, created because some watches were place upside down in the lockets.
+ * Notifies the observers with the following events:
+ *      - TOWARDS: If the piece screen is vertically facing the user.
+ *      - AWAY: If the piece screen is vertically away from the user.
+ *      - TAP: If the piece screen was tapped.
+ *      - LONG_PRESS: If the piece screen was long pressed.
+ *      - STARTED: When the recogniser is started.
+ *      - STOPPED: WHen the recogniser is stopped.
+ *
+ * @author Luis Carvalho
+ */
+class InvertedTouchRevealRecogniser(val context: Context, val activity: Activity) : AbstractRecogniser(), GestureDetector.OnGestureListener {
 
+    /**
+     * List of sensors.
+     */
     private var disposables: ArrayList<Disposable> = arrayListOf()
+
+    /**
+     * Last event that happened in the vertical axis.
+     */
     private var lastGravityEvent: RecogniserEvent? = null
 
     @SuppressLint("ClickableViewAccessibility")
@@ -80,6 +100,11 @@ class InvertedTouchRevealRecogniser(val context: Context, val activity: Activity
         return false
     }
 
+    /**
+     * Analyses a given gravity sensor event into a recognisable vertical event and notifies the observers.
+     *
+     * @param event gravity event from the sensor.
+     */
     private fun processGravity(event: RxSensorEvent) {
         val y = floor(event.values[1]).toInt()
         val z = floor(event.values[2]).toInt()

@@ -2,11 +2,13 @@ package uk.ac.ncl.openlab.ongoingness.workers
 
 import android.content.Context
 import android.os.AsyncTask
-import android.util.Log
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
 import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 
+/**
+ * AsyncTask that pushes logs and pulls media content from the server.
+ *
+ * @author Luis Carvalho
+ */
 class PullMediaPushLogsAsyncTask(private val preExecuteCallback: () -> Unit = {}, private val postExecuteCallback: (Boolean) -> Unit = {}) : AsyncTask<Context, Void, Boolean>() {
 
     override fun onPreExecute() {

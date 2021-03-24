@@ -2,8 +2,12 @@ package uk.ac.ncl.openlab.ongoingness.workers
 
 import android.content.Context
 import android.os.AsyncTask
-import uk.ac.ncl.openlab.ongoingness.BuildConfig.FLAVOR
 
+/**
+ * Async Task that pushes logs into the server.
+ *
+ * @author Luis Carvalho
+ */
 class PushLogsAsyncTask(private val preExecuteCallback: () -> Unit = {}, private val postExecuteCallback: (Boolean) -> Unit = {}) : AsyncTask<Context, Void, Boolean>() {
 
     override fun onPreExecute() {

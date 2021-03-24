@@ -1,17 +1,15 @@
 package uk.ac.ncl.openlab.ongoingness.utilities
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.graphics.*
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.BatteryManager
 import android.util.Log
 import androidx.work.*
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
 import uk.ac.ncl.openlab.ongoingness.BuildConfig
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsWorker
@@ -21,52 +19,41 @@ import java.io.*
 import java.net.NetworkInterface
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.random.Random
+
+/**
+ * Miscellaneous collection of static functions.
+ *
+ * @author Daniel Welsh, Luis Carvalho
+ */
 
 const val minBandwidthKbps: Int = 320
 const val TAG: String = "Utils"
 
 /**
- * Clear contents of media folder
+ * Clear contents of media folder.
  *
- * @param context Context Application context
+ * @param context context of the application.
  */
 fun clearMediaFolder(context: Context) {
     context.filesDir.listFiles().forEach { file: File? -> file?.delete() }
 }
 
+/**
+ * Deletes file.
+ *
+ * @param context context of the application.
+ * @param filename name of the file to be deleted.
+ */
 fun deleteFile(context: Context, filename: String) {
     File(context.filesDir, filename).delete()
-}
-
-fun persistBitmap(bitmap: Bitmap, filename:String, context: Context){
-    val imageFile = File(context.filesDir, filename)
-    Log.d(TAG,"try to store image ${imageFile.absolutePath}")
-
-    lateinit var stream: OutputStream
-    try {
-        stream = FileOutputStream(imageFile)
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
-        stream.flush()
-    } catch (e: IOException){ // Catch the exception
-        e.printStackTrace()
-    } finally {
-        stream.close()
-        Log.d(TAG,"stored image: ${imageFile.absolutePath}")
-    }
-}
-
-fun hasLocalCopy(context: Context, fileName: String):Boolean{
-    val file =  File(context.filesDir,fileName)
-    Log.d(TAG ,"Checked for: ${file.absolutePath}")
-    return file.exists()
 }
 
 /**
  * Get the stored bitmap from file.
  *
- * @param path
- * @return Bitmap
+ * @param context context of th application.
+ * @param filename name of the file to be read.
+ * @return Bitmap read from the file.
  */
 fun getBitmapFromFile(context: Context,filename: String): Bitmap? {
     return try {
@@ -82,7 +69,7 @@ fun getBitmapFromFile(context: Context,filename: String): Bitmap? {
  * Check that the activity has an active network connection.
  *
  * @param context context to check connection from.
- * @return boolean if device has connection
+ * @return boolean if device has connection.
  */
 fun hasConnection(context: Context?): Boolean {
     // Check a network is available
@@ -106,9 +93,9 @@ fun hasConnection(context: Context?): Boolean {
 }
 
 /**
- * Get mac address from IPv6 address
+ * Get mac address from IPv6 address.
  *
- * @return device mac address
+ * @return device wifi mac address.
  */
 fun getMacAddress(): String {
     try {
@@ -131,6 +118,12 @@ fun getMacAddress(): String {
     return ""
 }
 
+/**
+ * Get the battery level of the device.
+ *
+ * @param context context of the application.
+ * @return the current battery level.
+ */
 fun getBatteryLevel(context: Context): Float? {
     val batteryStatus: Intent? = IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { filter ->
         context.registerReceiver(null, filter)
@@ -143,6 +136,12 @@ fun getBatteryLevel(context: Context): Float? {
     }
 }
 
+/**
+ * Calculates the next request time given an interval in minutes.
+ *
+ * @param interval the interval to the next request time in minutes.
+ * @return the new request time in milliseconds.
+ */
 fun calculateNextMinutesRequestTimeDiff(interval : Int): Long {
 
     val currentTime = Calendar.getInstance()
@@ -154,6 +153,11 @@ fun calculateNextMinutesRequestTimeDiff(interval : Int): Long {
 
 }
 
+/**
+ * Calculates the next daily request from the current time.
+ *
+ * @return the new daily request time in milliseconds.
+ */
 fun calculateNextDailyRequestTimeDiff(): Long {
 
     val currentDate = Calendar.getInstance()
@@ -171,6 +175,11 @@ fun calculateNextDailyRequestTimeDiff(): Long {
 
 }
 
+/**
+ * Creates a daily worker request to push logs and pull media from the server.
+ *
+ * @param context context of the application.
+ */
 fun addPullMediaWorkRequest(context: Context) {
 
     val constraints = Constraints.Builder()
@@ -189,6 +198,11 @@ fun addPullMediaWorkRequest(context: Context) {
 
 }
 
+/**
+ * Creates a daily worker request to push logs from the server.
+ *
+ * @param context context of the application.
+ */
 fun addPushLogsWorkRequest(context: Context) {
 
     val constraints = Constraints.Builder()
@@ -207,16 +221,19 @@ fun addPushLogsWorkRequest(context: Context) {
 
 }
 
+/**
+ * Creates a interval specific worker request to push logs from the server.
+ *
+ * @param context context of the application.
+ */
 fun addPullMediaPushLogsWorkRequest(context: Context) {
 
     val constraints = Constraints.Builder()
-            .setRequiresCharging(Firebase.remoteConfig.getBoolean("FETCH_REQUIRES_CHARGING"))
+            .setRequiresCharging(BuildConfig.FETCH_REQUIRES_CHARGING)
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-    //val timeDiff = calculateNextDailyRequestTimeDiff()
-
-    val timeDiff = calculateNextMinutesRequestTimeDiff(Firebase.remoteConfig.getString("FETCH_INTERVAL_MINUTES").toInt())
+    val timeDiff = calculateNextMinutesRequestTimeDiff(BuildConfig.FETCH_INTERVAL_MINUTES)
 
     val dailyWorkRequest = OneTimeWorkRequestBuilder<PullMediaPushLogsWorker>()
             .setInitialDelay(timeDiff, TimeUnit.MILLISECONDS)
@@ -227,6 +244,14 @@ fun addPullMediaPushLogsWorkRequest(context: Context) {
 
 }
 
+/**
+ * Create the charging cover image.
+ *
+ * @param battery level of battery.
+ * @param screenSize size of screen.
+ * @param context context of the application.
+ * @return the charging cover image as a bitmap.
+ */
 fun getChargingBackground(battery: Float, screenSize: Int, context: Context): Bitmap {
 
     //First layer
@@ -261,7 +286,7 @@ fun getChargingBackground(battery: Float, screenSize: Int, context: Context): Bi
     return darkenBitmap(overlay, screenSize)
 }
 
-
+/*
 fun getAnewChargingBackground(battery: Float, screenSize: Int, context: Context): Bitmap {
 
     //First layer
@@ -288,6 +313,15 @@ fun getAnewChargingBackground(battery: Float, screenSize: Int, context: Context)
      return overlayBitmaps(transparent, mBackgroundBitmap, blue, screenSize)
 }
 
+ */
+
+/**
+ * Darkens a given bitmap.
+ *
+ * @param bitmap bitmap to be darkened.
+ * @param screenSize size of the bitmap in pixels.
+ * @return the bitmap darkened as a bitmap.
+ */
 fun darkenBitmap(bitmap: Bitmap, screenSize: Int): Bitmap {
     val darkB = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
     val darkCanvas = Canvas(darkB)
@@ -300,6 +334,14 @@ fun darkenBitmap(bitmap: Bitmap, screenSize: Int): Bitmap {
     return Bitmap.createScaledBitmap(darkB, screenSize, screenSize, false)
 }
 
+/**
+ * Overlays bitmaps by the order of parameters.
+ *
+ * @param b1 bitmap at the background.
+ * @param b2 bitmap in the middle.
+ * @param b3 bitmap in the foreground.
+ * @param screenSize size of the bitmap in pixels.
+ */
 fun overlayBitmaps(b1: Bitmap, b2: Bitmap, b3: Bitmap, screenSize: Int): Bitmap {
 
     val bmOverlay: Bitmap  = Bitmap.createBitmap(screenSize, screenSize, Bitmap.Config.ARGB_8888)
@@ -319,5 +361,58 @@ fun overlayBitmaps(b1: Bitmap, b2: Bitmap, b3: Bitmap, screenSize: Int): Bitmap 
     return Bitmap.createScaledBitmap(bmOverlay, screenSize, screenSize, false)
 
 }
+
+/**
+ * Record into the app preferences a failure of connecting to the server.
+ *
+ * @param context context of the application.
+ */
+fun recordFailure(context: Context) {
+    val pref: SharedPreferences = context.getSharedPreferences(BuildConfig.ONGOINGNESS_PREFS, 0)
+    val failures = pref.getInt(BuildConfig.SERVER_CONNECT_FAILURES_KEY, 0)
+    with (pref.edit()) {
+        putInt(BuildConfig.SERVER_CONNECT_FAILURES_KEY, failures + 1)
+        apply()
+    }
+
+    val failures2 = pref.getInt(BuildConfig.SERVER_CONNECT_FAILURES_KEY, 0)
+    Log.d("recordFailure", "$failures2")
+
+
+    if(failures2 >  BuildConfig.MAX_FAILURES) {
+        Logger.disableLogging(context)
+    }
+
+}
+
+/**
+ * Resets the failure counter in app preferences.
+ *
+ * @param context context of the application.
+ */
+fun resetFailureCounter(context: Context) {
+    val pref: SharedPreferences = context.getSharedPreferences(BuildConfig.ONGOINGNESS_PREFS, 0)
+    val failures = pref.getInt(BuildConfig.SERVER_CONNECT_FAILURES_KEY, 0)
+    with (pref.edit()) {
+        putInt(BuildConfig.SERVER_CONNECT_FAILURES_KEY, 0)
+        apply()
+    }
+
+    val failures2 = pref.getInt(BuildConfig.SERVER_CONNECT_FAILURES_KEY, 0)
+    Log.d("recordFailure", "$failures2")
+}
+
+/**
+ * Checks if the "logging" flag in the app preferences.
+ *
+ * @param context context of the application.
+ * @return if false the app will forever not try to connect to the server.
+ */
+fun isLogging(context: Context): Boolean {
+    val pref: SharedPreferences = context.getSharedPreferences(BuildConfig.ONGOINGNESS_PREFS, 0)
+    Log.d("isLogging", "${pref.getBoolean(BuildConfig.LOGGING_KEY, true)}")
+    return pref.getBoolean(BuildConfig.LOGGING_KEY, true)
+}
+
 
 

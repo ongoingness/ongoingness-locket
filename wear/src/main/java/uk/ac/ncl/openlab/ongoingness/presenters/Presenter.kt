@@ -4,28 +4,44 @@ import android.content.Context
 import android.graphics.*
 import android.graphics.drawable.BitmapDrawable
 import android.util.Log
-import android.widget.TextView
 import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.collections.ContentPiece
 import uk.ac.ncl.openlab.ongoingness.collections.ContentType
-
 import uk.ac.ncl.openlab.ongoingness.utilities.*
 import java.io.File
 
-
 /**
- * Connects the activity view to the media in the local database, allowing it to be displayed on screen.
+ * Connects the activity view to rest of the app, allowing content to be displayed on screen.
+ *
+ * @param context context of the application
+ * @param coverBitmap bitmap to be displayed as the cover when the device is not in use.
+ * @param coverWhiteBitmap bitmap to be displayed as the cover when de device is fetching data.
+ *
+ * @author Luis Carvalho
  */
 class Presenter(private val context: Context,
                 private val coverBitmap: Bitmap,
                 private val coverWhiteBitmap: Bitmap) {
 
+    /**
+     * View where content is rendered to.
+     */
     var view: View? = null
 
+    /**
+     * Displays the content in screen given a ContentPiece object.
+     *
+     * @param contentPiece Object containing the file to displayed.
+     */
     fun displayContentPiece(contentPiece: ContentPiece) {
         view?.updateBackground(contentPiece.file, contentPiece.type, contentPiece.bitmapDrawable)
     }
 
+    /**
+     * Display a cover given a type.
+     *
+     * @param type type of cover to be displayed.
+     */
     fun displayCover(type: CoverType) {
         when(type) {
             CoverType.BLACK -> view?.updateBackgroundWithBitmap(coverBitmap)
@@ -33,12 +49,18 @@ class Presenter(private val context: Context,
         }
     }
 
+    /**
+     * Display charging cover given a battery value.
+     *
+     * @param battery the quantity of battery to be displayed.
+     */
     fun displayChargingCover(battery: Float) {
-        //view?.updateBackgroundWithBitmap(getAnewChargingBackground(battery, view!!.getScreenSize(), context))
         view?.updateBackgroundWithBitmap(getChargingBackground(battery, view!!.getScreenSize(), context))
     }
 
-
+    /**
+     * Display warning screen, containing the device WIFI mac address.
+     */
     fun displayWarning() {
         view?.updateBackgroundWithBitmap(Bitmap.createScaledBitmap(BitmapFactory.decodeResource(context.resources, R.drawable.problem), view!!.getScreenSize(), view!!.getScreenSize(), false))
         view?.displayText(getMacAddress())
@@ -46,16 +68,15 @@ class Presenter(private val context: Context,
 
 
     /**
-     * Attach the view to the presenter
-     *
-     * @param view View to attach
+     * Attach the view to the presenter.
+     * @param view View to attach.
      */
     fun attachView(view: View) {
         this.view = view
     }
 
     /**
-     * Detach the view from the presenter
+     * Detach the view from the presenter.
      * Call this on view's onDestroy method.
      */
     fun detachView() {
@@ -64,7 +85,7 @@ class Presenter(private val context: Context,
 
 
     /**
-     * Display the devices mac address
+     * Display the devices WIFI mac address.
      */
     fun displayCode() {
         val mac = getMacAddress()
@@ -75,7 +96,7 @@ class Presenter(private val context: Context,
 
 
     /**
-     * Control the view, must implement these methods
+     * Control the view, must implement these methods.
      */
     interface View {
         fun updateBackgroundWithBitmap(bitmap: Bitmap)

@@ -1,109 +1,37 @@
 package uk.ac.ncl.openlab.ongoingness.utilities
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.content.Context
 import android.util.Log
-import com.google.firebase.ktx.Firebase
-import com.google.firebase.remoteconfig.ktx.remoteConfig
 import com.google.gson.Gson
-import com.google.gson.JsonObject
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
-import io.reactivex.schedulers.Schedulers
 import okhttp3.*
 import org.json.JSONArray
 import org.json.JSONObject
-import retrofit2.Retrofit
-import retrofit2.http.*
-import uk.ac.ncl.openlab.ongoingness.BuildConfig
 import java.io.IOException
-import java.util.*
+import java.lang.Exception
 import java.util.concurrent.TimeUnit
-import kotlin.collections.ArrayList
 
-interface OngoingnessService{
-
-    @POST("auth/mac")
-    fun requestToken(@Body mac:String): Observable<GenericResponse>
-
-    @GET("media")
-    fun fetchCollection(@Header("x-access-token") token: String?): Observable<MediaResponse>
-
-    @GET("media/{link}")
-    @Streaming
-    fun fetchMedia(@Header("x-access-token") token: String?, @Path("link") link: String): Observable<ResponseBody>
-}
-
-
-class API2 {
-
-    var retrofit: Retrofit = Retrofit.Builder()
-            .baseUrl(BuildConfig.API_URL)
-            .build()
-    var service = retrofit.create(OngoingnessService::class.java)
-    lateinit var token: String
-    var disposables: ArrayList<Disposable> = ArrayList()
-
-    /**
-     * Generate a token from the api using the devices mac address.
-     *
-     * @param callback function to call after generating a token
-     */
-    fun generateToken(callback: (token: String?) -> Unit) {
-        val mac: String = getMacAddress() // Get mac address
-        val disposable = service.requestToken(mac)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { response ->
-                    token = response.payload
-                    callback(token)
-                }
-        disposables.add(disposable)
-    }
-
-
-    /**
-     * Fetch all media from the api.
-     *
-     * @param callback function to call after retrieving the media
-     */
-    fun fetchAllMedia(callback: (Array<Media>?) -> Unit) {
-        val disposable = service.fetchCollection(token)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { response -> callback(response.payload) }
-        disposables.add(disposable)
-    }
-
-
-    /**
-     * Fetch image from the link.
-     *
-     * @param links Array<String>
-     */
-    fun fetchBitmap(link: String, callback: (Bitmap?) -> Unit) {
-        val disposable = service.fetchMedia(token, link)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { response ->
-                    callback(BitmapFactory.decodeStream(response.byteStream()))
-                }
-        disposables.add(disposable)
-    }
-
-
-    fun flush(){
-        disposables.forEach { d -> d.dispose() }
-    }
-}
-
-class API {
+/**
+ * Allows interactions with the Ongoingness API.
+ *
+ * @author Luis Carvalho, Daniel Welsh
+ */
+class API(val context: Context) {
 
     val gson = Gson()
 
-    private val apiUrl = Firebase.remoteConfig.getString("SERVER_URL")//BuildConfig.API_URL
+    /**
+     * API server base end-point.
+     */
+    private val apiUrl = "https://app.enablingongoingness.com/api/"//"http:abccccccccc.pt/"////"https:abc"
+
+    /**
+     * User authentication token.
+     */
     private var token: String? = null
+
+    /**
+     * Client in charge of handling the communications.
+     */
     private val client: OkHttpClient = OkHttpClient
             .Builder()
             .connectTimeout(30, TimeUnit.MINUTES)
@@ -114,32 +42,38 @@ class API {
                             ConnectionSpec.CLEARTEXT))
             .addInterceptor { chain ->
 
+
                 var request = chain.request()
 
-                var response = chain.proceed(request)
+                var response : Response? = null
 
-                var tryCount = 0
-
-                while(!response.isSuccessful && tryCount < 3) {
-                    Log.d("intercept", "Request is not successful - $tryCount")
-                    tryCount++
+                try {
                     response = chain.proceed(request)
+
+                    var tryCount = 0
+
+                    while (!response!!.isSuccessful && tryCount < 3) {
+                        Log.d("intercept", "Request is not successful - $tryCount")
+                        tryCount++
+                        response = chain.proceed(request)
+                    }
+                } catch (e: Exception) {
+                    recordFailure(context)
+                    throw e
                 }
-                response
+                response!!
 
             }
             .build()
 
-    init {
-        generateToken (callback = {}, onFailureCallback = {})
-    }
-
     /**
-     * Generate a token from the api using the devices mac address.  ? = null
+     * Generate a authentication token from the api using the devices wifi mac address.
      *
      * @param callback function to call after generating a token
      */
     private fun generateToken(callback: (token:String?) -> Unit, onFailureCallback: (e: IOException) -> Unit) {
+
+        Log.d("generateToken", "called")
 
         if(token != null){
             callback(token)
@@ -163,16 +97,23 @@ class API {
             }
 
             override fun onResponse(call: Call, response: Response) {
-                if(response.code().toString().startsWith('5'))
-                    onFailureCallback(IOException("No server"))
-                else {
-                    val genericResponse: GenericResponse = gson.fromJson(
-                            response.body()?.string(),
-                            GenericResponse::class.java)
+                Log.d("ttt", response.toString())
+                if(response.code().toString().startsWith('5') || response.code().toString().startsWith('4') ) {
+                    val code = response.code().toString()
+                    response.close()
+                    onFailureCallback(IOException(code))
+                } else {
+                    try {
+                        val genericResponse: GenericResponse = gson.fromJson(
+                                response.body()?.string(),
+                                GenericResponse::class.java)
 
-                    // Set token
-                    token = genericResponse.payload
-                    callback(token)
+                        // Set token
+                        token = genericResponse.payload
+                        callback(token)
+                    } catch (e: Exception) {
+                        onFailureCallback(IOException(e))
+                    }
                 }
             }
         })
@@ -180,41 +121,17 @@ class API {
 
 
     /**
-     * Fetch all media from the api.
+     *  Fetch all media items of the authenticated user.
      *
-     * @param callback function to call after retrieving the media
+     *  @param callback function called after fetching the media.
+     *  @param failure function called if the fetching fails.
+     *
      */
-    fun fetchMedia(callback: (Array<Media>?) -> Unit) {
-
-        generateToken(callback = { token ->  Log.d("API",token)
-
-            val url = "media"
-            val request = Request.Builder()
-                    .url(apiUrl + url)
-                    .get()
-                    .header("x-access-token", token!!)
-                    .build()
-
-            client.newCall(request).enqueue(object : Callback {
-
-                override fun onFailure(call: Call, e: IOException) {
-                    e.printStackTrace()
-                }
-
-                override fun onResponse(call: Call, response: Response) {
-                    val mediaResponse: MediaResponse = gson.fromJson(
-                            response.body()?.string(),
-                            MediaResponse::class.java)
-                    callback(mediaResponse.payload)
-                }
-            })
-        }, onFailureCallback = {})
-
-    }
-
     fun fetchMediaPayload(callback: (Response?) -> Unit, failure: (e: IOException) -> Unit) {
 
-        generateToken( callback = { token ->  Log.d("API",token)
+        generateToken( callback = { token ->
+
+            Log.d("API",token)
 
             val url = "media"
             val request = Request.Builder()
@@ -226,7 +143,6 @@ class API {
             client.newCall(request).enqueue(object : Callback {
 
                 override fun onFailure(call: Call, e: IOException) {
-
                     e.printStackTrace()
                     failure(e)
                 }
@@ -244,11 +160,13 @@ class API {
 
 
     /**
-     * Fetch Inferred media from the api.
+     * Fetch inferred media of the authenticated user.
      *
-     * @param callback function to call after retrieving the media
+     * @param mediaID id of the current media item in device belonging to present collection.
+     * @param callback function called after fetching the media.
+     * @param failure function called if the fetching fails.
      */
-    fun fetchInferredMedia(mediaID: String, callback: (Response?) -> Unit) {
+    fun fetchInferredMedia(mediaID: String, callback: (Response?) -> Unit, failure: (e: IOException) -> Unit) {
 
         generateToken( callback =  { token ->  Log.d("API",token)
 
@@ -269,15 +187,20 @@ class API {
                     callback(response)
                 }
             })
-        }, onFailureCallback = {} )
+        }, onFailureCallback = { e ->
+            failure(e)
+        })
     }
 
     /**
-     * Fetch image from the link.
+     * Fetch media file from a given link.
      *
-     * @param links Array<String>
+     * @param link link of the media file.
+     * @param size dimensions of the media file.
+     * @param callback function called after fetching the media file.
+     * @param failure function called if the fetching fails.
      */
-    fun fetchBitmap(link:String, size:Int = 300, callback: (ResponseBody?) -> Unit) {
+    fun fetchBitmap(link:String, size:Int = 300, callback: (ResponseBody?) -> Unit, failure: (e: IOException) -> Unit) {
 
         generateToken( callback =  { token ->
             Log.d("API", token)
@@ -292,6 +215,7 @@ class API {
             client.newCall(request).enqueue(object : Callback {
                 override fun onFailure(call: Call?, e: IOException?) {
                     Log.e("API", "Error here:"+e.toString())
+                    failure(e!!)
                 }
 
                 override fun onResponse(call: Call?, response: Response) {
@@ -299,13 +223,17 @@ class API {
                     callback(response.body())
                 }
             })
-        }, onFailureCallback = {})
+        }, onFailureCallback = { e ->
+            failure(e)
+        })
     }
 
     /**
-     * Fetch image from the link.
+     * Sends a given string of logs.
      *
-     * @param links Array<String>
+     * @param logs JSON formatted string of logs to be sent.
+     * @param callback function called after successfully sending the logs.
+     * @param failure function called if the operation fails.
      */
     fun sendLogs(logs:String, callback: (ResponseBody?) -> Unit, failure: (e: IOException) -> Unit) {
 

@@ -2,7 +2,6 @@ package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
 import android.util.Log
-import com.crashlytics.android.Crashlytics
 import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
 import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
@@ -10,19 +9,31 @@ import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
 import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
-import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
+import uk.ac.ncl.openlab.ongoingness.utilities.isLogging
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsAsyncTask
 
+/**
+ * Controller used by the Anew flavour.
+ *
+ * @param startedWithTap true if the app was started by tapping the screen.
+ * @param faceState the state of the watch face at the start of the app.
+ * @param battery the battery level at the start of the app.
+ * @param pullContentOnWake flag to decide if the app pulls data from the server on start.
+ * @author Luis Carvalho
+ */
 class AnewController(context: Context,
                      recogniser: AbstractRecogniser,
                      presenter: Presenter,
                      contentCollection: AbstractContentCollection,
-                     val startedWitTap: Boolean,
+                     val startedWithTap: Boolean,
                      val faceState: String,
                      val battery: Float,
                     private val pullContentOnWake: Boolean)
     : AbstractController(context, recogniser, presenter, contentCollection) {
 
+    /**
+     * Registers if this controller has got data from the server already.
+     */
     private var gotData = false
 
     override fun onStartedEvent() {
@@ -32,15 +43,12 @@ class AnewController(context: Context,
         if(faceState == ControllerState.CHARGING.toString()) {
             stopKillThread()
             getPresenter().view!!.finishActivity()
-            //getPresenter().displayChargingCover(battery)
-            //updateState(ControllerState.CHARGING)
         } else {
             getPresenter().displayCover(CoverType.BLACK)
             updateState(ControllerState.STANDBY)
         }
 
     }
-
 
     override fun onTowardsEvent() {
 
@@ -53,9 +61,6 @@ class AnewController(context: Context,
     }
 
     override fun onAwayEvent() {
-        //stopKillThread()
-        //getPresenter().view!!.finishActivity()
-
         if(getCurrentState() != ControllerState.OFF) {
             updateState(ControllerState.OFF)
             stopKillThread()
@@ -63,8 +68,6 @@ class AnewController(context: Context,
                 getPresenter().view!!.finishActivity()
         }
     }
-
-    override fun onUnknownEvent() {}
 
     override fun onTapEvent() {
 
@@ -93,10 +96,6 @@ class AnewController(context: Context,
             ControllerState.READY -> awakeUpProcedures()
 
             ControllerState.ACTIVE -> {
-                //getPresenter().displayCover(CoverType.BLACK)
-                //Logger.log(LogType.SLEEP, listOf(), context)
-                //updateState(ControllerState.READY)
-
                 getPresenter().displayCover(CoverType.BLACK)
                 getContentCollection().stop()
                 Logger.log(LogType.SLEEP, listOf(), context)
@@ -112,10 +111,6 @@ class AnewController(context: Context,
     }
 
     override fun onChargerConnectedEvent(battery: Float) {
-
-        //getPresenter().displayChargingCover(battery)
-        //updateState(ControllerState.CHARGING)
-
         stopKillThread()
         getPresenter().view!!.finishActivity()
     }
@@ -131,73 +126,30 @@ class AnewController(context: Context,
     }
 
     override fun onBatteryChangedEvent(battery: Float) {
-
         stopKillThread()
         getPresenter().view!!.finishActivity()
-        /*
-        when(getCurrentState()) {
-           ControllerState.CHARGING -> getPresenter().displayChargingCover(battery)
-            else -> {}
-        }*/
+
     }
 
     override fun setStartingState() {}
-
     override fun onStoppedEvent() {}
-
     override fun onUpEvent() {}
-
     override fun onDownEvent() {}
-
     override fun onRotateUp() {}
     override fun onRotateDown() {}
     override fun onRotateLeft() {}
-
     override fun onRotateRight() {}
-
     override fun onAwayLeft() {}
-
     override fun onAwayRight() {}
-    override fun onAwayTowards() {
-        TODO("Not yet implemented")
-    }
+    override fun onAwayTowards() {}
+    override fun onUnknownEvent() {}
 
+    /**
+     * Calls for new content from the server if allowed and starts displaying content in the screen.
+     */
     private fun awakeUpProcedures() {
 
-        /*
-        if(pullContentOnWake && !gotData && hasConnection(context)) {
-
-            val postExecuteCallback: (result: Boolean) -> Unit = {
-                gotData = it
-                getContentCollection().setup()
-                val content = getContentCollection().getCurrentContent()
-                if(content != null) {
-                    getContentCollection().startLoggingFields(content)
-                    getPresenter().displayContentPiece(content)
-                }
-                stopKillThread()
-                updateState(ControllerState.ACTIVE)
-            }
-
-            getPresenter().displayCover(CoverType.WHITE)
-            PullMediaPushLogsAsyncTask(postExecuteCallback = postExecuteCallback).execute(context)
-            updateState(ControllerState.PULLING_DATA)
-
-        } else {
-
-            getContentCollection().restartIndex()
-            val content = getContentCollection().getCurrentContent()
-            if(content != null) {
-                getContentCollection().startLoggingFields(content)
-                getPresenter().displayContentPiece(content)
-            }
-            stopKillThread()
-            updateState(ControllerState.ACTIVE)
-
-        }
-        Logger.log(LogType.WAKE_UP, listOf(), context)
-        */
-        if(pullContentOnWake && !gotData && hasConnection(context)) {
+        if(pullContentOnWake && !gotData && hasConnection(context) && isLogging(context)) {
 
             val postExecuteCallback: (result: Boolean) -> Unit = {
                 gotData = it

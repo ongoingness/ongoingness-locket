@@ -4,6 +4,18 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+/**
+ * Database representation of a log.
+ *
+ * @param id id of the log.
+ * @param level level type of the log.
+ * @param code code of log.
+ * @param content custom content as a JSON object associated to the log.
+ * @param message message to the printed.
+ * @param timestamp when the log was created.
+ *
+ * @author Luis Carvalho
+ */
 @Entity(tableName = "log")
 data class Log(
         @ColumnInfo(name = "level")                                 val level: String,

@@ -12,18 +12,54 @@ import uk.ac.ncl.openlab.ongoingness.utilities.SystemBatteryInfoReceiver
 import uk.ac.ncl.openlab.ongoingness.presenters.WatchFacePresenter
 import uk.ac.ncl.openlab.ongoingness.views.MainActivity
 
+/**
+ * Event-driven state machine in charge of interconnecting and commanding the model and view layers of the watchface.
+ *
+ * @param context context of the application.
+ * @param batteryChecking if true this controller expects to receive events from the battery.
+ * @param presenter presenter to be used by this controller.
+ * @author Luis Carvalho
+ */
 class WatchFaceController(var context: Context, var batteryChecking: Boolean, var presenter: WatchFacePresenter) {
 
+    /**
+     * Current state of this controller.
+     */
     private var currentControllerState: ControllerState = ControllerState.STANDBY
+
+    /**
+     * Previous state of this controller.
+     */
     private var previousControllerState: ControllerState = ControllerState.UNKNOWN
 
+    /**
+     * Receiver in charge of receiving events from the system about the battery and sending app based events.
+     */
     private var systemBatteryInfoReceiver: SystemBatteryInfoReceiver? = null
+
+    /**
+     * Receiver in charge of receiving
+     */
     private var batteryReceiver: BroadcastReceiver? = null
 
+    /**
+     * Battery level.
+     */
     private var battery = 0f
 
+    /**
+     *  watchface in ambient mode
+     */
     private var inAmbientMode = false
+
+    /**
+     * watchface in low bit ambient mode.
+     */
     private var mLowBitAmbient = false
+
+    /**
+     * watchface burn in protection.
+     */
     private var mBurnInProtection = false
 
     init {
@@ -80,6 +116,7 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
                                     ControllerState.CHARGING -> {
                                         presenter.displayCover(CoverType.BLACK)
                                         updateState(ControllerState.STANDBY)
+                                        startActivity(false)
                                     }
                                     else -> {}
 
@@ -94,12 +131,14 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
             val filter = IntentFilter(BROADCAST_INTENT_NAME).apply {}
             context.registerReceiver(batteryReceiver, filter)
 
-
-            systemBatteryInfoReceiver!!.start()
+           systemBatteryInfoReceiver!!.start()
 
         }
     }
 
+    /**
+     * Terminates the battery receiver.
+     */
     fun stop() {
         if(batteryChecking) {
             systemBatteryInfoReceiver!!.stop()
@@ -107,7 +146,11 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
         }
     }
 
-
+    /**
+     * Stores the current state of this controller as the previous state and sets the given state as the current.
+     *
+     * @param controllerState the new state of this controller.
+     */
     fun updateState(controllerState: ControllerState){
         synchronized(currentControllerState) {
             if (controllerState == currentControllerState)
@@ -120,25 +163,43 @@ class WatchFaceController(var context: Context, var batteryChecking: Boolean, va
         }
     }
 
+    /**
+     * Starts the app with a tap.
+     */
     fun tapEvent() {
         startActivity(true)
     }
 
-
+    /**
+     * Starts the app and stores the given ambient mode state.
+     * @param state the new ambient mode state.
+     */
     fun ambientModeChanged(state: Boolean) {
         inAmbientMode = state
         if(!state)
             startActivity(false)
     }
 
+    /**
+     * Sets the low bit ambient mode.
+     * @param state the new low bit ambient mode state.
+     */
     fun lowBitAmbientChanged(state: Boolean) {
         mLowBitAmbient = state
     }
 
+    /**
+     * Sets the burn in protection.
+     * @param state the new burn in protection state.
+     */
     fun burnInProtectionChanged(state: Boolean) {
         mBurnInProtection = state
     }
 
+    /**
+     * Starts the app.
+     * @param startedtWithTap stores if the app started with a tap.
+     */
     private fun startActivity(startedtWithTap: Boolean) {
 
         when(currentControllerState) {

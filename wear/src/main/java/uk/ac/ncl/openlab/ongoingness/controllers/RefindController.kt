@@ -1,7 +1,6 @@
 package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
-import com.crashlytics.android.Crashlytics
 import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
 import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
@@ -9,17 +8,25 @@ import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
 import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
-import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
+import uk.ac.ncl.openlab.ongoingness.utilities.isLogging
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsAsyncTask
 
-const val REFIND_PULL_CONTENT_ON_WAKE = true
-
+/**
+ * Controller used by the Refind flavour.
+ *
+ * @param pullContentOnWake flag to decide if the app pulls data from the server on start.
+ * @author Luis Carvalho
+ */
 class RefindController(context: Context,
                        recogniser: AbstractRecogniser,
                        presenter: Presenter,
-                       contentCollection: AbstractContentCollection)
+                       contentCollection: AbstractContentCollection,
+                       private val pullContentOnWake: Boolean)
     : AbstractController(context, recogniser, presenter, contentCollection) {
 
+    /**
+     * Registers if this controller has got data from the server already.
+     */
     var gotData = false
 
     override fun onRotateUp() {
@@ -57,29 +64,9 @@ class RefindController(context: Context,
 
     }
 
-    override fun onRotateLeft() {
-        TODO("Not yet implemented")
-    }
-
-    override fun onRotateRight() {
-        TODO("Not yet implemented")
-    }
-
-    override fun onAwayLeft() {
-        TODO("Not yet implemented")
-    }
-
-    override fun onAwayRight() {
-        TODO("Not yet implemented")
-    }
-
-    override fun onAwayTowards() {
-        TODO("Not yet implemented")
-    }
-
     override fun onStartedEvent() {
 
-        if(REFIND_PULL_CONTENT_ON_WAKE && !gotData && hasConnection(context)) {
+        if(pullContentOnWake && !gotData && hasConnection(context) && isLogging(context)) {
 
             val postExecuteCallback: (result: Boolean) -> Unit = {
                 gotData = it
@@ -115,28 +102,22 @@ class RefindController(context: Context,
     }
 
     override fun setStartingState() {}
-
     override fun onStoppedEvent() {}
-
     override fun onUpEvent() {}
-
     override fun onDownEvent() {}
-
     override fun onTowardsEvent() {}
-
     override fun onAwayEvent() {}
-
     override fun onUnknownEvent() {}
-
     override fun onTapEvent() {}
-
     override fun onLongPressEvent() {}
-
     override fun onChargerConnectedEvent(battery: Float) {}
-
     override fun onChargerDisconnectedEvent() {}
-
     override fun onBatteryChangedEvent(battery: Float) {}
+    override fun onRotateLeft() {}
+    override fun onRotateRight() {}
+    override fun onAwayLeft() {}
+    override fun onAwayRight() {}
+    override fun onAwayTowards() {}
 
 }
 

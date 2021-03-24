@@ -1,10 +1,6 @@
 package uk.ac.ncl.openlab.ongoingness.controllers
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import com.crashlytics.android.Crashlytics
-import uk.ac.ncl.openlab.ongoingness.R
 import uk.ac.ncl.openlab.ongoingness.collections.AbstractContentCollection
 import uk.ac.ncl.openlab.ongoingness.recognisers.AbstractRecogniser
 import uk.ac.ncl.openlab.ongoingness.presenters.CoverType
@@ -12,11 +8,18 @@ import uk.ac.ncl.openlab.ongoingness.utilities.LogType
 import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import uk.ac.ncl.openlab.ongoingness.utilities.hasConnection
 import uk.ac.ncl.openlab.ongoingness.presenters.Presenter
-import uk.ac.ncl.openlab.ongoingness.workers.PullMediaAsyncTask
+import uk.ac.ncl.openlab.ongoingness.utilities.isLogging
 import uk.ac.ncl.openlab.ongoingness.workers.PullMediaPushLogsAsyncTask
 
-const val INVERTED_PULL_CONTENT_ON_WAKE = false
-
+/**
+ * Controller used by the Inverted Anew flavour.
+ *
+ * @param startedWithTap true if the app was started by tapping the screen.
+ * @param faceState the state of the watch face at the start of the app.
+ * @param battery the battery level at the start of the app.
+ * @param pullContentOnWake flag to decide if the app pulls data from the server on start.
+ * @author Luis Carvalho
+ */
 class InvertedAnewController(context: Context,
                              recogniser: AbstractRecogniser,
                              presenter: Presenter,
@@ -27,8 +30,10 @@ class InvertedAnewController(context: Context,
                              private val pullContentOnWake : Boolean)
     : AbstractController(context, recogniser, presenter, contentCollection) {
 
+    /**
+     * Registers if this controller has got data from the server already.
+     */
     var gotData = false
-    var start = true
 
     override fun setStartingState() {
         startKillThread(30 * 1000L, 5 * 60 * 1000L)
@@ -41,8 +46,6 @@ class InvertedAnewController(context: Context,
             updateState(ControllerState.STANDBY)
         }
     }
-
-    override fun onStartedEvent() {}
 
     override fun onTowardsEvent() {
 
@@ -122,40 +125,25 @@ class InvertedAnewController(context: Context,
         }
     }
 
+    override fun onStartedEvent() {}
     override fun onStoppedEvent() {}
-
     override fun onUpEvent() {}
-
     override fun onDownEvent() {}
-
     override fun onRotateUp() {}
-
     override fun onRotateDown() {}
-    override fun onRotateLeft() {
-        TODO("Not yet implemented")
-    }
-
-    override fun onRotateRight() {
-        TODO("Not yet implemented")
-    }
-
-    override fun onAwayLeft() {
-        TODO("Not yet implemented")
-    }
-
-    override fun onAwayRight() {
-        TODO("Not yet implemented")
-    }
-
-    override fun onAwayTowards() {
-        TODO("Not yet implemented")
-    }
-
+    override fun onRotateLeft() {}
+    override fun onRotateRight() {}
+    override fun onAwayLeft() {}
+    override fun onAwayRight() {}
+    override fun onAwayTowards() {}
     override fun onUnknownEvent() {}
 
+    /**
+     * Calls for new content from the server if allowed and starts displaying content in the screen.
+     */
     private fun awakeUpProcedures() {
 
-        if(pullContentOnWake && !gotData && hasConnection(context)) {
+        if(pullContentOnWake && !gotData && hasConnection(context) && isLogging(context)) {
 
             val postExecuteCallback: (result: Boolean) -> Unit = {
                 gotData = it

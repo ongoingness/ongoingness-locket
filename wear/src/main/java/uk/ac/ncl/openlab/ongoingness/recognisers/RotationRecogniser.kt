@@ -19,13 +19,25 @@ import io.reactivex.subjects.PublishSubject
 import uk.ac.ncl.openlab.ongoingness.utilities.CircularArray
 
 /**
- * Created by Kyle Montague on 10/11/2018.
+ * Recognises the full vertical rotation of the device.
+ *
+ * @author Kyle Montague on 10/11/2018, Luis Carvalho.
  */
-open class RotationRecogniser(val context: Context) : AbstractRecogniser(context) {
+open class RotationRecogniser(val context: Context) : AbstractRecogniser() {
 
+    /**
+     * List of sensors.
+     */
     private var disposables = arrayListOf<Disposable>()
+
+    /**
+     * List of current states.
+     */
     private var states = ObservableList<State>()
 
+    /**
+     * Rotation states.
+     */
     private enum class State {
         UNKNOWN,
         TOWARDS,
@@ -34,7 +46,14 @@ open class RotationRecogniser(val context: Context) : AbstractRecogniser(context
         DOWN
     }
 
+    /**
+     * The state the recogniser entered.
+     */
     private var enterState = State.UNKNOWN
+
+    /**
+     * Last state of the recogniser.
+     */
     private var previousState = State.UNKNOWN
 
     override fun start() {

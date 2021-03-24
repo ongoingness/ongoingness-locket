@@ -4,27 +4,63 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.*
 import android.os.BatteryManager
 import android.util.Log
-import uk.ac.ncl.openlab.ongoingness.R
-import java.io.ByteArrayOutputStream
 import kotlin.math.abs
 
+
+/**
+ * Battery broadcast tag.
+ */
 const val BROADCAST_INTENT_NAME: String = "BATTERY_INFO"
 
+/**
+ * Receives battery related events from the system and sends events app related battery events.
+ *
+ * @param context the context of the application.
+ *
+ * @author Luis Carvalho
+ */
 class SystemBatteryInfoReceiver(private var context: Context) {
 
+    /**
+     * Broadcast receiver for system charging events.
+     */
     private var chargeReceiver: BroadcastReceiver
+
+    /**
+     * Broadcast receiver for system battery level events.
+     */
     private var batteryReceiver: BroadcastReceiver
 
+    /**
+     * Last checked level of battery.
+     */
     private var lastBatteryValue: Float = 0f
+
+    /**
+     * Is the charge receiver on.
+     */
     private var checkingChargeReceiverOn = false
+
+    /**
+     * Is the battery receiver on
+     */
     private var checkingBatteryReceiverOn: Boolean = false
 
+    /**
+     * Delta of battery
+     */
     private val chargeDelta: Float = 0.01f
+
+    /**
+     * Is charging.
+     */
     var charging = false
 
+    /**
+     * Tag for print.
+     */
     private val tag = "SystemBatteryInfoReceiver"
 
     init {
@@ -33,6 +69,8 @@ class SystemBatteryInfoReceiver(private var context: Context) {
 
             override fun onReceive(context: Context, intent: Intent) {
 
+                //If the device is connected to charger, broadcast CHARGER_CONNECTED and
+                //starts listening to battery events
                 if(intent.action == Intent.ACTION_POWER_CONNECTED) {
                     Log.d(tag, " Connected")
                     Logger.log(LogType.CHARGER_CONNECTED, listOf(), context)
@@ -46,6 +84,9 @@ class SystemBatteryInfoReceiver(private var context: Context) {
 
                     }
                     startCheckingBatteryValues()
+
+                // If the device is disconnected from the charger, broadcast CHARGER_DISCONNECTED and
+                //stops listening to battery events
                 } else if(intent.action == Intent.ACTION_POWER_DISCONNECTED) {
                     Log.d(tag, " Disconnected")
                     Logger.log(LogType.CHARGER_DISCONNECTED, listOf(), context)
@@ -79,10 +120,16 @@ class SystemBatteryInfoReceiver(private var context: Context) {
         }
     }
 
+    /**
+     * Starts listing for charge events.
+     */
     fun start() {
         startCheckingChargeState()
     }
 
+    /**
+     * Stops listing for charge and battery events.
+     */
     fun stop() {
         if(checkingChargeReceiverOn)
             stopCheckingChargeState()
@@ -91,6 +138,9 @@ class SystemBatteryInfoReceiver(private var context: Context) {
     }
 
 
+    /**
+     * Starts listening for charge events.
+     */
     private fun startCheckingChargeState() {
 
         val filter = IntentFilter(BatteryManager.ACTION_CHARGING).apply {
@@ -101,11 +151,17 @@ class SystemBatteryInfoReceiver(private var context: Context) {
         checkingChargeReceiverOn = true
     }
 
+    /**
+     * Stops listening to charge events.
+     */
     private fun stopCheckingChargeState() {
         context.unregisterReceiver(chargeReceiver)
         checkingChargeReceiverOn = false
     }
 
+    /**
+     * Starts listening for battery events.
+     */
     private fun startCheckingBatteryValues() {
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED).apply {}
         context.registerReceiver(batteryReceiver, filter)
@@ -113,6 +169,9 @@ class SystemBatteryInfoReceiver(private var context: Context) {
         charging = true
     }
 
+    /**
+     * Stops listening to battery events.
+     */
     private fun stopCheckingBatteryValues() {
         context.unregisterReceiver(batteryReceiver)
         checkingBatteryReceiverOn = false
@@ -120,6 +179,13 @@ class SystemBatteryInfoReceiver(private var context: Context) {
         charging = false
     }
 
+    /**
+     * Gets the current battery level.
+     *
+     * @param intent the intent of the app.
+     *
+     * @return current level of battery.
+     */
     private fun getBatteryValue(intent: Intent): Float? {
         return intent.let { i ->
             val level: Int = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)

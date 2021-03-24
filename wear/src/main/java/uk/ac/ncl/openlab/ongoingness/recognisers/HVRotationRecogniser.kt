@@ -17,12 +17,41 @@ import uk.ac.ncl.openlab.ongoingness.utilities.Logger
 import java.util.ArrayList
 import kotlin.math.floor
 
-class HVRotationRecogniser(val context: Context, val activity: Activity) : AbstractRecogniser(context){
+/**
+ * Recognises the horizontal and vertical rotation of the device through the gravity sensor.
+ * Notifies the observers with the following events:
+ *      - TOWARDS: If the piece screen is vertically facing the user.
+ *      - AWAY: If the piece screen is vertically away from the user.
+ *      - ROTATE_LEFT: If the piece is starting to be rotated horizontally to the left.
+ *      - ROTATE_RIGHT: If the piece is starting to be rotated horizontally to the right.
+ *      - AWAY_LEFT: If the piece is fully rotated horizontally to the left and the screen is away from the user.
+ *      - AWAY_RIGHT: If the piece is fully rotated horizontally to the right and the screen is away from the user.
+ *
+ * @param context the application context.
+ * @param activity the application activity.
+ *
+ * @author Luis Carvalho
+ */
+class HVRotationRecogniser(val context: Context, val activity: Activity) : AbstractRecogniser(){
 
+    /**
+     * List of sensors.
+     */
     private var disposables: ArrayList<Disposable> = arrayListOf()
+
+    /**
+     * Last event that happened in the vertical axis.
+     */
     private var lastVerticalGravityEvent: RecogniserEvent? = null
+
+    /**
+     * Last event that happened in the horizontal axis.
+     */
     private var lastHorizontalGravityEvent: RecogniserEvent? = null
 
+    /**
+     * Timestamp of when new content was displayed.
+     */
     private var newContentTimestamp: Long? = null
 
     override fun start() {
@@ -44,12 +73,15 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
         notifyEvent(RecogniserEvent.STOPPED)
     }
 
+    /**
+     * Analyses a given gravity sensor event into a recognisable vertical or horizontal events and notifies the observers.
+     *
+     * @param event gravity event from the sensor.
+     */
     private fun processGravity(event: RxSensorEvent) {
         val x = floor(event.values[0]).toInt()
         val y = floor(event.values[1]).toInt()
         val z = floor(event.values[2]).toInt()
-
-        var imageChanged = false
 
         //Vertical
         if (y >= 7 && z > -7 && z < 9 && lastVerticalGravityEvent != RecogniserEvent.TOWARDS) {
@@ -57,18 +89,15 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
             if(newContentTimestamp != null) {
                 logAwayDuration(LogType.AWAY_TOWARDS_DURATION)
             }
-
             Log.d("REC", "TOWARDS")
             lastVerticalGravityEvent = RecogniserEvent.TOWARDS
             notifyEvent(RecogniserEvent.TOWARDS)
         }
-        else if (y < -2 && z > -9 && z < 9 && lastVerticalGravityEvent != RecogniserEvent.AWAY) {
+        else if (y < /*1*/-2 && z > -9 && z <= 9 && lastVerticalGravityEvent != RecogniserEvent.AWAY) {
             Log.d("REC", "AWAY")
             lastVerticalGravityEvent = RecogniserEvent.AWAY
             notifyEvent(RecogniserEvent.AWAY)
         }
-
-
 
         //Horizontal
         if(x in 2..9 && z in 0..9 && lastHorizontalGravityEvent != RecogniserEvent.ROTATE_LEFT) {
@@ -99,7 +128,6 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
 
                 Log.d("REC", "AWAY LEFT")
                 lastHorizontalGravityEvent = RecogniserEvent.AWAY_LEFT
-                imageChanged = true
                 notifyEvent(RecogniserEvent.AWAY_LEFT)
 
             } else if(lastHorizontalGravityEvent == RecogniserEvent.ROTATE_RIGHT) {
@@ -108,24 +136,17 @@ class HVRotationRecogniser(val context: Context, val activity: Activity) : Abstr
 
                 Log.d("REC", "AWAY RIGHT")
                 lastHorizontalGravityEvent = RecogniserEvent.AWAY_RIGHT
-                imageChanged = true
                 notifyEvent(RecogniserEvent.AWAY_RIGHT)
             }
         }
 
-        /*
-        if(!imageChanged && lastVerticalGravityEvent == RecogniserEvent.TOWARDS &&
-                x == -1 && y in 0 .. 6 && z in -10 .. -8) {
-            Log.d("xxx", "$x")
-            newContentTimestamp = System.currentTimeMillis()
-
-            Log.d("REC", "AWAY TOWARDS")
-            lastVerticalGravityEvent = RecogniserEvent.AWAY_TOWARDS
-            notifyEvent(RecogniserEvent.AWAY_TOWARDS)
-        }
-         */
     }
 
+    /**
+     * Logs the duration of the piece rotation.
+     *
+     * @param logType type of the to be recorded.
+     */
     private fun logAwayDuration(logType: LogType) {
         val awayTime = System.currentTimeMillis() - newContentTimestamp!!
         Log.d("Away time", "$awayTime")
